@@ -2,7 +2,6 @@
 __pycache__/
 benchmarking/dataset
 benchmarking/output
-benchmarking/job.slurm
 *.slurm
 
 .DS_Store
