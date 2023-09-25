@@ -1,9 +1,17 @@
 import pandas as pd
 
-from benchmarking.utils.utils import load, save
+from utils.utils import load, save
 
 
 def generate_triplets(original_dataset_file: str, dataset_file: str) -> None:
+	"""
+	The generate_triplets function takes in two arguments:
+		- original_dataset_file: the path to the original dataset file
+		- dataset_file: the path to where you want to save your new triplet file
+
+	:param original_dataset_file: str: Specify the path to the original dataset file
+	:param dataset_file: str: Specify the file where the dataset will be stored
+	"""
 	original_dataset = load(original_dataset_file)
 
 	# only useful columns
@@ -16,7 +24,7 @@ def generate_triplets(original_dataset_file: str, dataset_file: str) -> None:
 	df.columns = ['node_parent', 'relation', 'node_child']
 
 	# lowercase
-	df = df.applymap(lambda x: x.lower() if isinstance(x, str) else x)
+	df = df.map(lambda x: x.lower() if isinstance(x, str) else x)
 	df = df.dropna().drop_duplicates().reset_index(drop=True)
 
 	save([df.columns.tolist()] + df.values.tolist(), dataset_file)
