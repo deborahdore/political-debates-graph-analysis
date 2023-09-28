@@ -1,7 +1,6 @@
-import datetime
-
 import matplotlib.pyplot as plt
 import pandas as pd
+import torch
 from loguru import logger
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.losses import MarginRankingLoss
@@ -9,8 +8,7 @@ from pykeen.pipeline import pipeline
 from pykeen.triples import TriplesFactory
 
 from utils.utils import read_json, write_json
-import json
-
+import gc
 
 def get_train_val_test_factory(dataset: str, ratio: float):
 	"""
@@ -24,48 +22,25 @@ def get_train_val_test_factory(dataset: str, ratio: float):
 	"""
 	logger.info("creating train, test and val TriplesFactory")
 
-	train = pd.read_csv(dataset.format(ratio=ratio, use='train'), sep="\t")
+	train = pd.read_csv(dataset.format(ratio = ratio, use = 'train'), sep = "\t")
 
-	test = pd.read_csv(dataset.format(ratio=ratio, use='test'), sep="\t")
+	test = pd.read_csv(dataset.format(ratio = ratio, use = 'test'), sep = "\t")
 
-	val = pd.read_csv(dataset.format(ratio=ratio, use='val'), sep="\t")
+	val = pd.read_csv(dataset.format(ratio = ratio, use = 'val'), sep = "\t")
 
-	assert len(train[train['noisy'] == 0]) > 0
-	assert len(train[train['noisy'] == 1]) > 0
-	assert len(val[val['noisy'] == 0]) > 0
-	assert len(val[val['noisy'] == 1]) > 0
-	assert len(test[test['noisy'] == 0]) > 0
-	assert len(test[test['noisy'] == 1]) > 0
+	train_factory = TriplesFactory.from_labeled_triples(triples = train[['subject', 'predicate', 'object']].values)
 
+	val_factory = TriplesFactory.from_labeled_triples(triples = val[['subject', 'predicate', 'object']].values)
 
-	train_positive = TriplesFactory.from_labeled_triples(
-			triples=train[train['noisy'] == 0][['subject', 'predicate', 'object']].values
-	)
+	test_factory = TriplesFactory.from_labeled_triples(triples = test[['subject', 'predicate', 'object']].values)
 
-	train_negative = TriplesFactory.from_labeled_triples(
-			triples=train[train['noisy'] == 1][['subject', 'predicate', 'object']].values
-	)
-
-	val_positive = TriplesFactory.from_labeled_triples(
-			triples=val[val['noisy'] == 0][['subject', 'predicate', 'object']].values
-	)
-
-	val_negative = TriplesFactory.from_labeled_triples(
-			triples=val[val['noisy'] == 1][['subject', 'predicate', 'object']].values
-	)
-
-	test_positive = TriplesFactory.from_labeled_triples(
-			triples=test[test['noisy'] == 0][['subject', 'predicate', 'object']].values
-	)
-	test_negative = TriplesFactory.from_labeled_triples(
-			triples=test[test['noisy'] == 1][['subject', 'predicate', 'object']].values
-	)
-
-	return train_positive, train_negative, val_positive, val_negative, test_positive, test_negative
+	return train_factory, val_factory, test_factory
 
 
-def do_benchmarking(model_name: str, dataset_path: str, model_file: str, pipeline_config_file: str, plot_file: str,
-					metric_file: str, model_dir:str, ratio: float):
+def do_benchmarking(
+		model_name: str, dataset_path: str, model_file: str, pipeline_config_file: str, plot_file: str,
+		metric_file: str, checkpoint_dir: str, ratio: float
+		):
 	"""
 	The do_benchmarking function is responsible for running the benchmarking pipeline.
 
@@ -79,39 +54,44 @@ def do_benchmarking(model_name: str, dataset_path: str, model_file: str, pipelin
 	"""
 	pipeline_config = read_json(pipeline_config_file)
 
-	train_positive, train_negative, val_positive, val_negative, test_positive, test_negative = get_train_val_test_factory(
-		dataset_path, ratio)
+	train_factory, val_factory, test_factory = get_train_val_test_factory(dataset_path, ratio)
 
 	logger.info(f"starting pipeline; Model: {model_name}; Ratio: {ratio}")
 	logger.info(f"{pipeline_config}")
 
-	result = pipeline(model=model_name,
-	                  random_seed=42,
-	                  training=train_positive,
-	                  testing=test_negative,
-					  validation=val_negative,
-					  model_kwargs={'embedding_dim': pipeline_config.get('embedding_dim', 50), },
-					  optimizer='adam',
-					  optimizer_kwargs={'lr': pipeline_config.get('learning_rate', 0.01), },
-					  loss=MarginRankingLoss(),
-					  loss_kwargs={'margin': 1},
-					  training_kwargs={'num_epochs': pipeline_config.get('num_epochs', 5),
-									  'batch_size': pipeline_config.get('batch_size',64),
-					                   'checkpoint_name': model_dir.format(model=model_name) + str(datetime.datetime)},
-					  evaluator=RankBasedEvaluator(),
-					  stopper='early',
-					  stopper_kwargs=dict(frequency=5, patience=2, relative_delta=0.002),
-	                  device='cuda',
-                  )
+	torch.cuda.empty_cache()
+
+	result = pipeline(
+			model = model_name,
+			random_seed = 42,
+			training = train_factory,
+			testing = test_factory,
+			validation = val_factory,
+			model_kwargs = {'embedding_dim': pipeline_config.get('embedding_dim', 50), },
+			optimizer = 'adam',
+			optimizer_kwargs = {'lr': pipeline_config.get('learning_rate', 0.01), },
+			loss = MarginRankingLoss(),
+			loss_kwargs = {'margin': 1},
+			training_kwargs = {'num_epochs':           pipeline_config.get('num_epochs', 5),
+			                   'batch_size':           pipeline_config.get('batch_size', 64),
+			                   'checkpoint_directory': checkpoint_dir,
+			                   'max_split_size_mb': 26000
+			                   },
+			evaluator = RankBasedEvaluator(),
+			stopper = 'early',
+			stopper_kwargs = dict(frequency = 5, patience = 2, relative_delta = 0.002),
+			device = 'cuda' if torch.cuda.is_available() else 'cpu'
+			)
 
 	metric_results = {str(key): value for key, value in result.metric_results.data.items()}
 
 	for metric_name in result.metric_results.metrics.keys():
 		metric_results[metric_name] = result.get_metric(metric_name)
 
-	write_json(metric_results, metric_file.format(model=model_name, ratio=ratio))
+	write_json(metric_results, metric_file.format(model = model_name, ratio = ratio))
 
 	result.plot_losses()
-	plt.savefig(plot_file.format(name=f"{model_name}_loss", ratio=ratio))
+	plt.savefig(plot_file.format(name = f"{model_name}_loss", ratio = ratio))
 
-	result.save_model(path=model_file.format(model=model_name, ratio=ratio))
+	result.save_model(path = model_file.format(model = model_name, ratio = ratio))
+	gc.collect()
