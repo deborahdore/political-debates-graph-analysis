@@ -1,6 +1,7 @@
+import gc
+
 import matplotlib.pyplot as plt
 import pandas as pd
-import torch
 from loguru import logger
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.losses import MarginRankingLoss
@@ -8,7 +9,7 @@ from pykeen.pipeline import pipeline
 from pykeen.triples import TriplesFactory
 
 from utils.utils import read_json, write_json
-import gc
+
 
 def get_train_val_test_factory(dataset: str, ratio: float):
 	"""
@@ -39,7 +40,7 @@ def get_train_val_test_factory(dataset: str, ratio: float):
 
 def do_benchmarking(
 		model_name: str, dataset_path: str, model_file: str, pipeline_config_file: str, plot_file: str,
-		metric_file: str, checkpoint_dir: str, ratio: float
+		metric_file: str, ratio: float
 		):
 	"""
 	The do_benchmarking function is responsible for running the benchmarking pipeline.
@@ -58,30 +59,21 @@ def do_benchmarking(
 
 	logger.info(f"starting pipeline; Model: {model_name}; Ratio: {ratio}")
 	logger.info(f"{pipeline_config}")
-
-	torch.cuda.empty_cache()
-
 	result = pipeline(
-			model = model_name,
-			random_seed = 42,
-			training = train_factory,
-			testing = test_factory,
-			validation = val_factory,
-			model_kwargs = {'embedding_dim': pipeline_config.get('embedding_dim', 50), },
-			optimizer = 'adam',
-			optimizer_kwargs = {'lr': pipeline_config.get('learning_rate', 0.01), },
-			loss = MarginRankingLoss(),
-			loss_kwargs = {'margin': 1},
+			model = model_name, random_seed = 42, training = train_factory, testing = test_factory,
+			validation = val_factory, model_kwargs = {'embedding_dim': pipeline_config.get('embedding_dim', 50), },
+			optimizer = 'adam', optimizer_kwargs = {'lr': pipeline_config.get('learning_rate', 0.01), },
+			loss = MarginRankingLoss(), loss_kwargs = {'margin': 1},
 			training_kwargs = {'num_epochs':           pipeline_config.get('num_epochs', 5),
 			                   'batch_size':           pipeline_config.get('batch_size', 64),
-			                   'checkpoint_directory': checkpoint_dir,
-			                   'max_split_size_mb': 26000
-			                   },
+			                   "checkpoint_frequency": 0},
 			evaluator = RankBasedEvaluator(),
-			stopper = 'early',
-			stopper_kwargs = dict(frequency = 5, patience = 2, relative_delta = 0.002),
-			device = 'cuda' if torch.cuda.is_available() else 'cpu'
+			# stopper = 'early',
+			# stopper_kwargs = dict(frequency = 5, patience = 2, relative_delta = 0.002),
+			use_tqdm = False
 			)
+
+	logger.info(f"model {model_name} training complete")
 
 	metric_results = {str(key): value for key, value in result.metric_results.data.items()}
 

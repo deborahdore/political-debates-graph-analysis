@@ -1,11 +1,12 @@
 import ast
 import sys
 
+import torch
 from loguru import logger
 
 from benchmark import do_benchmarking
-from config.config import (checkpoint_dir, dataset_file, metric_file, model_file, noisy_dataset_file,
-                           original_dataset_file, pipeline_config_file, plot_file, ratio, valid_kge_models)
+from config.config import (dataset_file, metric_file, model_file, noisy_dataset_file, original_dataset_file,
+                           pipeline_config_file, plot_file, ratio, valid_kge_models)
 from utils.dataset_utils import generate_noise, generate_triplets
 
 if __name__ == '__main__':
@@ -18,22 +19,15 @@ if __name__ == '__main__':
 	generate_dataset = ast.literal_eval(sys.argv[1])
 
 	if generate_dataset:
-
 		generate_triplets(original_dataset_file, dataset_file)
 		for r in ratio:
 			generate_noise(dataset_file = dataset_file, noisy_dataset_file = noisy_dataset_file, noise_ratio = r)
 
 	for model in valid_kge_models:
 		for r in ratio:
+			torch.cuda.empty_cache()
 			do_benchmarking(
-				model,
-				noisy_dataset_file,
-				model_file,
-				pipeline_config_file,
-				plot_file,
-				metric_file,
-				checkpoint_dir,
-				r
-				)
+					model, noisy_dataset_file, model_file, pipeline_config_file, plot_file, metric_file, r
+					)
 
 	logger.info("end")

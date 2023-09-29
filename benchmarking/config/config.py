@@ -4,13 +4,11 @@ from pathlib import Path
 # ==================== Directories ==================== #
 base_dir = os.path.abspath(".")
 dataset_dir = os.path.join(base_dir, "dataset")
-output_dir = os.path.join(base_dir, "output")
 models_dir = os.path.join(base_dir, "models")
 model_dir = os.path.join(models_dir, "{model}")
 noisy_dataset_dir = os.path.join(dataset_dir, "noisy_dataset_{ratio}")
 config_dir = os.path.join(base_dir, "config")
 plot_dir = os.path.join(base_dir, "plot")
-checkpoint_dir = os.path.join(output_dir, "checkpoint")
 
 # ==================== Files ==================== #
 original_dataset_file = os.path.join(dataset_dir, "relation_graph.csv")
@@ -40,9 +38,6 @@ ratio = [0.05, 0.1, 0.2, 0.3, 1]
 
 # ==================== Create Directories ==================== #
 assert Path(dataset_dir).exists()
-
-Path(output_dir).mkdir(parents = True, exist_ok = True)
-Path(checkpoint_dir).mkdir(parents = True, exist_ok = True)
 Path(plot_dir).mkdir(parents = True, exist_ok = True)
 
 for model in valid_kge_models:
