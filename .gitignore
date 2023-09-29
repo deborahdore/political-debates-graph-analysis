@@ -1,7 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-benchmarking/dataset
-benchmarking/output
+/dataset/
+
 *.slurm
 
 .DS_Store
