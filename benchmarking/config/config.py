@@ -6,21 +6,17 @@ base_dir = os.path.abspath(".")
 dataset_dir = os.path.join(base_dir, "dataset")
 models_dir = os.path.join(base_dir, "models")
 model_dir = os.path.join(models_dir, "{model}")
-noisy_dataset_dir = os.path.join(dataset_dir, "noisy_dataset_{ratio}")
 config_dir = os.path.join(base_dir, "config")
 plot_dir = os.path.join(base_dir, "plot")
+results_dir = os.path.join(base_dir, "results")
 
 # ==================== Files ==================== #
-original_dataset_file = os.path.join(dataset_dir, "relation_graph.csv")
-dataset_file = os.path.join(dataset_dir, "dataset.csv")
-noisy_dataset_file = noisy_dataset_dir + "/" + "noisy_{ratio}_{use}.tsv"
+original_dataset_file = os.path.join(dataset_dir, "original_dataset.csv")
+triplets_file = os.path.join(dataset_dir, "triplets_file.tsv")
+
 pipeline_config_file = os.path.join(config_dir, "pipeline_config.json")
-plot_file = os.path.join(plot_dir, "{name}-{ratio}.svg")
-model_file = os.path.join(model_dir, "{model}-{ratio}.pt")
-metric_file = model_dir + "/metrics-{ratio}.json"
 
 # ==================== Models Names ==================== #
-
 valid_kge_models = [
 	"TransE",
 	"DistMult",
@@ -34,14 +30,14 @@ valid_kge_models = [
 	"BoxE",
 	]
 # ==================== Ratio of noise ==================== #
-ratio = [0.05, 0.1, 0.2, 0.3, 1]
+ratio = [0.05, 0.1, 0.2, 0.3, 0.5]
 
 # ==================== Create Directories ==================== #
 assert Path(dataset_dir).exists()
 Path(plot_dir).mkdir(parents = True, exist_ok = True)
+Path(models_dir).mkdir(parents = True, exist_ok = True)
+Path(config_dir).mkdir(parents = True, exist_ok = True)
+Path(results_dir).mkdir(parents = True, exist_ok = True)
 
 for model in valid_kge_models:
-	Path(model_dir.format(model = model)).mkdir(exist_ok = True, parents = True)
-
-for r in ratio:
-	Path(noisy_dataset_dir.format(ratio = r)).mkdir(exist_ok = True, parents = True)
+	Path(model_dir.format(model = model)+"/hyper").mkdir(exist_ok = True, parents = True)

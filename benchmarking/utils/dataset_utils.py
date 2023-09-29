@@ -1,9 +1,11 @@
 import random
+from typing import Any, Tuple
 
 import pandas as pd
 from loguru import logger
+from pykeen.triples import TriplesFactory
 from sklearn.model_selection import train_test_split
-from utils.utils import load, save, save_tsv
+from utils.utils import load, save
 
 
 def get_nodes(dataset: pd.DataFrame) -> pd.DataFrame:
@@ -20,20 +22,20 @@ def get_nodes(dataset: pd.DataFrame) -> pd.DataFrame:
 	return nodes
 
 
-def generate_triplets(original_dataset_file: str, dataset_file: str) -> None:
+def generate_triplets(original_dataset_file: str, triples_file: str) -> None:
 	"""
 	The generate_triplets function takes in two arguments:
-		- original_dataset_file: the path to the original dataset file (e.g., 'dataset/relation_graph.csv')
+		- original_dataset_file: the path to the original dataset file (e.g., 'dataset/original_dataset.csv')
 		- dataset_file: the path to where you want to save your new triplet-formatted data (e.g.,
 		'dataset/dataset.csv')
 
 	:param original_dataset_file: str: Specify the location of the original dataset file
-	:param dataset_file: str: Specify the dataset file to be used
+	:param triples_file: str: Specify the dataset file to be used
 	:return: A list of lists
 	"""
 	logger.info("generating triplets")
 	logger.info(f"original dataset: {original_dataset_file}")
-	logger.info(f"destination file: {dataset_file}")
+	logger.info(f"destination file: {triples_file}")
 
 	original_dataset = load(original_dataset_file)
 
@@ -52,27 +54,24 @@ def generate_triplets(original_dataset_file: str, dataset_file: str) -> None:
 	df = df.map(lambda x: x.lower() if isinstance(x, str) else x)
 	df = df.dropna().drop_duplicates().reset_index(drop = True)
 
-	save([df.columns] + df.values.tolist(), dataset_file)
+	save([df.columns] + df.values.tolist(), triples_file)
 
 
-def generate_noise(dataset_file: str, noisy_dataset_file: str, noise_ratio: float) -> None:
+def generate_noise(triplets_file: str, noise_ratio: float) -> Tuple[Any, Any, Any]:
 	"""
-	The generate_noise function takes a dataset file, a noisy dataset file and the noise ratio as input. It then
-	loads the correct edges from the dataset_file into a pandas dataframe. It samples this dataframe with the given
-	noise ratio to get an equal amount of noisy edges as there are correct ones in the original data set. The
-	function then iterates over all sampled rows and randomly decides whether to remove links from chains,
-	swap links or introduce new incorrect links. The resulting list of noisy edges is saved in another pandas
-	DataFrame together with their labels (noisy = 1). This DataFrame is concatenated with Possible operations to
-	introduce noise are: remove links, swap link label, introduce new incorrect links
+	The generate_noise function takes a triplets file and a noise ratio as input.
+	It then generates noisy data by randomly selecting edges from the original dataset,
+	and either removing them, swapping their predicate or introducing new incorrect links.
+	The function returns three datasets: train, val and test.
 
-	:param dataset_file: str: Specify the path to the dataset file
-	:param noisy_dataset_file: str: Specify the file path where the noisy dataset will be saved
-	:param noise_ratio: float: Determine the percentage of noise in the dataset
+	:param triplets_file: str: Specify the path to the file containing triplets
+	:param noise_ratio: float: Determine the ratio of noise in the dataset
+	:return: A tuple of 3 dataframes: train, val and test
 	"""
 	logger.info(f"generating dataset with {noise_ratio} nose")
-	logger.info(f"source file: {dataset_file}")
+	logger.info(f"source file: {triplets_file}")
 
-	edges_correct = load(dataset_file)
+	edges_correct = load(triplets_file)
 	edges_correct = pd.DataFrame(edges_correct[1:], columns = edges_correct[0])
 
 	edges_correct_sample = edges_correct.sample(frac = noise_ratio, random_state = 42)
@@ -102,9 +101,9 @@ def generate_noise(dataset_file: str, noisy_dataset_file: str, noise_ratio: floa
 					continue
 
 				# Check if the combination already exists in edges_correct
-				is_combination_unique = ((edges_correct['subject'] == subject_node) &
-				                         (edges_correct['object'] == object_node) &
-				                         (edges_correct['predicate'] == predicate_label))
+				is_combination_unique = (
+							(edges_correct['subject'] == subject_node) & (edges_correct['object'] == object_node) & (
+								edges_correct['predicate'] == predicate_label))
 
 				if not is_combination_unique.any():
 					# The combination is unique, break the loop
@@ -125,6 +124,33 @@ def generate_noise(dataset_file: str, noisy_dataset_file: str, noise_ratio: floa
 	train, test = train_test_split(final_df, test_size = 0.2, random_state = 42, stratify = final_df['noisy'])
 	train, val = train_test_split(train, test_size = 0.15, random_state = 42, stratify = train['noisy'])
 
-	save_tsv(train, tsv_file_path = noisy_dataset_file.format(ratio = noise_ratio, use = "train"))
-	save_tsv(test, tsv_file_path = noisy_dataset_file.format(ratio = noise_ratio, use = "test"))
-	save_tsv(val, tsv_file_path = noisy_dataset_file.format(ratio = noise_ratio, use = "val"))
+	return train, val, test
+
+
+def get_train_val_test_factory(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame) -> Tuple[
+	TriplesFactory, TriplesFactory, TriplesFactory]:
+	"""
+	The get_train_val_test_factory function takes in the train, val and test dataframes as input.
+	It then creates a TriplesFactory object for each of these dataframes.
+	The TriplesFactory objects are used to create the training, validation and testing datasets that will be fed into our model.
+
+	:param train: pd.DataFrame: Pass the train dataframe to the function
+	:param val: pd.DataFrame: Create the validation set
+	:param test: pd.DataFrame: Create the test_factory
+	:return: A tuple of three triplesfactory objects
+	"""
+	logger.info("creating train, test and val TriplesFactory")
+
+	train_factory = TriplesFactory.from_labeled_triples(
+			triples = train[['subject', 'predicate', 'object']].values, create_inverse_triples = True
+			)
+
+	val_factory = TriplesFactory.from_labeled_triples(
+			triples = val[['subject', 'predicate', 'object']].values, create_inverse_triples = True
+			)
+
+	test_factory = TriplesFactory.from_labeled_triples(
+			triples = test[['subject', 'predicate', 'object']].values, create_inverse_triples = True
+			)
+
+	return train_factory, val_factory, test_factory
