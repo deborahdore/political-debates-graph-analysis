@@ -29,7 +29,7 @@ def save(dataset: [], csv_file: str) -> None:
 	:param csv_file: str: Specify the file name of the csv file to be saved
 	"""
 	logger.info(f"saving dataset to {csv_file}")
-	with open(csv_file, 'w', newline = '') as csvfile:
+	with open(csv_file, 'w', newline='') as csvfile:
 		writer = csv.writer(csvfile)
 		writer.writerows(dataset)
 
@@ -42,7 +42,7 @@ def save_tsv(df: pd.DataFrame, tsv_file_path: str) -> None:
 	:return: None
 	"""
 	logger.info(f"saving dataframe to tsv {tsv_file_path}")
-	df.to_csv(tsv_file_path, sep = '\t', index = False, header = True)
+	df.to_csv(tsv_file_path, sep='\t', index=False, header=True)
 
 
 def read_json(json_file_name: str) -> json:
@@ -68,5 +68,5 @@ def write_json(json_obj: json, json_file_name: str) -> None:
 	"""
 	logger.info("[write_json] writing json file")
 	with open(json_file_name, 'w') as file:
-		file.write(json.dumps(json_obj, indent = 4))
+		file.write(json.dumps(json_obj, indent=4))
 	file.close()

@@ -28,16 +28,14 @@ valid_kge_models = [
 	"PairRE",
 	"AutoSF",
 	"BoxE",
-	]
-# ==================== Ratio of noise ==================== #
-ratio = [0.05, 0.1, 0.2, 0.3, 0.5]
+]
 
 # ==================== Create Directories ==================== #
 assert Path(dataset_dir).exists()
-Path(plot_dir).mkdir(parents = True, exist_ok = True)
-Path(models_dir).mkdir(parents = True, exist_ok = True)
-Path(config_dir).mkdir(parents = True, exist_ok = True)
-Path(results_dir).mkdir(parents = True, exist_ok = True)
+Path(plot_dir).mkdir(parents=True, exist_ok=True)
+Path(models_dir).mkdir(parents=True, exist_ok=True)
+Path(config_dir).mkdir(parents=True, exist_ok=True)
+Path(results_dir).mkdir(parents=True, exist_ok=True)
 
 for model in valid_kge_models:
-	Path(model_dir.format(model = model)+"/hyper").mkdir(exist_ok = True, parents = True)
+	Path(model_dir.format(model=model)).mkdir(exist_ok=True, parents=True)

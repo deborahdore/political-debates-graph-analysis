@@ -5,6 +5,7 @@ import pandas as pd
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sklearn.model_selection import train_test_split
+
 from utils.utils import load, save
 
 
@@ -17,8 +18,8 @@ def get_nodes(dataset: pd.DataFrame) -> pd.DataFrame:
 	"""
 	logger.info("extracting nodes from dataset")
 
-	nodes = pd.concat([dataset['subject'], dataset['object']], axis = 0)
-	nodes = nodes.dropna().drop_duplicates().reset_index(drop = True)
+	nodes = pd.concat([dataset['subject'], dataset['object']], axis=0)
+	nodes = nodes.dropna().drop_duplicates().reset_index(drop=True)
 	return nodes
 
 
@@ -40,19 +41,19 @@ def generate_triplets(original_dataset_file: str, triples_file: str) -> None:
 	original_dataset = load(original_dataset_file)
 
 	# only useful columns
-	df = pd.DataFrame(original_dataset[1:], columns = original_dataset[0])[
+	df = pd.DataFrame(original_dataset[1:], columns=original_dataset[0])[
 		['Dependent', 'D_type', 'Governor', 'G_type', 'RelationType']]
 
-	df['subject'] = df.apply(lambda row: str(row['Governor']) + "-" + str(row['G_type']), axis = 1)
-	df['object'] = df.apply(lambda row: str(row['Dependent']) + "-" + str(row['D_type']), axis = 1)
+	df['subject'] = df.apply(lambda row: str(row['Governor']) + "-" + str(row['G_type']), axis=1)
+	df['object'] = df.apply(lambda row: str(row['Dependent']) + "-" + str(row['D_type']), axis=1)
 
-	df.drop(columns = ['Dependent', 'D_type', 'Governor', 'G_type'], inplace = True)
+	df.drop(columns=['Dependent', 'D_type', 'Governor', 'G_type'], inplace=True)
 	df = df[['subject', 'RelationType', 'object']]
 	df.columns = ['subject', 'predicate', 'object']
 
 	logger.info("preprocessing created dataset")
 	df = df.map(lambda x: x.lower() if isinstance(x, str) else x)
-	df = df.dropna().drop_duplicates().reset_index(drop = True)
+	df = df.dropna().drop_duplicates().reset_index(drop=True)
 
 	save([df.columns] + df.values.tolist(), triples_file)
 
@@ -72,9 +73,9 @@ def generate_noise(triplets_file: str, noise_ratio: float) -> Tuple[Any, Any, An
 	logger.info(f"source file: {triplets_file}")
 
 	edges_correct = load(triplets_file)
-	edges_correct = pd.DataFrame(edges_correct[1:], columns = edges_correct[0])
+	edges_correct = pd.DataFrame(edges_correct[1:], columns=edges_correct[0])
 
-	edges_correct_sample = edges_correct.sample(frac = noise_ratio, random_state = 42)
+	edges_correct_sample = edges_correct.sample(frac=noise_ratio, random_state=42)
 	edges_noisy = []
 
 	nodes = get_nodes(edges_correct)
@@ -102,8 +103,8 @@ def generate_noise(triplets_file: str, noise_ratio: float) -> Tuple[Any, Any, An
 
 				# Check if the combination already exists in edges_correct
 				is_combination_unique = (
-							(edges_correct['subject'] == subject_node) & (edges_correct['object'] == object_node) & (
-								edges_correct['predicate'] == predicate_label))
+						(edges_correct['subject'] == subject_node) & (edges_correct['object'] == object_node) & (
+						edges_correct['predicate'] == predicate_label))
 
 				if not is_combination_unique.any():
 					# The combination is unique, break the loop
@@ -111,18 +112,18 @@ def generate_noise(triplets_file: str, noise_ratio: float) -> Tuple[Any, Any, An
 
 			edges_noisy.append([subject_node, predicate_label, object_node, 1])
 
-	noisy_df = pd.DataFrame(edges_noisy, columns = ['subject', 'predicate', 'object', 'noisy'])
+	noisy_df = pd.DataFrame(edges_noisy, columns=['subject', 'predicate', 'object', 'noisy'])
 	noisy_df = noisy_df.dropna().drop_duplicates()
 
 	edges_correct = edges_correct.drop(edges_correct_sample.index)
 	edges_correct['noisy'] = 0
 
-	final_df = pd.concat([edges_correct, noisy_df], axis = 0)
-	final_df = final_df.sample(frac = 1).dropna().drop_duplicates().reset_index(drop = True)
+	final_df = pd.concat([edges_correct, noisy_df], axis=0)
+	final_df = final_df.sample(frac=1).dropna().drop_duplicates().reset_index(drop=True)
 
 	# split
-	train, test = train_test_split(final_df, test_size = 0.2, random_state = 42, stratify = final_df['noisy'])
-	train, val = train_test_split(train, test_size = 0.15, random_state = 42, stratify = train['noisy'])
+	train, test = train_test_split(final_df, test_size=0.2, random_state=42, stratify=final_df['noisy'])
+	train, val = train_test_split(train, test_size=0.15, random_state=42, stratify=train['noisy'])
 
 	return train, val, test
 
@@ -142,15 +143,15 @@ def get_train_val_test_factory(train: pd.DataFrame, val: pd.DataFrame, test: pd.
 	logger.info("creating train, test and val TriplesFactory")
 
 	train_factory = TriplesFactory.from_labeled_triples(
-			triples = train[['subject', 'predicate', 'object']].values, create_inverse_triples = True
-			)
+			triples=train[['subject', 'predicate', 'object']].values, create_inverse_triples=True
+	)
 
 	val_factory = TriplesFactory.from_labeled_triples(
-			triples = val[['subject', 'predicate', 'object']].values, create_inverse_triples = True
-			)
+			triples=val[['subject', 'predicate', 'object']].values, create_inverse_triples=True
+	)
 
 	test_factory = TriplesFactory.from_labeled_triples(
-			triples = test[['subject', 'predicate', 'object']].values, create_inverse_triples = True
-			)
+			triples=test[['subject', 'predicate', 'object']].values, create_inverse_triples=True
+	)
 
 	return train_factory, val_factory, test_factory

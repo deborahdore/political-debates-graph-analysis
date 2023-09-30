@@ -1,62 +1,61 @@
 import gc
 import os.path
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from loguru import logger
-from pykeen.evaluation import RankBasedEvaluator
 from pykeen.hpo import hpo_pipeline
 from pykeen.pipeline import pipeline
+from pykeen.triples import TriplesFactory
 
-from utils.dataset_utils import generate_noise, get_train_val_test_factory
 from utils.utils import read_json, write_json
 
 
 def training(
-		triplets_file: str,
 		pipeline_config_file: str,
 		model_dir: str,
 		model_name: str,
 		results_dir: str,
 		plot_dir: str,
+		train_factory: TriplesFactory,
+		test_factory: TriplesFactory,
+		val_factory: TriplesFactory,
 		ratio: float
-		) -> None:
-
+) -> None:
 	"""
-	The training function takes in a triplets file, pipeline config file, model directory, model name and results directory.
-	It then generates the train/val/test sets using the generate_noise function with a noise ratio of ratio.
-	The training factory is created from this train set and passed into the pipeline along with other parameters such as
-	the optimizer type and number of epochs to run for. The result is saved to disk as well as some metrics.
+	The training function takes in a pipeline configuration file, a model directory, a model name, and three TriplesFactory
+	objects for training data, testing data and validation data.
+	The ratio parameter is used to indicate how much noise ratio the dataset in use contains.
 
-	:param triplets_file: str: Specify the file path to the triplets
-	:param pipeline_config_file: str: Specify the configuration file for the pipeline
-	:param model_dir: str: Specify the directory where the model will be saved
+	:param pipeline_config_file: str: Read the pipeline configuration file
+	:param model_dir: str: Specify the directory where the model is saved
 	:param model_name: str: Specify the model to be used
-	:param results_dir: str: Store the metric results
+	:param results_dir: str: Save the results to a file
 	:param plot_dir: str: Save the loss plot
-	:param ratio: float: Determine the ratio of noise to be added to the triplets file
+	:param train_factory: TriplesFactory: Create a training set for the model
+	:param test_factory: TriplesFactory: Create the test set
+	:param val_factory: TriplesFactory: Create a validation set
+	:param ratio: float: Specify the ratio of noise
 	"""
-	train, val, test = generate_noise(triplets_file = triplets_file, noise_ratio = ratio)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
-
 	pipeline_config = read_json(pipeline_config_file)
 
 	logger.info(f"starting pipeline --> {model_name} with ratio {ratio}")
 	logger.info(f"{pipeline_config}")
 
 	result = pipeline(
-			training = train_factory,
-			testing = test_factory,
-			validation = val_factory,
-			model = model_name,
-			model_kwargs = {'embedding_dim': pipeline_config.get('embedding_dim', 50)},
-			optimizer = 'adam',
-			optimizer_kwargs = {'lr': pipeline_config.get('learning_rate', 0.01)},
-			training_kwargs = {'num_epochs': pipeline_config.get('num_epochs', 5),
-			                   'batch_size': pipeline_config.get('batch_size', 64),
-			                   'checkpoint_frequency': 0, },
-			use_tqdm = False,
-			random_seed = 42,
-			)
+			training=train_factory,
+			testing=test_factory,
+			validation=val_factory,
+			model=model_name,
+			model_kwargs={'embedding_dim': pipeline_config.get('embedding_dim', 50)},
+			optimizer='adam',
+			optimizer_kwargs={'lr': pipeline_config.get('learning_rate', 0.01)},
+			training_kwargs={'num_epochs':           pipeline_config.get('num_epochs', 5),
+			                 'batch_size':           pipeline_config.get('batch_size', 64),
+			                 'checkpoint_frequency': 0, },
+			use_tqdm=False,
+			random_seed=42,
+	)
 
 	model_file = os.path.join(model_dir, f"{model_name}_{ratio}.pt")
 
@@ -76,36 +75,42 @@ def training(
 	plot_file = os.path.join(plot_dir, f"{model_name}_{ratio}_loss.svg")
 	plt.savefig(plot_file)
 
-	result.save_model(path = model_file)
+	result.save_model(path=model_file)
 	gc.collect()
 
 
-def hyperparameter_optimization(triplets_file:str, model_name: str, model_dir:str, ratio:float) -> None:
+def hyperparameter_optimization(model_name: str,
+                                model_dir: str,
+                                train_factory: TriplesFactory,
+                                test_factory: TriplesFactory,
+                                val_factory: TriplesFactory,
+                                ratio: float) -> None:
 	"""
-	The hyperparameter_optimization function takes in a triplets file, model name, model directory and ratio.
-	It then generates noise for the train, val and test sets using the generate_noise function. It then gets
-	the training factory, validation factory and testing factory from get_train_val_test_factory function.
-	The hpo pipeline is run with 15 trials on these factories to optimize hyperparameters for each of them.
-	The results are saved to a directory.
+	The hyperparameter_optimization function takes in a model name, a directory to save the results to, and three
+	TriplesFactory objects for training, testing and validation.
+	It then runs an HPO pipeline on these data. The number of trials is set at 15.
 
-	:param triplets_file:str: Specify the file containing the triplets
-	:param model_name: str: Specify the model to be used for training
+	:param model_name: str: Specify the model to be used in the pipeline
 	:param model_dir:str: Specify the directory where the model will be saved
-	:param ratio:float: Specify the noise ratio for the triplets
+	:param train_factory: TriplesFactory: Create the training set
+	:param test_factory: TriplesFactory: Create a test set
+	:param val_factory: TriplesFactory: Create a validation set
+	:param ratio:float: Determine the ratio of noise in the dataset
+	:return: A directory of the model's results
+	:doc-author: Trelent
 	"""
-	train, val, test = generate_noise(triplets_file = triplets_file, noise_ratio = ratio)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
 
-	logger.info(f"starting optimizer pipeline; Model: {model_name}; Ratio: {ratio}")
+	logger.info(f"starting optimizer pipeline - {model_name} with ratio {ratio}")
 
 	hpo_results = hpo_pipeline(
-			training = train_factory, testing = test_factory, validation = val_factory, model = model_name,
-			n_trials = 15, )
+			training=train_factory, testing=test_factory, validation=val_factory, model=model_name,
+			n_trials=15, )
 
 	logger.info(f"model {model_name} training complete")
 
-	model_file = os.path.join(model_dir, f"hyper/{model_name}_{ratio}")
-	logger.info(f"saving {model_name} to {model_file}")
+	model_dir_ratio = model_dir + f"/{ratio}"
+	logger.info(f"saving {model_name} to {model_dir_ratio}")
 
-	hpo_results.save_to_directory(model_dir)
+	Path(model_dir_ratio).mkdir(exist_ok=True, parents=True)
+	hpo_results.save_to_directory(model_dir_ratio)
 	gc.collect()
