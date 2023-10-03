@@ -13,14 +13,10 @@ results_dir = os.path.join(base_dir, "results")
 # ==================== Files ==================== #
 original_dataset_file = os.path.join(dataset_dir, "original_dataset.csv")
 triplets_file = os.path.join(dataset_dir, "triplets_file.tsv")
-
-pipeline_config_file = os.path.join(config_dir, "pipeline_config.json")
-
 # ==================== Models Names ==================== #
 valid_kge_models = [
 	"TransE",
 	"DistMult",
-	"TransH",
 	"ComplEx",
 	"HolE",
 	"ConvE",
@@ -28,6 +24,7 @@ valid_kge_models = [
 	"PairRE",
 	"AutoSF",
 	"BoxE",
+	"TransH"
 ]
 
 # ==================== Create Directories ==================== #

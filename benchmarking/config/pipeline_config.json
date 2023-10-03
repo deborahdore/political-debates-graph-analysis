@@ -1,6 +1,0 @@
-{
-  "embedding_dim": 100,
-  "learning_rate": 0.008,
-  "num_epochs": 20,
-  "batch_size": 32
-}

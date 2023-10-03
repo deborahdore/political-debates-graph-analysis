@@ -4,7 +4,7 @@ import sys
 import torch
 from loguru import logger
 
-from config.config import (model_dir, original_dataset_file, pipeline_config_file, plot_dir,
+from config.config import (model_dir, original_dataset_file, plot_dir,
                            results_dir, triplets_file, valid_kge_models)
 from training import hyperparameter_optimization, training
 from utils.dataset_utils import generate_noise, generate_triplets, get_train_val_test_factory
@@ -20,7 +20,6 @@ def parse_command_line():
 		opt = ast.literal_eval(sys.argv[sys.argv.index("--optimization") + 1])
 	if "--noise" in sys.argv:
 		n = ast.literal_eval(sys.argv[sys.argv.index("--noise") + 1])
-
 	return gd, opt, n
 
 
@@ -45,12 +44,11 @@ if __name__ == '__main__':
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
 
 	if not optimization:
-		logger.info("basic training")
+		logger.info("basic training with best pipeline config")
 
 		for model in valid_kge_models:
 			torch.cuda.empty_cache()
 			training(
-					pipeline_config_file=pipeline_config_file,
 					model_dir=model_dir.format(model=model),
 					model_name=model,
 					results_dir=results_dir,
@@ -63,12 +61,15 @@ if __name__ == '__main__':
 	else:
 		logger.info("hyperparameter tuning")
 		for model in valid_kge_models:
-			torch.cuda.empty_cache()
-			hyperparameter_optimization(model_name=model,
-			                            model_dir=model_dir.format(model=model),
-			                            train_factory=train_factory,
-			                            test_factory=test_factory,
-			                            val_factory=val_factory,
-			                            ratio=noise)
+			try:
+				torch.cuda.empty_cache()
+				hyperparameter_optimization(model_name=model,
+				                            model_dir=model_dir.format(model=model),
+			                                train_factory=train_factory,
+			                                test_factory=test_factory,
+			                                val_factory=val_factory,
+			                                ratio=noise)
+			finally:
+				continue
 
 	logger.info("end")
