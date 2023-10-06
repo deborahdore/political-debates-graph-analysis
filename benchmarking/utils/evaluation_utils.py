@@ -29,7 +29,7 @@ def corrupt_tail(dataset: pd.DataFrame, nodes: pd.Series):
 	return corrupted_dataset_head
 
 
-def exchange_head(dataset: pd.DataFrame, nodes: pd.Series):
+def corrupt_heads(dataset: pd.DataFrame, nodes: pd.Series):
 	final_triples = []
 	for idx, (head, relation, tail) in dataset.iterrows():
 		for new_head in nodes:
@@ -41,7 +41,7 @@ def exchange_head(dataset: pd.DataFrame, nodes: pd.Series):
 	return link_prediction_head_df
 
 
-def exchange_tail(dataset: pd.DataFrame, nodes: pd.Series):
+def corrupt_tails(dataset: pd.DataFrame, nodes: pd.Series):
 	final_triples = []
 	for idx, (head, relation, tail) in dataset.iterrows():
 		for new_tail in nodes:

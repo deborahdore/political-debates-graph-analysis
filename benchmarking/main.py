@@ -4,8 +4,8 @@ import sys
 import torch
 from loguru import logger
 
-from config.config import (model_dir, original_dataset_file, plot_dir, triplets_file, valid_kge_models)
-from evaluation import link_prediction_evaluation
+from config.config import (metrics_file, model_dir, original_dataset_file, plot_dir, triplets_file)
+from evaluation import link_deletion_evaluation, link_prediction_evaluation
 from training import hyperparameter_optimization, training
 from utils.dataset_utils import generate_noise, generate_triplets, get_train_val_test_factory
 
@@ -47,19 +47,28 @@ if __name__ == '__main__':
 	if not optimization:
 		logger.info("basic training with best pipeline config")
 
-		for name in valid_kge_models:
+		for name in ['TransE']:
 			torch.cuda.empty_cache()
-			training(model_dir=model_dir.format(model=name),
-					 model_name=name,
-					 plot_dir=plot_dir,
-					 train_factory=train_factory,
-					 test_factory=test_factory,
-					 val_factory=val_factory,
-					 ratio=noise)
+			result = training(model_dir=model_dir.format(model=name),
+							  model_name=name,
+							  plot_dir=plot_dir,
+							  train_factory=train_factory,
+							  test_factory=test_factory,
+							  val_factory=val_factory,
+							  ratio=noise)
 
-			link_prediction_evaluation(model_name=name,
-									   model_dir=model_dir.format(model=name),
-									   triples_file=triplets_file,
+			link_deletion_evaluation(result=result,
+									 model_name=name,
+									 triples_file=triplets_file.format(use="test"),
+									 metrics_file=metrics_file.format(model=name, ratio=noise),
+									 ratio=noise)
+
+			link_prediction_evaluation(result=result,
+									   noisy_train=train_factory,
+									   noisy_val=val_factory,
+									   original_test_file=triplets_file.format(use="test"),
+									   model_name=name,
+									   metrics_file=metrics_file.format(model=name, ratio=noise),
 									   ratio=noise)
 
 	else:

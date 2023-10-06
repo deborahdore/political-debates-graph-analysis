@@ -1,24 +1,30 @@
-import os.path
+import os
 
 import pandas as pd
 from loguru import logger
+from pykeen.evaluation import RankBasedEvaluator
+from pykeen.pipeline import PipelineResult
 from pykeen.predict import predict_triples
+from pykeen.triples import TriplesFactory
 
+from benchmarking.utils.metrics import hits_at_k, mean_rank, mean_reciprocal_rank
 from utils.dataset_utils import get_factory, get_nodes
-from utils.evaluation_utils import exchange_head, exchange_tail
-from utils.metrics import hits_at_k_head, mean_rank_head, mean_reciprocal_rank
-from utils.utils import load, load_model
+from utils.evaluation_utils import corrupt_heads, corrupt_tails
+from utils.utils import load, read_json, save_json
 
 
-def link_prediction_evaluation(model_name: str, model_dir: str, triples_file: str, ratio: float):
+def link_deletion_evaluation(result: PipelineResult,
+							 model_name: str,
+							 triples_file: str,
+							 metrics_file: str,
+							 ratio: float):
 	# load pytorch model
-	model = load_model(os.path.join(model_dir, f"{model_name}_{ratio}.pt"))
+	model = result.model
 
-	original_df_test = load(triples_file.format(use="test"))
+	logger.info(f"evaluating {model_name} of dataset with {ratio} noise on link deletion")
+
+	original_df_test = load(triples_file)
 	original_df_test = pd.DataFrame(original_df_test[1:], columns=original_df_test[0])
-
-	original_df_all = load(triples_file.format(use="all"))
-	original_df_all = pd.DataFrame(original_df_all[1:], columns=original_df_all[0])
 
 	hits_at_1_head = 0
 	hits_at_3_head = 0
@@ -34,14 +40,14 @@ def link_prediction_evaluation(model_name: str, model_dir: str, triples_file: st
 	mr_tail = 0
 	mrr_tail = 0
 
-	nodes = get_nodes(original_df_all)
+	nodes = get_nodes(original_df_test)
 
 	for idx, (h, r, t) in original_df_test.iterrows():
 		triple = pd.DataFrame([[h, r, t]], columns=original_df_test.columns)
 
 		# for every triple (h, r, t) create a new triple (h', r, t) where h' correspond to every node in the dataset
-		head_fake = exchange_head(triple, nodes)
-		tail_fake = exchange_tail(triple, nodes)
+		head_fake = corrupt_heads(triple, nodes)
+		tail_fake = corrupt_tails(triple, nodes)
 
 		# create triples factory
 		head_fake_factory = get_factory(head_fake)
@@ -54,42 +60,81 @@ def link_prediction_evaluation(model_name: str, model_dir: str, triples_file: st
 		tail_scores = predict_triples(model=model, triples=tail_fake_factory.mapped_triples, mode=None).process(
 			tail_fake_factory).df.sort_values(by='score', ascending=False)
 
-		hits_at_1_head += hits_at_k_head(true_entities=triple, predicted_entities=head_scores, k=1)
-		hits_at_3_head += hits_at_k_head(true_entities=triple, predicted_entities=head_scores, k=3)
-		hits_at_5_head += hits_at_k_head(true_entities=triple, predicted_entities=head_scores, k=5)
-		hits_at_10_head += hits_at_k_head(true_entities=triple, predicted_entities=head_scores, k=10)
-		mr_head += mean_rank_head(true_entities=triple, predicted_entities=head_scores)
-		mrr_head += mean_reciprocal_rank(true_entities=triple, predicted_entities=head_scores)
+		hits_at_1_head += hits_at_k(predicted_entities=head_scores, true_entities=original_df_test, k=1)
+		hits_at_3_head += hits_at_k(predicted_entities=head_scores, true_entities=original_df_test, k=3)
+		hits_at_5_head += hits_at_k(predicted_entities=head_scores, true_entities=original_df_test, k=5)
+		hits_at_10_head += hits_at_k(predicted_entities=head_scores, true_entities=original_df_test, k=10)
+		mr_head += mean_rank(predicted_entities=head_scores, true_entities=original_df_test)
+		mrr_head += mean_reciprocal_rank(predicted_entities=head_scores, true_entities=original_df_test)
 
-		hits_at_1_tail += hits_at_k_head(true_entities=triple, predicted_entities=tail_scores, k=1)
-		hits_at_3_tail += hits_at_k_head(true_entities=triple, predicted_entities=tail_scores, k=3)
-		hits_at_5_tail += hits_at_k_head(true_entities=triple, predicted_entities=tail_scores, k=5)
-		hits_at_10_tail += hits_at_k_head(true_entities=triple, predicted_entities=tail_scores, k=10)
-		mr_tail += mean_rank_head(true_entities=triple, predicted_entities=tail_scores)
-		mrr_tail += mean_reciprocal_rank(true_entities=triple, predicted_entities=tail_scores)
+		hits_at_1_tail += hits_at_k(predicted_entities=tail_scores, true_entities=original_df_test, k=1)
+		hits_at_3_tail += hits_at_k(predicted_entities=tail_scores, true_entities=original_df_test, k=3)
+		hits_at_5_tail += hits_at_k(predicted_entities=tail_scores, true_entities=original_df_test, k=5)
+		hits_at_10_tail += hits_at_k(predicted_entities=tail_scores, true_entities=original_df_test, k=10)
+		mr_tail += mean_rank(predicted_entities=tail_scores, true_entities=original_df_test)
+		mrr_tail += mean_reciprocal_rank(predicted_entities=tail_scores, true_entities=original_df_test)
 
-	hits_at_1_head = hits_at_1_head / len(original_df_test)
-	hits_at_3_head = hits_at_3_head / len(original_df_test)
-	hits_at_5_head = hits_at_5_head / len(original_df_test)
-	hits_at_10_head = hits_at_10_head / len(original_df_test)
-	mr_head = mr_head / len(original_df_test)
-	mrr_head = mrr_head / len(original_df_test)
+		results_eval = {
+			"head": {
+				"hits_at_1" : hits_at_1_head / len(original_df_test),
+				"hits_at_3" : hits_at_3_head / len(original_df_test),
+				"hits_at_5" : hits_at_5_head / len(original_df_test),
+				"hits_at_10": hits_at_10_head / len(original_df_test),
+				"mr"        : mr_head / len(original_df_test),
+				"mrr"       : mrr_head / len(original_df_test)},
+			"tail": {
+				"hits_at_1" : hits_at_1_tail / len(original_df_test),
+				"hits_at_3" : hits_at_3_tail / len(original_df_test),
+				"hits_at_5" : hits_at_5_tail / len(original_df_test),
+				"hits_at_10": hits_at_10_tail / len(original_df_test),
+				"mr"        : mr_tail / len(original_df_test),
+				"mrr"       : mrr_tail / len(original_df_test)}}
 
-	hits_at_1_tail = hits_at_1_tail / len(original_df_test)
-	hits_at_3_tail = hits_at_3_tail / len(original_df_test)
-	hits_at_5_tail = hits_at_5_tail / len(original_df_test)
-	hits_at_10_tail = hits_at_10_tail / len(original_df_test)
-	mr_tail = mr_tail / len(original_df_test)
-	mrr_tail = mrr_tail / len(original_df_test)
+		# Check if the JSON file exists
+		if os.path.isfile(metrics_file):
+			existing_results = read_json(metrics_file)
+			existing_results.update({"link deletion": results_eval})
+			save_json(existing_results, metrics_file)
+		else:
+			save_json({"link deletion": results_eval}, metrics_file)
 
-	# TODO to save
-
-	logger.info("evaluation completed")
-
-
-def link_deletion_evaluation(model_name: str, model_dir: str, triples_file: str, ratio: float):
-	pass
+		logger.info(f"Evaluating model {model_name} complete")
 
 
-def triple_evaluation(model_name: str, model_dir: str, triples_file: str, ratio: float):
+def link_prediction_evaluation(result: PipelineResult,
+							   noisy_train: TriplesFactory,
+							   noisy_val: TriplesFactory,
+							   original_test_file: str,
+							   model_name: str,
+							   metrics_file: str,
+							   ratio: float):
+	logger.info(f"evaluating {model_name} of dataset with {ratio} noise on link prediction")
+
+	original_test = load(original_test_file)
+	original_test_df = pd.DataFrame(original_test[1:], columns=original_test[0])
+	original_test_df_factory = get_factory(original_test_df)
+
+	evaluator = RankBasedEvaluator(metrics=["hits_at_k", "mr", "mrr"],
+								   metrics_kwargs=[{'k': k} if metric == "hits_at_k" else {} for metric, k in
+												   zip(["hits_at_k", "mr", "mrr"], (1, 3, 5, 10))])
+
+	results_eval = evaluator.evaluate(model=result.model,
+									  mapped_triples=original_test_df_factory.mapped_triples,
+									  additional_filter_triples=[noisy_train.mapped_triples, noisy_val.mapped_triples],
+									  batch_size=result.configuration.get('batch_size'),
+									  use_tqdm=True,
+									  slice_size=None).to_dict()
+
+	# Check if the JSON file exists
+	if os.path.isfile(metrics_file):
+		existing_results = read_json(metrics_file)
+		existing_results.update({"link prediction": results_eval})
+		save_json(existing_results, metrics_file)
+	else:
+		save_json({"link prediction": results_eval}, metrics_file)
+
+	logger.info(f"Evaluating model {model_name} complete")
+
+
+def triple_classification(result: PipelineResult, model_name: str, triples_file: str, metrics_file: str, ratio: float):
 	pass

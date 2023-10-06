@@ -59,7 +59,7 @@ def read_json(json_file_name: str):
 	return data
 
 
-def write_json(json_obj: json, json_file_name: str):
+def save_json(json_obj: json, json_file_name: str):
 	"""
 	The write_json function takes a json object and writes it to a file.
 

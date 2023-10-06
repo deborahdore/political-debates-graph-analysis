@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def hits_at_k_head(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame, k: int = 1):
+def hits_at_k(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame, k: int = 1):
 	hits_count = 0
 	for idx, (head, rel, tail) in true_entities.iterrows():
 		if [head, rel, tail] in predicted_entities[:k][['head_label', 'relation_label', 'tail_label']].values:
@@ -10,7 +10,7 @@ def hits_at_k_head(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame
 	return hits_count
 
 
-def mean_rank_head(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame):
+def mean_rank(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame):
 	total_rank = 0
 
 	for idx, (head, rel, tail) in true_entities.iterrows():

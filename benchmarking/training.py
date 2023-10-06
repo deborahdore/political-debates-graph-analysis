@@ -53,6 +53,8 @@ def training(model_dir: str,
 	plt.savefig(plot_file)
 	gc.collect()
 
+	return result
+
 
 def hyperparameter_optimization(model_name: str,
 								model_dir: str,
@@ -66,8 +68,10 @@ def hyperparameter_optimization(model_name: str,
 							   testing=test_factory,
 							   validation=val_factory,
 							   model=model_name,
-							   n_trials=15,
-							   evaluator="RankBasedEvaluator", )
+							   n_trials=10,
+							   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
+														   batch_size=dict(type=int, low=64, high=256, q=64), ),
+							   evaluator="RankBasedEvaluator")
 
 	logger.info(f"model {model_name} training complete")
 
