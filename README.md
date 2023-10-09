@@ -15,9 +15,7 @@ attributes of constructed graphs to enhance the automated classification of argu
 ## EXPLORATION DATA ANALYSIS
 
 All the code for the exploration data analysis of the dataset can be found in the corresponding folder:
-`visualization/graph_visualization.ipynb` - <a target="_blank" href="https://colab.research.google.com/github/deborahdore/political-debates-graph-analysis/blob/main/visualization/graph_visualization.ipynb">
-<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
-</a>
+`visualization/graph_visualization.ipynb`
 
 | **Statistics**             | **num** | 
 |:---------------------------|:-------:|
@@ -30,6 +28,10 @@ All the code for the exploration data analysis of the dataset can be found in th
 | Support Nodes Relations    |  21689  |   
 | Attack Nodes Relations     |  3835   |
 | Equivalent Nodes Relations |   706   |
+
+<a target="_blank" href="https://colab.research.google.com/github/deborahdore/political-debates-graph-analysis/blob/main/visualization/graph_visualization.ipynb">
+<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 _Example graph of debate between Gore and Kemp_:
 <img src="visualization/imgs/09-10-1996_debate_graph.svg">
