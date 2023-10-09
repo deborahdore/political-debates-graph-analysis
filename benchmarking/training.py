@@ -82,10 +82,6 @@ def hyperparameter_optimization(model_name: str,
 							   metric="both.realistic.inverse_harmonic_mean_rank",
 							   stopper=None,
 							   evaluator="RankBasedEvaluator",
-							   evaluation_kwargs={
-								   "use_tqdm"                 : True,
-								   "additional_filter_triples": [train_factory.mapped_triples,
-																 val_factory.mapped_triples], },
 							   filter_validation_when_testing=True, )
 
 	logger.info(f"model {model_name} training complete")
