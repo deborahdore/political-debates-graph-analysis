@@ -10,12 +10,13 @@ def hits_at_k(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame, k: 
 	return hits_count
 
 
-def mean_rank(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame):
+def mean_rank(predicted: pd.DataFrame, true_entities: pd.DataFrame):
 	total_rank = 0
 
 	for idx, (head, rel, tail) in true_entities.iterrows():
 		# get index
-		rank = predicted_entities.tolist().index([head, rel, tail]) + 1
+		rank = predicted.index[(predicted['head_label'] == head) & (predicted['relation_label'] == rel) & (
+				predicted['tail_label'] == tail)].tolist()[0] + 1
 		total_rank += rank
 
 	return total_rank

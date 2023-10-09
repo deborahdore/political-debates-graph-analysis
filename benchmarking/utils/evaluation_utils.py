@@ -2,6 +2,9 @@ import random
 
 import pandas as pd
 
+from benchmarking.utils.dataset_utils import generate_noise, get_factory
+from benchmarking.utils.utils import load
+
 
 def corrupt_head(dataset: pd.DataFrame, nodes: pd.Series):
 	final_triples = []
@@ -51,3 +54,14 @@ def corrupt_tails(dataset: pd.DataFrame, nodes: pd.Series):
 	link_prediction_tail_df = pd.concat([dataset, link_prediction_tail_df], axis=0)
 	link_prediction_tail_df = link_prediction_tail_df.dropna().drop_duplicates().reset_index(drop=True)
 	return link_prediction_tail_df
+
+
+def load_and_prepare_for_triple_classification(file_name: str, use: str, noisy: bool = False):
+	if not noisy:
+		data = load(file_name.format(use=use))
+		data_df = pd.DataFrame(data[1:], columns=data[0])
+	else:
+		data_df = generate_noise(file_name, noise_ratio=1, use=use)
+
+	factory = get_factory(data_df)
+	return data_df, factory

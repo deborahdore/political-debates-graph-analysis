@@ -48,16 +48,15 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	save([columns] + test.values.tolist(), triples_file.format(use="test"))
 
 
-def generate_noise(triplets_file: str, noise_ratio: float):
-	train = __generate_noise(triplets_file.format(use="train"), noise_ratio=noise_ratio)
-	val = __generate_noise(triplets_file.format(use="val"), noise_ratio=noise_ratio)
-	test = __generate_noise(triplets_file.format(use="test"), noise_ratio=noise_ratio)
-
-	return train, val, test
-
-
-def generate_noise_for_triples_classification(triplets_file: str, noise_ratio: float = 0.5):
-	return __generate_noise(triplets_file.format(use="test"), noise_ratio=noise_ratio)
+def generate_noise(triplets_file: str, noise_ratio: float, use: str = None):
+	if use is None:
+		train = __generate_noise(triplets_file.format(use="train"), noise_ratio=noise_ratio)
+		val = __generate_noise(triplets_file.format(use="val"), noise_ratio=noise_ratio)
+		test = __generate_noise(triplets_file.format(use="test"), noise_ratio=noise_ratio)
+		return train, val, test
+	else:
+		data = __generate_noise(triplets_file.format(use=use), noise_ratio=noise_ratio)
+		return data
 
 
 def __generate_noise(triplets_file: str, noise_ratio: float):
