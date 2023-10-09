@@ -56,6 +56,10 @@ def generate_noise(triplets_file: str, noise_ratio: float):
 	return train, val, test
 
 
+def generate_noise_for_triples_classification(triplets_file: str, noise_ratio: float = 0.5):
+	return __generate_noise(triplets_file.format(use="test"), noise_ratio=noise_ratio)
+
+
 def __generate_noise(triplets_file: str, noise_ratio: float):
 	logger.info(f"generating dataset with {noise_ratio} noise")
 	logger.info(f"source file: {triplets_file}")

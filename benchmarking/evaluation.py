@@ -7,8 +7,8 @@ from pykeen.pipeline import PipelineResult
 from pykeen.predict import predict_triples
 from pykeen.triples import TriplesFactory
 
-from benchmarking.utils.metrics import hits_at_k, mean_rank, mean_reciprocal_rank
-from utils.dataset_utils import get_factory, get_nodes
+from utils.metrics import hits_at_k, mean_rank, mean_reciprocal_rank
+from utils.dataset_utils import generate_noise_for_triples_classification, get_factory, get_nodes
 from utils.evaluation_utils import corrupt_heads, corrupt_tails
 from utils.utils import load, read_json, save_json
 
@@ -137,4 +137,16 @@ def link_prediction_evaluation(result: PipelineResult,
 
 
 def triple_classification(result: PipelineResult, model_name: str, triples_file: str, metrics_file: str, ratio: float):
-	pass
+	# load model
+	model = result.model
+
+	original_test = load(triples_file)
+	original_test_df = pd.DataFrame(original_test[1:], columns=original_test[0])
+
+	# generate a dataset half good and half noisy
+	noisy_test = generate_noise_for_triples_classification(triples_file)
+	noisy_test_factory = get_factory(generate_noise_for_triples_classification(triples_file))
+
+	predict_triples(model=model,
+					triples=noisy_test_factory.mapped_triples,
+					mode=None).process(noisy_test).df.sort_values(by='score', ascending=False)

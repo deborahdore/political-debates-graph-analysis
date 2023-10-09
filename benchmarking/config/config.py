@@ -3,7 +3,7 @@ from pathlib import Path
 
 # ======================== utils ======================== #
 valid_kge_models = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "RotatE", "PairRE", "AutoSF", "BoxE", "TransH"]
-noise = [0.5, 0.1, 0.15, 0.2, 0.3, 1]
+noise = [0, 0.05, 0.1, 0.2, 0.3, 1]
 link_metrics = ['mr', 'mrr', 'hits_at_1', 'hits_at_3', 'hits_at_5', 'hits_at_10']
 triple_metrics = ['f1_macro', 'f1_neg', 'f1_pos', 'norm_dist', 'z_stat']
 strategies1 = ['head', 'tail', 'both']
