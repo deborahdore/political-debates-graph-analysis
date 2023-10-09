@@ -13,7 +13,7 @@ Previously, the classification of argument relations, including support, attack,
 deep learning techniques. This project endeavors to explore an innovative approach by considering the structural
 attributes of constructed graphs to enhance the automated classification of argument relations.
 
-## EXPLORATION DATA ANALYSIS - 
+## EXPLORATION DATA ANALYSIS 
 All the code for the exploration data analysis of the dataset can be found in the corresponding folder:
 `visualization/graph_visualization.ipynb` 
 
@@ -21,23 +21,22 @@ All the code for the exploration data analysis of the dataset can be found in th
 <a target="_blank" href="https://colab.research.google.com/github/deborahdore/political-debates-graph-analysis/blob/main/visualization/graph_visualization.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
-<div style="text-align: center;">
 
-| **Statistics**       | **num** | 
-|:---------------------|:-------:|
-| Debates              |   44    |
-| Total speakers       |   64    |
-| Edges                |  26230  |
-| Nodes                |  38667  |
-| Claim node           |  25078  |
-| Premise node         |  13589  |
-| Support Relations    |  21689  |   
-| Attack Relations     |  3835   |
-| Equivalent Relations |   706   |
+| **Statistics**             | **num** | 
+|:---------------------------|:-------:|
+| Debates                    |   44    |
+| Total speakers             |   64    |
+| Edges                      |  26230  |
+| Nodes                      |  38667  |
+| Claim node                 |  25078  |
+| Premise node               |  13589  |
+| Support Nodes Relations    |  21689  |   
+| Attack Nodes Relations     |  3835   |
+| Equivalent Nodes Relations |   706   |
 
-</div>
 
 <img src="visualization/imgs/09-10-1996_debate_graph.svg">
+Example graph of debate between Gore and Kemp
 
 ## BENCHMARKING
 The dataset was tested against 10 state of the art KGE models using the [PyKEEN](https://github.com/pykeen/pykeen) library
