@@ -26,6 +26,7 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	df = pd.DataFrame(original_dataset[1:], columns=original_dataset[0])[
 		['Dependent', 'D_type', 'Governor', 'G_type', 'RelationType']]
 
+	# create nodes
 	df['subject'] = df.apply(lambda row: str(row['Governor']) + "-" + str(row['G_type']), axis=1)
 	df['object'] = df.apply(lambda row: str(row['Dependent']) + "-" + str(row['D_type']), axis=1)
 
@@ -37,26 +38,22 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	df = df.map(lambda x: x.lower() if isinstance(x, str) else x)
 	df = df.dropna().drop_duplicates().reset_index(drop=True)
 
-	# split
-	train, test = train_test_split(df, test_size=0.2, random_state=42)
-	train, val = train_test_split(train, test_size=0.15, random_state=42)
-
 	columns = df.columns
-	save([columns] + df.values.tolist(), triples_file.format(use="all"))
-	save([columns] + train.values.tolist(), triples_file.format(use="train"))
-	save([columns] + val.values.tolist(), triples_file.format(use="val"))
-	save([columns] + test.values.tolist(), triples_file.format(use="test"))
+	save([columns] + df.values.tolist(), triples_file)
 
 
-def generate_noise(triplets_file: str, noise_ratio: float, use: str = None):
-	if use is None:
-		train = __generate_noise(triplets_file.format(use="train"), noise_ratio=noise_ratio)
-		val = __generate_noise(triplets_file.format(use="val"), noise_ratio=noise_ratio)
-		test = __generate_noise(triplets_file.format(use="test"), noise_ratio=noise_ratio)
-		return train, val, test
-	else:
-		data = __generate_noise(triplets_file.format(use=use), noise_ratio=noise_ratio)
-		return data
+def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [float]):
+	for noise_ratio in valid_noise:
+		df = __generate_noise(triplets_file, noise_ratio=noise_ratio)
+
+		# split
+		train, test = train_test_split(df, test_size=0.2, random_state=42, stratify=df['noisy'])
+		train, val = train_test_split(train, test_size=0.15, random_state=42, stratify=train['noisy'])
+
+		columns = df.columns
+		save([columns] + train.values.tolist(), noisy_triples_file.format(noise=noise_ratio, use="train"))
+		save([columns] + test.values.tolist(), noisy_triples_file.format(noise=noise_ratio, use="test"))
+		save([columns] + val.values.tolist(), noisy_triples_file.format(noise=noise_ratio, use="val"))
 
 
 def __generate_noise(triplets_file: str, noise_ratio: float):
@@ -67,6 +64,7 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	edges_correct = pd.DataFrame(edges_correct[1:], columns=edges_correct[0])
 
 	if noise_ratio == 0.0:
+		edges_correct['noisy'] = 0
 		return edges_correct
 
 	edges_correct_sample = edges_correct.sample(frac=noise_ratio, random_state=42)
@@ -113,7 +111,7 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	edges_correct['noisy'] = 0
 
 	final_df = pd.concat([edges_correct, noisy_df], axis=0)
-	final_df = final_df.sample(frac=1).dropna().drop_duplicates().reset_index(drop=True)
+	final_df = final_df.dropna().drop_duplicates().reset_index(drop=True)
 
 	return final_df
 
@@ -135,6 +133,34 @@ def get_train_val_test_factory(train: pd.DataFrame,
 
 
 def get_factory(dataset: pd.DataFrame, create_inverse_triples: bool = False):
-	factory = TriplesFactory.from_labeled_triples(triples=dataset[['subject', 'predicate', 'object', ]].values,
+	factory = TriplesFactory.from_labeled_triples(triples=dataset[['subject', 'predicate', 'object']].values,
 												  create_inverse_triples=create_inverse_triples)
 	return factory
+
+
+def get_train_val_test_from_dir(noisy_triples_file: str, noise: float, drop_col_noise: bool = True):
+	train = load(noisy_triples_file.format(use="train", noise=noise))
+	train = pd.DataFrame(data=train[1:], columns=train[0])
+
+	val = load(noisy_triples_file.format(use="val", noise=noise))
+	val = pd.DataFrame(data=val[1:], columns=val[0])
+
+	test = load(noisy_triples_file.format(use="test", noise=noise))
+	test = pd.DataFrame(data=test[1:], columns=test[0])
+
+	if drop_col_noise:
+		train = train.drop("noisy", axis=1)
+		val = val.drop("noisy", axis=1)
+		test = test.drop("noisy", axis=1)
+
+	return train, val, test
+
+
+def divide_dataset(df: pd.DataFrame):
+	original = df[df['noisy'] == "0"]
+	original = original.drop('noisy', axis=1)
+
+	noisy = df[df['noisy'] == "1"]
+	noisy = noisy.drop('noisy', axis=1)
+
+	return original, noisy

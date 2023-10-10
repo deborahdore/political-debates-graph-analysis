@@ -62,24 +62,32 @@ on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_
 ### REPRODUCIBILITY
 
 #### Environment
+
 * Python 3.9
 * Nvidia V100 32 Gb
 * [requirements.py](benchmarking/config/requirements.txt)
 
 #### Data Processing Script
+
 `benchmarking/utils/dataset_utils.py`
+
 #### Training/Hyperparameter tuning Script
+
 `benchmarking/training.py`
+
 #### Evaluation Script
+
 `benchmarking/evaluation.py`</br>
 `benchmarking/utils/metrics.py`</br>
 `benchmarking/utils/evaluation_utils.py`
 
 ## ACKNOWLEDGEMENT
+
 This work was supported by the French government, through the UCAJEDI Investments in the Future project managed by the
 National Research Agency (ANR) under reference number ANR-15-IDEX-01. The authors are grateful to the OPAL
 infrastructure and the Université Côte d’Azur’s Center for High-Performance Computing for providing resources and
 support.
 
 ## LICENSE
+
 Our code and data are licensed with a [MIT License](LICENSE).

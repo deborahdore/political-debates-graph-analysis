@@ -6,23 +6,20 @@ import matplotlib.pyplot as plt
 from loguru import logger
 from pykeen.hpo import hpo_pipeline
 from pykeen.pipeline import pipeline
-from pykeen.triples import TriplesFactory
 
+from benchmarking.utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
 from utils.utils import read_json
 
 
-def training(model_dir: str,
-			 model_name: str,
-			 plot_dir: str,
-			 train_factory: TriplesFactory,
-			 test_factory: TriplesFactory,
-			 val_factory: TriplesFactory,
-			 ratio: float):
+def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir: str, ratio: float):
 	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
 	pipeline_config = read_json(pipeline_config)['pipeline']
 
 	logger.info(f"starting pipeline --> {model_name} with ratio {ratio}")
 	logger.info(f"{pipeline_config}")
+
+	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
 
 	result = pipeline(training=train_factory,
 					  testing=test_factory,
@@ -42,6 +39,7 @@ def training(model_dir: str,
 					  use_tqdm=False,
 					  random_seed=42, )
 
+	# todo: change saving directory
 	model_file = os.path.join(model_dir, f"{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")
 	logger.info(f"saving {model_name} to {model_file}")
@@ -56,16 +54,14 @@ def training(model_dir: str,
 	return result
 
 
-def hyperparameter_optimization(model_name: str,
-								model_dir: str,
-								train_factory: TriplesFactory,
-								test_factory: TriplesFactory,
-								val_factory: TriplesFactory,
-								ratio: float):
+def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_file: str, ratio: float):
 	logger.info(f"starting optimizer pipeline - {model_name} with ratio {ratio}")
 
 	# otherwise TransH won't work
 	regularizer = "OrthogonalityRegularizer" if model_name == 'TransH' else None
+
+	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
 
 	hpo_results = hpo_pipeline(training=train_factory,
 							   testing=test_factory,

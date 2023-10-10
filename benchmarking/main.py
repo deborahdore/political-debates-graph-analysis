@@ -5,10 +5,17 @@ import torch
 from loguru import logger
 
 from config import config
-from config.config import (metrics_file, model_dir, original_dataset_file, plot_dir, triplets_file, valid_kge_models)
+from config.config import (metrics_file,
+						   model_dir,
+						   noisy_triples_file,
+						   original_dataset_file,
+						   plot_dir,
+						   triplets_file,
+						   valid_kge_models,
+						   valid_noise_ratio, )
 from evaluation import link_deletion_evaluation, link_prediction_evaluation, triple_classification
 from training import hyperparameter_optimization, training
-from utils.dataset_utils import generate_noise, generate_triplets, get_train_val_test_factory
+from utils.dataset_utils import generate_noise, generate_triplets
 
 
 def parse_command_line():
@@ -40,42 +47,40 @@ if __name__ == '__main__':
 
 	if generate_dataset:
 		generate_triplets(original_dataset_file=original_dataset_file, triples_file=triplets_file)
-
-	train, val, test = generate_noise(triplets_file=triplets_file, noise_ratio=noise)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
+		generate_noise(triplets_file=triplets_file,
+					   noisy_triples_file=noisy_triples_file,
+					   valid_noise=config.valid_noise_ratio)
 
 	if not optimization:
 		logger.info("basic training with best pipeline config")
 
-		for name in ['TransE']:
-			for noise in [0.3]:  # config.noise:
+		for name in valid_kge_models:
+			for noise in valid_noise_ratio:  # config.noise:
 				torch.cuda.empty_cache()
 				result = training(model_dir=model_dir.format(model=name),
 								  model_name=name,
+								  noisy_triples_file=noisy_triples_file,
 								  plot_dir=plot_dir,
-								  train_factory=train_factory,
-								  test_factory=test_factory,
-								  val_factory=val_factory,
 								  ratio=noise)
 
-				link_deletion_evaluation(result=result,
-										 model_name=name,
-										 triples_file=triplets_file.format(use="test"),
-										 metrics_file=metrics_file.format(model=name, ratio=noise),
-										 ratio=noise)
-
 				link_prediction_evaluation(result=result,
-										   noisy_train=train_factory,
-										   noisy_val=val_factory,
-										   original_test_file=triplets_file.format(use="test"),
+										   noisy_triples_file=noisy_triples_file,
 										   model_name=name,
 										   metrics_file=metrics_file.format(model=name, ratio=noise),
-										   ratio=noise)
+										   noise_ratio=noise)
 
 				triple_classification(result=result,
 									  model_name=name,
-									  triples_file=triplets_file,
-									  metrics_file=metrics_file.format(model=name, ratio=noise))
+									  noisy_triples_file=noisy_triples_file,
+									  metrics_file=metrics_file.format(model=name, ratio=noise),
+									  noise_ratio=noise)
+
+				link_deletion_evaluation(result=result,
+										 model_name=name,
+										 noisy_triples_file=noisy_triples_file,
+										 metrics_file=metrics_file.format(model=name, ratio=noise),
+										 noise_ratio=noise)
+
 
 	else:
 		logger.info(f"hyperparameter tuning with {model} - noise {noise}")
@@ -83,9 +88,7 @@ if __name__ == '__main__':
 		torch.cuda.empty_cache()
 		hyperparameter_optimization(model_name=model,
 									model_dir=model_dir.format(model=model),
-									train_factory=train_factory,
-									test_factory=test_factory,
-									val_factory=val_factory,
+									noisy_triples_file=noisy_triples_file,
 									ratio=noise)
 	finally:
 		logger.info(f"Training {model} complete")

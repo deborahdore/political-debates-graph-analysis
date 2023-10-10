@@ -2,41 +2,31 @@ import pandas as pd
 
 
 def hits_at_k(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame, k: int = 1):
-	hits_count = 0
-	for idx, (head, rel, tail) in true_entities.iterrows():
-		if [head, rel, tail] in predicted_entities[:k][['head_label', 'relation_label', 'tail_label']].values:
-			hits_count += 1
-
-	return hits_count
+	if true_entities.values[0].tolist() in predicted_entities[:k][
+		['head_label', 'relation_label', 'tail_label']].values:
+		return 1
+	return 0
 
 
 def mean_rank(predicted: pd.DataFrame, true_entities: pd.DataFrame):
-	total_rank = 0
+	head, relation, tail = true_entities.values[0]
 
-	for idx, (head, rel, tail) in true_entities.iterrows():
-		# get index
-		rank = predicted.index[(predicted['head_label'] == head) & (predicted['relation_label'] == rel) & (
-				predicted['tail_label'] == tail)].tolist()[0] + 1
-		total_rank += rank
+	# get index
+	rank = predicted.index[(predicted['head_label'] == head) & (predicted['relation_label'] == relation) & (
+			predicted['tail_label'] == tail)].tolist()
 
-	return total_rank
+	assert len(rank) == 1
+	return rank[0] + 1
 
 
-def mean_reciprocal_rank(true_entities, predicted_entities):
-	total_rr = 0
-	num_queries = len(true_entities)
+def mean_reciprocal_rank(true_entities: pd.DataFrame, predicted_entities: pd.DataFrame):
+	# real query
+	head, relation, tail = true_entities.values[0]
 
-	for i in range(num_queries):
-		query_true = true_entities[i]
-		query_predicted = predicted_entities[i]
+	# Find the rank of the first correctly ranked item (reciprocal rank)
+	rank = predicted_entities.index[(
+			(predicted_entities['head_label'] == head) & (predicted_entities['relation_label'] == relation) & (
+			predicted_entities['tail_label'] == tail))].tolist()
 
-		# Find the rank of the first correctly ranked item (reciprocal rank)
-		rr = 0
-		for j, entity in enumerate(query_predicted):
-			if entity in query_true:
-				rr = 1 / (j + 1)  # Reciprocal rank formula
-				break
-
-		total_rr += rr
-
-	return total_rr
+	assert len(rank) == 1
+	return 1 / (rank[0] + 1)
