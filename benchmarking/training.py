@@ -7,7 +7,7 @@ from loguru import logger
 from pykeen.hpo import hpo_pipeline
 from pykeen.pipeline import pipeline
 
-from benchmarking.utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
+from utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
 from utils.utils import read_json
 
 
