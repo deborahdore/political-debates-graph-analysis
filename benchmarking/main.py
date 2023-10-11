@@ -55,7 +55,9 @@ if __name__ == '__main__':
 		logger.info("basic training with best pipeline config")
 
 		for name in valid_kge_models:
-			for noise in valid_noise_ratio:  # config.noise:
+			for noise in valid_noise_ratio:
+				if noise == 0.0 or noise == 1:
+					break
 				torch.cuda.empty_cache()
 				result = training(model_dir=model_dir.format(model=name),
 								  model_name=name,
