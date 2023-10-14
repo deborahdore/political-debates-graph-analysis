@@ -40,7 +40,7 @@ _Example graph of debate between Gore and Kemp_:
 
 The dataset was tested against 10 state of the art KGE models using the [PyKEEN](https://github.com/pykeen/pykeen)
 library
-with increasing level of noise (0, 0.05, 0.1, 0.2, 0.3, random) to simulate the noise produced by the annotators on the
+with increasing level of noise (0, 0.1, 0.2, 0.3, random) to simulate the noise produced by the annotators on the
 dataset.
 
 * _TransE_
@@ -56,8 +56,8 @@ dataset.
 
 ### DATASET
 
-Original dataset are available
-on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/EiOstyJcCJBBhLjMnF2DNVIBwc7s0IzaBgDFeoNhSqYU-Q?e=7S1t23)
+Original dataset and datasets without noise are available
+on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Ek_00pPwRgNBrR6HuKIrEyoBwghlx6NSONKM6T21r0Yv2A?e=cIPJ12)
 
 ### REPRODUCIBILITY
 
