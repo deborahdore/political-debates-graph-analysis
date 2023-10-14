@@ -11,8 +11,7 @@ from config.config import (metrics_file,
 						   original_dataset_file,
 						   plot_dir,
 						   triplets_file,
-						   valid_kge_models,
-						   valid_noise_ratio, )
+						   valid_kge_models, )
 from evaluation import link_deletion_evaluation, link_prediction_evaluation, triple_classification
 from training import hyperparameter_optimization, training
 from utils.dataset_utils import generate_noise, generate_triplets
@@ -32,7 +31,9 @@ def parse_command_line():
 	if opt_arg:
 		assert "--model" in sys.argv
 		assert "--noise" in sys.argv
-		noise_arg = ast.literal_eval(sys.argv[sys.argv.index("--noise") + 1])
+		noise_arg = sys.argv[sys.argv.index("--noise") + 1]
+		if noise_arg != 'bert':
+			noise_arg = ast.literal_eval(noise_arg)
 		model_arg = sys.argv[sys.argv.index("--model") + 1]
 
 		return gen_arg, opt_arg, noise_arg, model_arg
@@ -55,34 +56,36 @@ if __name__ == '__main__':
 		logger.info("basic training with best pipeline config")
 
 		for name in valid_kge_models:
-			for noise in valid_noise_ratio:
+			for noise in ['bert']:
 				if noise == 0.0 or noise == 1:
 					break
-				torch.cuda.empty_cache()
-				result = training(model_dir=model_dir.format(model=name),
-								  model_name=name,
-								  noisy_triples_file=noisy_triples_file,
-								  plot_dir=plot_dir,
-								  ratio=noise)
-
-				link_prediction_evaluation(result=result,
-										   noisy_triples_file=noisy_triples_file,
-										   model_name=name,
-										   metrics_file=metrics_file.format(model=name, ratio=noise),
-										   noise_ratio=noise)
-
-				triple_classification(result=result,
+				try:
+					torch.cuda.empty_cache()
+					result = training(model_dir=model_dir.format(model=name),
 									  model_name=name,
 									  noisy_triples_file=noisy_triples_file,
-									  metrics_file=metrics_file.format(model=name, ratio=noise),
-									  noise_ratio=noise)
+									  plot_dir=plot_dir,
+									  ratio=noise)
 
-				link_deletion_evaluation(result=result,
-										 model_name=name,
-										 noisy_triples_file=noisy_triples_file,
-										 metrics_file=metrics_file.format(model=name, ratio=noise),
-										 noise_ratio=noise)
+					link_prediction_evaluation(result=result,
+											   noisy_triples_file=noisy_triples_file,
+											   model_name=name,
+											   metrics_file=metrics_file.format(model=name, ratio=noise),
+											   noise_ratio=noise)
 
+					triple_classification(result=result,
+										  model_name=name,
+										  noisy_triples_file=noisy_triples_file,
+										  metrics_file=metrics_file.format(model=name, ratio=noise),
+										  noise_ratio=noise)
+
+					link_deletion_evaluation(result=result,
+											 model_name=name,
+											 noisy_triples_file=noisy_triples_file,
+											 metrics_file=metrics_file.format(model=name, ratio=noise),
+											 noise_ratio=noise)
+				finally:
+					logger.info(f"{name} evaluation completed")
 
 	else:
 		logger.info(f"hyperparameter tuning with {model} - noise {noise}")

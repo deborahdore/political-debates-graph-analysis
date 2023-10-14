@@ -39,7 +39,6 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 					  use_tqdm=False,
 					  random_seed=42, )
 
-	# todo: change saving directory
 	model_file = os.path.join(model_dir, f"{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")
 	logger.info(f"saving {model_name} to {model_file}")
@@ -57,28 +56,48 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_file: str, ratio: float):
 	logger.info(f"starting optimizer pipeline - {model_name} with ratio {ratio}")
 
-	# otherwise TransH won't work
-	regularizer = "OrthogonalityRegularizer" if model_name == 'TransH' else None
-
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
 
-	hpo_results = hpo_pipeline(training=train_factory,
-							   testing=test_factory,
-							   validation=val_factory,
-							   model=model_name,
-							   n_trials=15,
-							   regularizer=regularizer,
-							   optimizer="Adam",
-							   optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),
-							   training_loop="slcwa",
-							   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
-														   batch_size=dict(type=int, low=64, high=256, q=64), ),
-							   negative_sampler="basic",
-							   metric="both.realistic.inverse_harmonic_mean_rank",
-							   stopper=None,
-							   evaluator="RankBasedEvaluator",
-							   filter_validation_when_testing=True, )
+	if model_name == 'TransH':
+		hpo_results = hpo_pipeline(model=model_name,
+								   training=train_factory,
+								   testing=test_factory,
+								   validation=val_factory,
+								   n_trials=15,
+								   regularizer=None,
+								   optimizer="Adam",
+								   optimizer_kwargs_ranges=dict(lr=dict(type=float,
+																		low=0.0001,
+																		high=0.01,
+																		scale="log"), ),
+								   training_loop="slcwa",
+								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
+															   batch_size=dict(type=int, low=64, high=256, q=64), ),
+								   negative_sampler="basic",
+								   metric="both.realistic.inverse_harmonic_mean_rank",
+								   stopper=None,
+								   evaluator="RankBasedEvaluator",
+								   filter_validation_when_testing=True, )
+	else:
+		hpo_results = hpo_pipeline(model=model_name,
+								   training=train_factory,
+								   testing=test_factory,
+								   validation=val_factory,
+								   n_trials=15,
+								   optimizer="Adam",
+								   optimizer_kwargs_ranges=dict(lr=dict(type=float,
+																		low=0.0001,
+																		high=0.01,
+																		scale="log"), ),
+								   training_loop="slcwa",
+								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
+															   batch_size=dict(type=int, low=64, high=256, q=64), ),
+								   negative_sampler="basic",
+								   metric="both.realistic.inverse_harmonic_mean_rank",
+								   stopper=None,
+								   evaluator="RankBasedEvaluator",
+								   filter_validation_when_testing=True, )
 
 	logger.info(f"model {model_name} training complete")
 
