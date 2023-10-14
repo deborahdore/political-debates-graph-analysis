@@ -34,9 +34,14 @@ def link_deletion_evaluation(result: PipelineResult,
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, noise_ratio, False)
 
 	# get real and noisy
-	train, train_noisy = divide_dataset(train_original)
-	val, val_noisy = divide_dataset(val_original)
-	test, test_noisy = divide_dataset(test_original)
+	if noise_ratio not in [0, 1]:
+		train, _ = divide_dataset(train_original)
+		val, _ = divide_dataset(val_original)
+		test, _ = divide_dataset(test_original)
+	else:
+		train = train_original.drop('noisy', axis=1)
+		val = val_original.drop('noisy', axis=1)
+		test = test_original.drop('noisy', axis=1)
 
 	# get factory
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, False)
@@ -188,28 +193,40 @@ def link_prediction_evaluation(result: PipelineResult,
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, noise_ratio, False)
 
 	# get real and noisy
-	train, train_noisy = divide_dataset(train_original)
-	val, val_noisy = divide_dataset(val_original)
-	test, test_noisy = divide_dataset(test_original)
+	if noise_ratio not in [0, 1]:
+		train, train_noisy = divide_dataset(train_original)
+		val, val_noisy = divide_dataset(val_original)
+		test, test_noisy = divide_dataset(test_original)
+	else:
+		train = train_original.drop('noisy', axis=1)
+		val = val_original.drop('noisy', axis=1)
+		test = test_original.drop('noisy', axis=1)
 
-	# get factory
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, False)
-	train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
-																							val_noisy,
-																							test_noisy,
-																							False)
 
 	evaluator = RankBasedEvaluator(metrics=["hits_at_k", "mr", "mrr"],
 								   metrics_kwargs=[{'k': k} if metric == "hits_at_k" else {} for metric, k in
 												   zip(["hits_at_k", "mr", "mrr"], (1, 3, 5, 10))])
 
-	result_dict = evaluator.evaluate(model=result.model,
-									 mapped_triples=test_factory.mapped_triples,
-									 additional_filter_triples=[test_factory_noisy.mapped_triples,
-																val_factory_noisy.mapped_triples],
-									 batch_size=result.configuration.get('batch_size'),
-									 use_tqdm=True,
-									 slice_size=None).to_dict()
+	# get factory
+	if noise_ratio not in [0, 1]:
+		train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
+																								val_noisy,
+																								test_noisy,
+																								False)
+		result_dict = evaluator.evaluate(model=result.model,
+										 mapped_triples=test_factory.mapped_triples,
+										 additional_filter_triples=[test_factory_noisy.mapped_triples,
+																	val_factory_noisy.mapped_triples],
+										 batch_size=result.configuration.get('batch_size'),
+										 use_tqdm=True,
+										 slice_size=None).to_dict()
+	else:
+		result_dict = evaluator.evaluate(model=result.model,
+										 mapped_triples=test_factory.mapped_triples,
+										 batch_size=result.configuration.get('batch_size'),
+										 use_tqdm=True,
+										 slice_size=None).to_dict()
 
 	results_eval = {}
 
@@ -241,10 +258,7 @@ def triple_classification(result: PipelineResult,
 						  noisy_triples_file: str,
 						  metrics_file: str,
 						  noise_ratio: float):
-	# todo: what to do in this case
-	# no fake/real nodes to test on
-	if noise_ratio == 0 or noise_ratio == 1:
-		return
+	# todo: what to do when there is no fake or real to test on
 
 	# load model
 	model = result.model
@@ -253,16 +267,18 @@ def triple_classification(result: PipelineResult,
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, noise_ratio, False)
 
 	# get real and noisy
-	train, train_noisy = divide_dataset(train_original)
-	val, val_noisy = divide_dataset(val_original)
-	test, test_noisy = divide_dataset(test_original)
+	if noise_ratio not in [0, 1]:
+		train, train_noisy = divide_dataset(train_original)
+		val, val_noisy = divide_dataset(val_original)
+		test, test_noisy = divide_dataset(test_original)
+	else:
+		train = train_original.drop('noisy', axis=1)
+		val = val_original.drop('noisy', axis=1)
+		test = test_original.drop('noisy', axis=1)
 
 	# get factory
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, False)
-	train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
-																							val_noisy,
-																							test_noisy,
-																							False)
+
 	### INFERENCE ON ORIGINAL TESTING
 	real_train_scores = get_scores(model, train_factory)
 	real_train_center = get_center(real_train_scores)
@@ -271,22 +287,34 @@ def triple_classification(result: PipelineResult,
 	real_val_scores = get_scores(model, val_factory)
 	real_val_center = get_center(real_val_scores)
 
-	fake_val_scores = get_scores(model, val_factory_noisy)
-	fake_val_center = get_center(fake_val_scores)
-
 	#### INFERENCE ON TESTING
 	real_test_scores = get_scores(model, test_factory)
 	real_test_center = get_center(real_test_scores)
 
-	fake_test_scores = get_scores(model, test_factory_noisy)
-	fake_test_center = get_center(fake_test_scores)
+	if noise_ratio not in [0, 1]:
+		train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
+																								val_noisy,
+																								test_noisy,
+																								False)
+		fake_val_scores = get_scores(model, val_factory_noisy)
+		fake_val_center = get_center(fake_val_scores)
 
-	threshold = fake_val_center + ((real_val_center - fake_val_center) / 2)
-	logger.info(f"classification threshold: {threshold}")
+		fake_test_scores = get_scores(model, test_factory_noisy)
+		fake_test_center = get_center(fake_test_scores)
 
-	y_true = [1 for _ in real_test_scores] + [0 for _ in fake_test_scores]
-	y_pred = [1 if y >= threshold else 0 for y in real_test_scores] + [1 if y >= threshold else 0 for y in
-																	   fake_test_scores]
+		threshold = fake_val_center + ((real_val_center - fake_val_center) / 2)
+		logger.info(f"classification threshold: {threshold}")
+
+		y_true = [1 for _ in real_test_scores] + [0 for _ in fake_test_scores]
+		y_pred = [1 if y >= threshold else 0 for y in real_test_scores] + [1 if y >= threshold else 0 for y in
+																		   fake_test_scores]
+
+	else:
+		threshold = 0.5
+		logger.info(f"classification threshold: {threshold}")
+
+		y_true = [1 for _ in real_test_scores]
+		y_pred = [1 if y >= threshold else 0 for y in real_test_scores]
 
 	n_round = 4
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
@@ -299,13 +327,23 @@ def triple_classification(result: PipelineResult,
 	# compute norm_distance among the two distribution (greater is better)
 
 	maximum = np.max(real_train_scores)
-	minimum = np.min(fake_test_scores)
-	if real_test_center > fake_test_center:
-		norm_distance = abs(real_test_center - fake_test_center) / abs(maximum - minimum)
-		norm_distance = round(norm_distance, n_round)
+	if noise_ratio not in [0, 1]:
+		minimum = np.min(fake_test_scores)
+		if real_test_center > fake_test_center:
+			norm_distance = abs(real_test_center - fake_test_center) / abs(maximum - minimum)
+			norm_distance = round(norm_distance, n_round)
+		else:
+			norm_distance = float('inf')
+			logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
 	else:
-		norm_distance = float('inf')
-		logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
+		minimum = 0
+		fake_test_center = 0
+		if real_test_center > 0:
+			norm_distance = abs(real_test_center - fake_test_center) / abs(maximum - minimum)
+			norm_distance = round(norm_distance, n_round)
+		else:
+			norm_distance = float('inf')
+			logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
 
 	# Compute Z-test (http://homework.uoregon.edu/pub/class/es202/ztest.html)
 	# Z = (mean_1 - mean_2) / sqrt{ (std1/sqrt(N1))**2 + (std2/sqrt(N2))**2 }

@@ -11,7 +11,8 @@ from config.config import (metrics_file,
 						   original_dataset_file,
 						   plot_dir,
 						   triplets_file,
-						   valid_kge_models, )
+						   valid_kge_models,
+						   valid_noise_ratio, )
 from evaluation import link_deletion_evaluation, link_prediction_evaluation, triple_classification
 from training import hyperparameter_optimization, training
 from utils.dataset_utils import generate_noise, generate_triplets
@@ -56,9 +57,7 @@ if __name__ == '__main__':
 		logger.info("basic training with best pipeline config")
 
 		for name in valid_kge_models:
-			for noise in ['bert']:
-				if noise == 0.0 or noise == 1:
-					break
+			for noise in valid_noise_ratio:
 				try:
 					torch.cuda.empty_cache()
 					result = training(model_dir=model_dir.format(model=name),

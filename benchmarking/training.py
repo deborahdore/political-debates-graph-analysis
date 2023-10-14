@@ -39,7 +39,7 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 					  use_tqdm=False,
 					  random_seed=42, )
 
-	model_file = os.path.join(model_dir, f"{model_name}_{ratio}.pt")
+	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")
 	logger.info(f"saving {model_name} to {model_file}")
 	result.save_model(path=model_file)
