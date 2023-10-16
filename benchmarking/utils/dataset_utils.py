@@ -153,14 +153,4 @@ def get_train_val_test_from_dir(noisy_triples_file: str, noise: float, drop_col_
 		val = val.drop("noisy", axis=1)
 		test = test.drop("noisy", axis=1)
 
-	return train, val, test
-
-
-def divide_dataset(df: pd.DataFrame):
-	original = df[df['noisy'] == "0"]
-	original = original.drop('noisy', axis=1)
-
-	noisy = df[df['noisy'] == "1"]
-	noisy = noisy.drop('noisy', axis=1)
-
-	return original, noisy
+	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)

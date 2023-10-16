@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 import pandas as pd
+import torch
 from loguru import logger
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
@@ -12,7 +13,10 @@ from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
 	InverseHarmonicMeanRank
 from pykeen.pipeline import PipelineResult
 from sklearn import metrics
+from torch.utils.data import DataLoader, SequentialSampler
+from transformers import BertForSequenceClassification
 
+from utils.bert_utils import adjust_dataset_for_bert, get_probabilities_bert, tokenize_and_generate_dataset
 from utils.dataset_utils import get_factory, get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
 from utils.evaluation_utils import get_center, get_scores
 from utils.utils import read_json, save_json
@@ -251,7 +255,6 @@ def triple_classification(result: PipelineResult,
 																							test_noisy,
 																							False)
 
-
 	### INFERENCE ON ORIGINAL TESTING
 	real_train_scores = get_scores(model, train_factory)
 	real_train_center = get_center(real_train_scores)
@@ -300,6 +303,279 @@ def triple_classification(result: PipelineResult,
 	fake_scores_error = (fake_test_scores.std() / (np.sqrt(fake_test_scores.shape[0]))) ** 2
 
 	Z_statistic = round((real_test_scores.mean() - fake_test_scores.mean()) / (
+		np.sqrt(real_scores_error + fake_scores_error)), 2)
+
+	results_eval = {
+		"accuracy"     : accuracy,
+		"f1_macro"     : f1_macro,
+		"f1_pos"       : f1_pos,
+		"f1_neg"       : f1_neg,
+		"precision"    : precision,
+		"recall"       : recall,
+		"Z_statistic"  : Z_statistic,
+		"norm_distance": norm_distance}
+
+	logger.info(results_eval)
+
+	# Check if the JSON file exists
+	if os.path.exists(metrics_file):
+		existing_results = read_json(metrics_file)
+		existing_results.update({"triple classification": results_eval})
+		save_json(existing_results, metrics_file)
+	else:
+		save_json({"triple classification": results_eval}, metrics_file)
+
+	logger.info(f"Evaluating model {model_name} complete")
+
+
+def link_evaluation_bert(model: BertForSequenceClassification,
+						 model_dir: str,
+						 model_name: str,
+						 noisy_triples_file: str,
+						 metrics_file: str,
+						 noise_ratio: float,
+						 link_prediction: bool = True):
+	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+	logger.info(f"evaluating bert with dataset with {noise_ratio} noise on link prediction")
+
+	# load dataset
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
+	test = pd.concat([val_original, test_original], axis=0)
+
+	nodes = get_nodes(test)
+
+	test = adjust_dataset_for_bert(test)
+	dataset_test = tokenize_and_generate_dataset(test)
+	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=16)
+	score_test = get_probabilities_bert(model, dataloader_test, device)
+
+	ranks_head = []
+	ranks_tail = []
+	ranks = []
+
+	# generate false connections
+	for (head, rel, tail) in test.iterrows():
+		fake_head_triple = None
+		fake_tail_triple = None
+		while True:
+			new_h = random.choice(nodes)
+			while new_h == head:
+				new_h = random.choice(nodes)
+			fake_head_triple = [new_h, rel, tail]
+			if fake_head_triple not in val_original.values.tolist():
+				break
+		while True:
+			new_t = random.choice(nodes)
+			fake_tail_triple = [head, rel, new_t]
+			if fake_tail_triple not in val_original.values.tolist():
+				break
+
+		fake_head_triples = pd.DataFrame(fake_head_triple, columns=['subject', 'predicate', 'object'])
+		fake_tail_triples = pd.DataFrame(fake_tail_triple, columns=['subject', 'predicate', 'object'])
+
+		# create datasets
+		fake_tail_triples = adjust_dataset_for_bert(fake_tail_triples)
+		fake_head_triples = adjust_dataset_for_bert(fake_head_triples)
+
+		# Load the BERT tokenizer
+		dataset_fake_head = tokenize_and_generate_dataset(fake_head_triples)
+		dataset_fake_tail = tokenize_and_generate_dataset(fake_tail_triples)
+
+		dataloader_fake_head = DataLoader(dataset_fake_head,
+										  sampler=SequentialSampler(dataset_fake_head),
+										  batch_size=16)
+		dataloader_fake_tail = DataLoader(dataset_fake_tail,
+										  sampler=SequentialSampler(dataset_fake_tail),
+										  batch_size=16)
+
+		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, device)
+		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, device)
+
+		if link_prediction:
+			rank_head = np.searchsorted(a=score_fake_head, v=score_test) + 1
+			rank_tail = np.searchsorted(a=score_fake_tail, v=score_test) + 1
+		else:
+			rank_head = np.searchsorted(a=score_test, v=score_fake_head) + 1
+			rank_tail = np.searchsorted(a=score_test, v=score_fake_tail) + 1
+
+		rank = int((rank_head, rank_tail) / 2.0)
+		ranks_head.append(rank_head)
+		ranks_tail.append(rank_tail)
+		ranks.append(rank)
+
+	# Metrics
+	mr_calculator = ArithmeticMeanRank()
+	adjusted_mr_calculator = AdjustedArithmeticMeanRank()
+	mrr_calculator = InverseHarmonicMeanRank()
+	adjusted_mrr_calculator = AdjustedInverseHarmonicMeanRank()
+	hits_at_1_calculator = HitsAtK(k=1)
+	hits_at_3_calculator = HitsAtK(k=3)
+	hits_at_5_calculator = HitsAtK(k=5)
+	hits_at_10_calculator = HitsAtK(k=10)
+
+	test_size = len(test)
+	n_round = 4
+
+	ranks_head_array = np.array(ranks_head, dtype=int)
+	ranks_tail_array = np.array(ranks_tail, dtype=int)
+
+	# MR
+	mr_head = round(float(mr_calculator(ranks_head_array, test_size)), n_round)
+	mr_tail = round(float(mr_calculator(ranks_tail_array, test_size)), n_round)
+	mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+
+	# ADJUSTED MR
+	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
+	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
+	adjusted_mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+
+	# MRR
+	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
+	mrr_tail = round(float(mrr_calculator(ranks_tail_array, test_size)), n_round)
+	mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+
+	# ADJUSTED MRR
+	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
+	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
+	adjusted_mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+
+	# HITS AT 1
+	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
+	hits_at_1_tail = round(float(hits_at_1_calculator(ranks_tail_array)), n_round)
+	hits_at_1 = round(float((hits_at_1_head + hits_at_1_tail) / 2.0), n_round)
+
+	# HITS AT 3
+	hits_at_3_head = round(float(hits_at_3_calculator(ranks_head_array)), n_round)
+	hits_at_3_tail = round(float(hits_at_3_calculator(ranks_tail_array)), n_round)
+	hits_at_3 = round(float((hits_at_3_head + hits_at_3_tail) / 2.0), n_round)
+
+	# HITS AT 5
+	hits_at_5_head = round(float(hits_at_5_calculator(ranks_head_array)), n_round)
+	hits_at_5_tail = round(float(hits_at_5_calculator(ranks_tail_array)), n_round)
+	hits_at_5 = round(float((hits_at_5_head + hits_at_5_tail) / 2.0), n_round)
+
+	# HITS AT 10
+	hits_at_10_head = round(float(hits_at_10_calculator(ranks_head_array)), n_round)
+	hits_at_10_tail = round(float(hits_at_10_calculator(ranks_tail_array)), n_round)
+	hits_at_10 = round(float((hits_at_10_head + hits_at_10_tail) / 2.0), n_round)
+
+	results_eval = {
+		'head': {
+			'hits_at_1'   : hits_at_1_head,
+			'hits_at_3'   : hits_at_3_head,
+			'hits_at_5'   : hits_at_5_head,
+			'hits_at_10'  : hits_at_10_head,
+			'mr'          : mr_head,
+			'adjusted_mr' : adjusted_mr_head,
+			'mrr'         : mrr_head,
+			'adjusted_mrr': adjusted_mrr_head},
+		'both': {
+			'hits_at_1'   : hits_at_1,
+			'hits_at_3'   : hits_at_3,
+			'hits_at_5'   : hits_at_5,
+			'hits_at_10'  : hits_at_10,
+			'mr'          : mr,
+			'adjusted_mr' : adjusted_mr,
+			'mrr'         : mrr,
+			'adjusted_mrr': adjusted_mrr},
+		'tail': {
+			'hits_at_1'   : hits_at_1_tail,
+			'hits_at_3'   : hits_at_3_tail,
+			'hits_at_5'   : hits_at_5_tail,
+			'hits_at_10'  : hits_at_10_tail,
+			'mr'          : mr_tail,
+			'adjusted_mr' : adjusted_mr_tail,
+			'mrr'         : mrr_tail,
+			'adjusted_mrr': adjusted_mrr_tail},
+
+	}
+
+	# Check if the JSON file exists
+	if link_prediction:
+		task = "link prediction"
+	else:
+		task = "link deletion"
+
+	if os.path.isfile(metrics_file):
+		existing_results = read_json(metrics_file)
+
+		existing_results.update({task: results_eval})
+		save_json(existing_results, metrics_file)
+	else:
+		save_json({task: results_eval}, metrics_file)
+
+	logger.info(f"Evaluating model {model_name} complete")
+
+
+def triple_classification_bert(model: BertForSequenceClassification,
+							   model_dir: str,
+							   model_name: str,
+							   noisy_triples_file: str,
+							   metrics_file: str,
+							   noise_ratio: float):
+	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+	# load dataset gold
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
+
+	# get prediction for train gold
+	dataset_train = tokenize_and_generate_dataset(adjust_dataset_for_bert(train_original))
+	dataloader_train = DataLoader(dataset_train, sampler=SequentialSampler(dataset_train), batch_size=16)
+	score_train = get_probabilities_bert(model, dataloader_train, device)
+
+	# get prediction for test gold
+	test = pd.concat([val_original, test_original], axis=0)
+	test = adjust_dataset_for_bert(test)
+	dataset_test = tokenize_and_generate_dataset(test)
+	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=16)
+	score_test = get_probabilities_bert(model, dataloader_test, device)
+
+	# load dataset random
+	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, 1, False)
+
+	# get prediction for test noisy
+	test_noisy = adjust_dataset_for_bert(test_noisy)
+	dataset_test_noisy = tokenize_and_generate_dataset(test_noisy)
+	dataloader_test_noisy = DataLoader(dataset_test_noisy, sampler=SequentialSampler(dataset_test_noisy),
+									   batch_size=16)
+	score_test_noisy = get_probabilities_bert(model, dataloader_test_noisy, device)
+
+	# get prediction for val noisy
+	val_noisy = adjust_dataset_for_bert(val_noisy)
+	dataset_val_noisy = tokenize_and_generate_dataset(val_noisy)
+	dataloader_val_noisy = DataLoader(dataset_val_noisy, sampler=SequentialSampler(dataset_val_noisy), batch_size=16)
+	score_val_noisy = get_probabilities_bert(model, dataloader_val_noisy, device)
+
+	threshold = score_val_noisy + ((score_test - score_val_noisy) / 2)
+	logger.info(f"classification threshold: {threshold}")
+
+	y_true = [1 for _ in score_test] + [0 for _ in score_test_noisy]
+	y_pred = [1 if y >= threshold else 0 for y in score_test] + [1 if y >= threshold else 0 for y in score_test_noisy]
+
+	n_round = 4
+	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
+	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
+	f1_neg = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=0), n_round)
+	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	recall = round(metrics.recall_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+
+	maximum = np.max(score_train)
+	minimum = np.min(score_test_noisy)
+	if score_test > score_test_noisy:
+		norm_distance = abs(score_test - score_test_noisy) / abs(maximum - minimum)
+		norm_distance = round(norm_distance, n_round)
+	else:
+		norm_distance = float('inf')
+		logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
+
+	# Compute Z-test (http://homework.uoregon.edu/pub/class/es202/ztest.html)
+	# Z = (mean_1 - mean_2) / sqrt{ (std1/sqrt(N1))**2 + (std2/sqrt(N2))**2 }
+	real_scores_error = (score_test.std() / (np.sqrt(score_test.shape[0]))) ** 2
+	fake_scores_error = (score_test_noisy.std() / (np.sqrt(score_test_noisy.shape[0]))) ** 2
+
+	Z_statistic = round((score_test.mean() - score_test_noisy.mean()) / (
 		np.sqrt(real_scores_error + fake_scores_error)), 2)
 
 	results_eval = {

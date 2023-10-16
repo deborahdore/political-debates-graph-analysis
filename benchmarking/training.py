@@ -1,14 +1,138 @@
 import gc
 import os.path
-from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from loguru import logger
 from pykeen.hpo import hpo_pipeline
 from pykeen.pipeline import pipeline
+from sklearn.metrics import classification_report
+from torch.optim import AdamW
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from tqdm import tqdm
+from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
 
+from utils.bert_utils import adjust_dataset_for_bert, tokenize_and_generate_dataset
 from utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
 from utils.utils import read_json
+
+
+def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, ratio: float):
+	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+	logger.info(f"Training bert with {ratio} noise ratio")
+	train, val, test = get_train_val_test_from_dir(noisy_triples_file, ratio)
+
+	train = adjust_dataset_for_bert(train)
+	val = adjust_dataset_for_bert(val)
+	test = adjust_dataset_for_bert(test)
+
+	dataset_train = tokenize_and_generate_dataset(train)
+	dataset_val = tokenize_and_generate_dataset(val)
+	dataset_test = tokenize_and_generate_dataset(test)
+
+	# create dataloaders
+	batch_size = 16
+	epochs = 5
+
+	dataloader_train = DataLoader(dataset_train, sampler=RandomSampler(dataset_train), batch_size=batch_size)
+	dataloader_val = DataLoader(dataset_val, sampler=SequentialSampler(dataset_val), batch_size=batch_size)
+	dataloader_test = DataLoader(dataset_val, sampler=SequentialSampler(dataset_test), batch_size=batch_size)
+
+	# define model
+	model = BertForSequenceClassification.from_pretrained("bert-base-uncased",
+														  num_labels=3,
+														  output_attentions=False,
+														  output_hidden_states=False)
+	model.to(device)
+
+	# define optimizer
+	optimizer = AdamW(model.parameters(), lr=1e-5, eps=1e-8)
+
+	scheduler = get_linear_schedule_with_warmup(optimizer,
+												num_warmup_steps=0,
+												num_training_steps=len(dataloader_train) * epochs)
+
+	# train
+	for epoch in range(epochs):
+
+		loss_train_total = 0.0
+		model.train()
+
+		with tqdm(total=len(dataloader_train), desc=f"Epoch {epoch + 1}/{epoch}", unit="batch") as pbar:
+			for batch in dataloader_train:
+				optimizer.zero_grad()
+
+				batch = tuple(b.to(device) for b in batch)
+				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+				outputs = model(**inputs)
+
+				loss = outputs.loss
+				loss_train_total += loss.item()
+				loss.backward()
+
+				torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+				optimizer.step()
+				scheduler.step()
+
+				pbar.update(1)
+				pbar.set_postfix({'train/loss': '{:.3f}'.format(loss.item() / len(batch))})
+
+		loss_train_avg = loss_train_total / len(dataloader_train)
+		logger.info(f'Training loss: {loss_train_avg}')
+
+		# eval
+		model.eval()
+
+		loss_val_total = 0
+		with torch.no_grad():
+			for batch in dataloader_val:
+				batch = tuple(b.to(device) for b in batch)
+				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+				outputs = model(**inputs)
+
+				loss = outputs.loss
+				loss_val_total += loss.item()
+
+		loss_val_avg = loss_val_total / len(dataloader_val)
+		logger.info(f'Validation loss: {loss_val_avg}')
+
+	logger.info(f"{model_name} training complete")
+
+	# test
+	loss_test_total = 0.0
+	y_true, y_pred = [], []
+
+	with tqdm(total=len(dataloader_test), desc="Testing", unit="batch") as pbar:
+		with torch.no_grad():
+			for batch in dataloader_test:
+				batch = tuple(b.to(device) for b in batch)
+				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+				outputs = model(**inputs)
+				loss = outputs.loss
+				loss_test_total += loss.item()
+
+				res = outputs.logits.detach().cpu().numpy()
+				predictions = np.argmax(res, axis=1)
+				y_true.extend(batch[2].cpu().numpy())
+				y_pred.extend(predictions)
+
+			pbar.update(1)
+
+	avg_test_loss = loss_test_total / len(dataloader_test)
+	logger.info(f"[test] Average Test Loss: {avg_test_loss:.20f}")
+
+	# saving model
+	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
+	logger.info(f"saving {model_name} to {model_file}")
+	torch.save(model, model_file)
+
+	class_report = classification_report(y_true, y_pred)
+	logger.info("Classification report")
+	logger.info(class_report)
+
+	return model
 
 
 def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir: str, ratio: float):
@@ -104,6 +228,5 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 	model_dir_ratio = model_dir + f"/{ratio}"
 	logger.info(f"saving {model_name} to {model_dir_ratio}")
 
-	Path(model_dir_ratio).mkdir(exist_ok=True, parents=True)
 	hpo_results.save_to_directory(model_dir_ratio)
 	gc.collect()

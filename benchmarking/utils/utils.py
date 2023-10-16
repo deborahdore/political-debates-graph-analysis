@@ -46,6 +46,11 @@ def save_tsv(df: pd.DataFrame, tsv_file_path: str):
 	df.to_csv(tsv_file_path, sep='\t', index=False, header=True)
 
 
+def read_tsv(tsv_file_path: str):
+	logger.info(f"Loading {tsv_file_path}")
+	return pd.read_csv(tsv_file_path, sep='\t', index_col=False, header=True)
+
+
 def read_json(json_file_name: str):
 	"""
 	The read_json function reads a json file and returns the data as a json object.
