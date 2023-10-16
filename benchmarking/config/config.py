@@ -19,11 +19,13 @@ plot_dir = os.path.join(base_dir, "plot")
 results_dir = os.path.join(base_dir, "evaluation_results")
 noisy_dir = os.path.join(dataset_dir, "{noise}")
 bert_dir = os.path.join(dataset_dir, "bert")
+excel_dir = os.path.join(results_dir, "excel")
+
 # ======================== Files ======================== #
 original_dataset_file = os.path.join(dataset_dir, "original_dataset.csv")
 triplets_file = os.path.join(dataset_dir, "triplets_file.tsv")
 noisy_triples_file = os.path.join(noisy_dir, "triplets_file_{use}.tsv")
-metrics_file = os.path.join(results_dir, "metrics_{model}_{ratio}.json")
+metrics_file = os.path.join(results_dir, "all/metrics_{model}_{ratio}.json")
 
 # ================== Create Directories ================== #
 assert Path(dataset_dir).exists()
@@ -32,6 +34,7 @@ Path(models_dir).mkdir(parents=True, exist_ok=True)
 Path(config_dir).mkdir(parents=True, exist_ok=True)
 Path(results_dir).mkdir(parents=True, exist_ok=True)
 Path(bert_dir).mkdir(parents=True, exist_ok=True)
+Path(excel_dir).mkdir(parents=True, exist_ok=True)
 
 for model in valid_kge_models:
 	Path(model_dir.format(model=model)).mkdir(exist_ok=True, parents=True)
