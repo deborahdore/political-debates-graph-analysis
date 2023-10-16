@@ -15,7 +15,8 @@ from config.config import (metrics_file,
 						   valid_kge_models,
 						   valid_noise_ratio, )
 from evaluation import link_deletion_evaluation, \
-	link_evaluation_bert, \
+	link_deletion_bert, \
+	link_prediction_bert, \
 	link_prediction_evaluation, \
 	triple_classification, \
 	triple_classification_bert
@@ -68,19 +69,19 @@ if __name__ == '__main__':
 											  noisy_triples_file=noisy_triples_file,
 											  ratio=noise)
 						# todo
-						link_evaluation_bert(model=model,
-											 model_dir=model_dir.format(model="bert"),
-											 model_name='bert',
-											 noisy_triples_file=noisy_triples_file,
-											 metrics_file=metrics_file.format(model=name, ratio=noise),
-											 noise_ratio=noise)
-						link_evaluation_bert(model=model,
-											 model_dir=model_dir.format(model="bert"),
-											 model_name='bert',
-											 noisy_triples_file=noisy_triples_file,
-											 metrics_file=metrics_file.format(model=name, ratio=noise),
-											 noise_ratio=noise,
-											 link_prediction=False)  # link deletion
+						link_prediction_bert(model=model,
+										   model_dir=model_dir.format(model="bert"),
+										   model_name='bert',
+										   noisy_triples_file=noisy_triples_file,
+										   metrics_file=metrics_file.format(model=name, ratio=noise),
+										   noise_ratio=noise)
+
+						link_deletion_bert(model=model,
+										   model_dir=model_dir.format(model="bert"),
+										   model_name='bert',
+										   noisy_triples_file=noisy_triples_file,
+										   metrics_file=metrics_file.format(model=name, ratio=noise),
+										   noise_ratio=noise)
 
 						triple_classification_bert(model=model,
 												   model_dir=model_dir.format(model="bert"),

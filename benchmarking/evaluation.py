@@ -328,13 +328,12 @@ def triple_classification(result: PipelineResult,
 	logger.info(f"Evaluating model {model_name} complete")
 
 
-def link_evaluation_bert(model: BertForSequenceClassification,
-						 model_dir: str,
-						 model_name: str,
-						 noisy_triples_file: str,
-						 metrics_file: str,
-						 noise_ratio: float,
-						 link_prediction: bool = True):
+def link_deletion_bert(model: BertForSequenceClassification,
+					   model_dir: str,
+					   model_name: str,
+					   noisy_triples_file: str,
+					   metrics_file: str,
+					   noise_ratio: float):
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 	logger.info(f"evaluating bert with dataset with {noise_ratio} noise on link prediction")
@@ -382,24 +381,21 @@ def link_evaluation_bert(model: BertForSequenceClassification,
 		dataset_fake_head = tokenize_and_generate_dataset(fake_head_triples)
 		dataset_fake_tail = tokenize_and_generate_dataset(fake_tail_triples)
 
-		dataloader_fake_head = DataLoader(dataset_fake_head,
-										  sampler=SequentialSampler(dataset_fake_head),
-										  batch_size=16)
-		dataloader_fake_tail = DataLoader(dataset_fake_tail,
-										  sampler=SequentialSampler(dataset_fake_tail),
-										  batch_size=16)
+		dataloader_fake_head = DataLoader(dataset_fake_head, sampler=SequentialSampler(dataset_fake_head),
+										  batch_size=1)
+		dataloader_fake_tail = DataLoader(dataset_fake_tail, sampler=SequentialSampler(dataset_fake_tail),
+										  batch_size=1)
 
 		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, device)
 		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, device)
 
-		if link_prediction:
-			rank_head = np.searchsorted(a=score_fake_head, v=score_test) + 1
-			rank_tail = np.searchsorted(a=score_fake_tail, v=score_test) + 1
-		else:
-			rank_head = np.searchsorted(a=score_test, v=score_fake_head) + 1
-			rank_tail = np.searchsorted(a=score_test, v=score_fake_tail) + 1
+		# scores are sorted in ascending order, meaning from the lowest to the highest
+		# in link deletion we expect the score of the fake to be as low as possible
+		# therefore close to the top
+		rank_head = np.searchsorted(a=score_test, v=score_fake_head) + 1
+		rank_tail = np.searchsorted(a=score_test, v=score_fake_tail) + 1
 
-		rank = int((rank_head, rank_tail) / 2.0)
+		rank = int((rank_head + rank_tail) / 2.0)
 		ranks_head.append(rank_head)
 		ranks_tail.append(rank_tail)
 		ranks.append(rank)
@@ -492,18 +488,187 @@ def link_evaluation_bert(model: BertForSequenceClassification,
 	}
 
 	# Check if the JSON file exists
-	if link_prediction:
-		task = "link prediction"
-	else:
-		task = "link deletion"
-
 	if os.path.isfile(metrics_file):
 		existing_results = read_json(metrics_file)
 
-		existing_results.update({task: results_eval})
+		existing_results.update({"link deletion": results_eval})
 		save_json(existing_results, metrics_file)
 	else:
-		save_json({task: results_eval}, metrics_file)
+		save_json({"link deletion": results_eval}, metrics_file)
+
+	logger.info(f"Evaluating model {model_name} complete")
+
+
+def link_prediction_bert(model: BertForSequenceClassification,
+						 model_dir: str,
+						 model_name: str,
+						 noisy_triples_file: str,
+						 metrics_file: str,
+						 noise_ratio: float):
+	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+	logger.info(f"evaluating bert with dataset with {noise_ratio} noise on link prediction")
+
+	# load dataset all fake
+	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, 1, False)
+	test_noisy = adjust_dataset_for_bert(pd.concat([val_noisy, test_noisy], axis=0))
+	dataset_test_noisy = tokenize_and_generate_dataset(test_noisy)
+	dataloader_test_noisy = DataLoader(dataset_test_noisy, sampler=SequentialSampler(dataset_test_noisy),
+									   batch_size=16)
+	score_test_noisy = get_probabilities_bert(model, dataloader_test_noisy, device)
+
+	# load original dataset
+	train, val, test = get_train_val_test_from_dir(noisy_triples_file, 0, False)
+	test = pd.concat([val, test], axis=0)
+
+	ranks_head = []
+	ranks_tail = []
+	ranks = []
+
+	# for each fake triple, get a real one
+	for (head, rel, tail) in test_noisy.iterrows():
+		real_head_triple = None
+		real_tail_triple = None
+
+		# get a triple [?, rel, tail] where ? corresponds to a real head
+		real_head_triple = []
+		while len(real_head_triple) == 0:  # todo
+			real_head_triple = test[test['predicate'] == rel and test['object'] == tail].copy()
+
+		# get a triple [head, rel, ?] where ? corresponds to a real tail
+		real_tail_triple = []
+		while len(real_tail_triple) == 0:  # todo
+			real_tail_triple = test[test['predicate'] == rel and test['subject'] == head].copy()
+
+		real_head_triples = pd.DataFrame(real_head_triple[0], columns=['subject', 'predicate', 'object'])
+		real_tail_triples = pd.DataFrame(real_tail_triple[0], columns=['subject', 'predicate', 'object'])
+
+		# create datasets
+		real_head_triples = adjust_dataset_for_bert(real_head_triples)
+		real_tail_triples = adjust_dataset_for_bert(real_tail_triples)
+
+		# Load the BERT tokenizer
+		dataset_real_head = tokenize_and_generate_dataset(real_head_triples)
+		dataset_real_tail = tokenize_and_generate_dataset(real_tail_triples)
+
+		dataloader_real_head = DataLoader(dataset_real_head, sampler=SequentialSampler(dataset_real_head),
+										  batch_size=1)
+		dataloader_real_tail = DataLoader(dataset_real_tail, sampler=SequentialSampler(dataset_real_tail),
+										  batch_size=1)
+
+		score_fake_head = get_probabilities_bert(model, dataloader_real_head, device)
+		score_fake_tail = get_probabilities_bert(model, dataloader_real_tail, device)
+
+		# scores are sorted in ascending order, meaning from the lowest to the highest
+		# in link prediction we expect the score of the real to be as high as possible
+		# therefore close to the bottom
+		rank_head = len(score_test_noisy) - np.searchsorted(a=score_test_noisy[::-1],
+															v=score_fake_head,
+															side='right') + 1
+		rank_tail = len(score_test_noisy) - np.searchsorted(a=score_test_noisy[::-1],
+															v=score_fake_tail,
+															side='right') + 1
+
+		rank = int((rank_head + rank_tail) / 2.0)
+		ranks_head.append(rank_head)
+		ranks_tail.append(rank_tail)
+		ranks.append(rank)
+
+	# Metrics
+	mr_calculator = ArithmeticMeanRank()
+	adjusted_mr_calculator = AdjustedArithmeticMeanRank()
+	mrr_calculator = InverseHarmonicMeanRank()
+	adjusted_mrr_calculator = AdjustedInverseHarmonicMeanRank()
+	hits_at_1_calculator = HitsAtK(k=1)
+	hits_at_3_calculator = HitsAtK(k=3)
+	hits_at_5_calculator = HitsAtK(k=5)
+	hits_at_10_calculator = HitsAtK(k=10)
+
+	test_size = len(test)
+	n_round = 4
+
+	ranks_head_array = np.array(ranks_head, dtype=int)
+	ranks_tail_array = np.array(ranks_tail, dtype=int)
+
+	# MR
+	mr_head = round(float(mr_calculator(ranks_head_array, test_size)), n_round)
+	mr_tail = round(float(mr_calculator(ranks_tail_array, test_size)), n_round)
+	mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+
+	# ADJUSTED MR
+	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
+	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
+	adjusted_mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+
+	# MRR
+	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
+	mrr_tail = round(float(mrr_calculator(ranks_tail_array, test_size)), n_round)
+	mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+
+	# ADJUSTED MRR
+	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
+	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
+	adjusted_mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+
+	# HITS AT 1
+	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
+	hits_at_1_tail = round(float(hits_at_1_calculator(ranks_tail_array)), n_round)
+	hits_at_1 = round(float((hits_at_1_head + hits_at_1_tail) / 2.0), n_round)
+
+	# HITS AT 3
+	hits_at_3_head = round(float(hits_at_3_calculator(ranks_head_array)), n_round)
+	hits_at_3_tail = round(float(hits_at_3_calculator(ranks_tail_array)), n_round)
+	hits_at_3 = round(float((hits_at_3_head + hits_at_3_tail) / 2.0), n_round)
+
+	# HITS AT 5
+	hits_at_5_head = round(float(hits_at_5_calculator(ranks_head_array)), n_round)
+	hits_at_5_tail = round(float(hits_at_5_calculator(ranks_tail_array)), n_round)
+	hits_at_5 = round(float((hits_at_5_head + hits_at_5_tail) / 2.0), n_round)
+
+	# HITS AT 10
+	hits_at_10_head = round(float(hits_at_10_calculator(ranks_head_array)), n_round)
+	hits_at_10_tail = round(float(hits_at_10_calculator(ranks_tail_array)), n_round)
+	hits_at_10 = round(float((hits_at_10_head + hits_at_10_tail) / 2.0), n_round)
+
+	results_eval = {
+		'head': {
+			'hits_at_1'   : hits_at_1_head,
+			'hits_at_3'   : hits_at_3_head,
+			'hits_at_5'   : hits_at_5_head,
+			'hits_at_10'  : hits_at_10_head,
+			'mr'          : mr_head,
+			'adjusted_mr' : adjusted_mr_head,
+			'mrr'         : mrr_head,
+			'adjusted_mrr': adjusted_mrr_head},
+		'both': {
+			'hits_at_1'   : hits_at_1,
+			'hits_at_3'   : hits_at_3,
+			'hits_at_5'   : hits_at_5,
+			'hits_at_10'  : hits_at_10,
+			'mr'          : mr,
+			'adjusted_mr' : adjusted_mr,
+			'mrr'         : mrr,
+			'adjusted_mrr': adjusted_mrr},
+		'tail': {
+			'hits_at_1'   : hits_at_1_tail,
+			'hits_at_3'   : hits_at_3_tail,
+			'hits_at_5'   : hits_at_5_tail,
+			'hits_at_10'  : hits_at_10_tail,
+			'mr'          : mr_tail,
+			'adjusted_mr' : adjusted_mr_tail,
+			'mrr'         : mrr_tail,
+			'adjusted_mrr': adjusted_mrr_tail},
+
+	}
+
+	# Check if the JSON file exists
+	if os.path.isfile(metrics_file):
+		existing_results = read_json(metrics_file)
+
+		existing_results.update({"link prediction": results_eval})
+		save_json(existing_results, metrics_file)
+	else:
+		save_json({"link prediction": results_eval}, metrics_file)
 
 	logger.info(f"Evaluating model {model_name} complete")
 
