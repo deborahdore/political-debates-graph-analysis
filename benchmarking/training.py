@@ -273,5 +273,6 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 	model_dir_ratio = model_dir + f"/{ratio}"
 	logger.info(f"saving {model_name} to {model_dir_ratio}")
 
+	hpo_results.objective.evaluation_kwargs = None
 	hpo_results.save_to_directory(model_dir_ratio)
 	gc.collect()
