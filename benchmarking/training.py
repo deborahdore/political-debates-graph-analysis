@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import torch
 from loguru import logger
+from optuna.pruners import PercentilePruner
+from optuna.samplers import TPESampler
 from pykeen.hpo import hpo_pipeline
 from pykeen.pipeline import pipeline
 from sklearn.metrics import classification_report
@@ -175,8 +177,8 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 					  training_kwargs=pipeline_config['training_kwargs'],
 					  training_loop=pipeline_config['training_loop'],
 					  use_tqdm=True,
-					  random_seed=123,
-					  device=device)
+					  random_seed=42,
+					  device=device, )
 
 	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")
@@ -214,10 +216,24 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
 															   batch_size=dict(type=int, low=64, high=256, q=64), ),
 								   negative_sampler="basic",
-								   metric="both.realistic.inverse_harmonic_mean_rank",
 								   stopper=None,
 								   evaluator="RankBasedEvaluator",
-								   filter_validation_when_testing=True, )
+								   evaluation_kwargs={
+									   "use_tqdm"                 : True,
+									   "additional_filter_triples": [train_factory.mapped_triples,
+																	 val_factory.mapped_triples], },
+								   evaluator_kwargs={"filtered": True, },
+								   filter_validation_when_testing=True,
+								   sampler=TPESampler(consider_prior=True,
+													  prior_weight=1.0,
+													  consider_magic_clip=True,
+													  consider_endpoints=False,
+													  n_startup_trials=10,
+													  n_ei_candidates=32, ),
+								   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
+								   metric="both.realistic.inverse_harmonic_mean_rank",
+								   direction="maximize",
+								   )
 	else:
 		hpo_results = hpo_pipeline(model=model_name,
 								   training=train_factory,
@@ -233,10 +249,24 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
 															   batch_size=dict(type=int, low=64, high=256, q=64), ),
 								   negative_sampler="basic",
-								   metric="both.realistic.inverse_harmonic_mean_rank",
 								   stopper=None,
 								   evaluator="RankBasedEvaluator",
-								   filter_validation_when_testing=True, )
+								   evaluation_kwargs={
+									   "use_tqdm"                 : True,
+									   "additional_filter_triples": [train_factory.mapped_triples,
+																	 val_factory.mapped_triples], },
+								   evaluator_kwargs={"filtered": True, },
+								   filter_validation_when_testing=True,
+								   sampler=TPESampler(consider_prior=True,
+													  prior_weight=1.0,
+													  consider_magic_clip=True,
+													  consider_endpoints=False,
+													  n_startup_trials=10,
+													  n_ei_candidates=32, ),
+								   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
+								   metric="both.realistic.inverse_harmonic_mean_rank",
+								   direction="maximize",
+								   )
 
 	logger.info(f"model {model_name} training complete")
 

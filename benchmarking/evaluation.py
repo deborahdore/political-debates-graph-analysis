@@ -26,6 +26,7 @@ from utils.utils import read_json, save_json
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+
 # ======================== KGE MODELS EVALUATION  ======================== #
 def link_deletion_evaluation(result: PipelineResult,
 							 model_name: str,
@@ -46,7 +47,7 @@ def link_deletion_evaluation(result: PipelineResult,
 
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
 
-	real_test_scores = get_scores(model, test_factory)
+	real_test_scores = get_scores(model, test_factory, result.training)
 
 	ranks = []
 	ranks_head = []
@@ -61,7 +62,7 @@ def link_deletion_evaluation(result: PipelineResult,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	dataset_original = pd.concat([train_original, val_original, test_original], axis=0)
+	dataset_original = pd.concat([train_original, val_original, test_original], axis=0).reset_index(drop=True)
 	nodes = get_nodes(dataset_original)
 
 	for h, r, t in test_original.values.tolist():
@@ -81,12 +82,12 @@ def link_deletion_evaluation(result: PipelineResult,
 		fake_tail_triple = [h, r, new_t]
 
 		fake_factory = get_factory(pd.DataFrame([fake_head_triple, fake_tail_triple], columns=train_original.columns))
-		scores = get_scores(model, fake_factory)
+		scores = get_scores(model, fake_factory, result.training)
 
 		assert len(scores) == 2
 		fake_h_score, fake_t_score = scores[0], scores[1]
-		rank_head = np.searchsorted(a=real_test_scores.ravel(), v=fake_h_score.ravel(), side='left') + 1
-		rank_tail = np.searchsorted(a=real_test_scores.ravel(), v=fake_t_score.ravel(), side='left') + 1
+		rank_head = np.searchsorted(a=real_test_scores, v=fake_h_score, side='left') + 1
+		rank_tail = np.searchsorted(a=real_test_scores, v=fake_t_score, side='left') + 1
 		ranks.append(int((rank_head + rank_tail) / 2.0))
 		ranks_head.append(rank_head)
 		ranks_tail.append(rank_tail)
@@ -187,9 +188,7 @@ def link_prediction_evaluation(result: PipelineResult,
 							   noise_ratio: float):
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
 
-	evaluator = RankBasedEvaluator(metrics=["hits_at_k", "mr", "mrr"],
-								   metrics_kwargs=[{'k': k} if metric == "hits_at_k" else {} for metric, k in
-												   zip(["hits_at_k", "mr", "mrr"], (1, 3, 5, 10))])
+	evaluator = RankBasedEvaluator(filtered=True)
 
 	# load dataset
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
@@ -206,26 +205,26 @@ def link_prediction_evaluation(result: PipelineResult,
 
 	result_dict = evaluator.evaluate(model=result.model,
 									 mapped_triples=test_factory.mapped_triples,
-									 additional_filter_triples=[test_factory_noisy.mapped_triples,
-																val_factory_noisy.mapped_triples],
 									 batch_size=result.configuration.get('batch_size'),
+									 additional_filter_triples=[train_factory_noisy.mapped_triples,
+																val_factory_noisy.mapped_triples],
 									 use_tqdm=True,
 									 slice_size=None,
-									 device=device).to_dict()
+									 device=torch.device(device)).to_dict()
 
 	results_eval = {}
-
+	n_round = 4
 	for key in ['head', 'both', 'tail']:
 		sub_dict = result_dict[key]['realistic']
 		results_eval[key] = {
-			'hits_at_1'   : sub_dict['hits_at_1'],
-			'hits_at_3'   : sub_dict['hits_at_3'],
-			'hits_at_5'   : sub_dict['hits_at_5'],
-			'hits_at_10'  : sub_dict['hits_at_10'],
-			'mr'          : sub_dict['arithmetic_mean_rank'],
-			'mrr'         : sub_dict['inverse_harmonic_mean_rank'],
-			'adjusted_mr' : sub_dict['adjusted_arithmetic_mean_rank'],
-			'adjusted_mrr': sub_dict['adjusted_inverse_harmonic_mean_rank']}
+			'hits_at_1'   : round(sub_dict['hits_at_1'], n_round),
+			'hits_at_3'   : round(sub_dict['hits_at_3'], n_round),
+			'hits_at_5'   : round(sub_dict['hits_at_5'], n_round),
+			'hits_at_10'  : round(sub_dict['hits_at_10'], n_round),
+			'mr'          : round(sub_dict['arithmetic_mean_rank'], n_round),
+			'mrr'         : round(sub_dict['inverse_harmonic_mean_rank'], n_round),
+			'adjusted_mr' : round(sub_dict['adjusted_arithmetic_mean_rank'], n_round),
+			'adjusted_mrr': round(sub_dict['adjusted_inverse_harmonic_mean_rank'], n_round)}
 
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
@@ -248,7 +247,6 @@ def triple_classification(result: PipelineResult,
 
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on triple classification")
 
-
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
 	# load dataset random
@@ -265,21 +263,21 @@ def triple_classification(result: PipelineResult,
 																							False)
 
 	### INFERENCE ON ORIGINAL TESTING
-	real_train_scores = get_scores(model, train_factory)
+	real_train_scores = get_scores(model, train_factory, result.training)
 	real_train_center = get_center(real_train_scores)
 
 	#### INFERENCE ON VALIDATION
-	real_val_scores = get_scores(model, val_factory)
+	real_val_scores = get_scores(model, val_factory, result.training)
 	real_val_center = get_center(real_val_scores)
 
 	#### INFERENCE ON TESTING
-	real_test_scores = get_scores(model, test_factory)
+	real_test_scores = get_scores(model, test_factory, result.training)
 	real_test_center = get_center(real_test_scores)
 
-	fake_val_scores = get_scores(model, val_factory_noisy)
+	fake_val_scores = get_scores(model, val_factory_noisy, result.training)
 	fake_val_center = get_center(fake_val_scores)
 
-	fake_test_scores = get_scores(model, test_factory_noisy)
+	fake_test_scores = get_scores(model, test_factory_noisy, result.training)
 	fake_test_center = get_center(fake_test_scores)
 
 	threshold = fake_val_center + ((real_val_center - fake_val_center) / 2)
@@ -344,14 +342,12 @@ def link_deletion_bert(model: BertForSequenceClassification,
 					   noisy_triples_file: str,
 					   metrics_file: str,
 					   noise_ratio: float):
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
 
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
-	dataset_original = pd.concat([train_original, val_original, test_original], axis=0)
-	test_original = pd.concat([val_original, test_original], axis=0)
+	dataset_original = pd.concat([train_original, val_original, test_original], axis=0).reset_index(drop=True)
+	test_original = pd.concat([val_original, test_original], axis=0).reset_index(drop=True)
 
 	nodes = get_nodes(dataset_original)
 
@@ -414,7 +410,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	test_size = len(test_original)
+	test_size = len(test_original.values.tolist())
 	n_round = 4
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
@@ -514,13 +510,13 @@ def link_prediction_bert(model: BertForSequenceClassification,
 
 	# load original dataset
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file, 0)
-	test = pd.concat([val, test], axis=0)
+	test = pd.concat([val, test], axis=0).reset_index(drop=True)
 
 	ranks_head = []
 	ranks_tail = []
 	ranks = []
 
-	dataset_original = pd.concat([train, val, test], axis=0)
+	dataset_original = pd.concat([train, val, test], axis=0).reset_index(drop=True)
 	nodes = get_nodes(dataset_original)
 
 	# for each real triple, sample 15 negatives
@@ -598,7 +594,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	test_size = len(test)
+	test_size = len(test.values.tolist())
 	n_round = 4
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
@@ -692,8 +688,6 @@ def triple_classification_bert(model: BertForSequenceClassification,
 							   noisy_triples_file: str,
 							   metrics_file: str,
 							   noise_ratio: float):
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
 
@@ -703,7 +697,7 @@ def triple_classification_bert(model: BertForSequenceClassification,
 	score_train = np.array(get_probabilities_bert(model, dataloader_train, device))
 
 	# get prediction for test gold
-	test = pd.concat([val_original, test_original], axis=0)
+	test = pd.concat([val_original, test_original], axis=0).reset_index(drop=True)
 	dataset_test = tokenize_and_generate_dataset(adjust_dataset_for_bert(test, label=int(True)))
 	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=1)
 	score_test = np.array(get_probabilities_bert(model, dataloader_test, device))
@@ -756,14 +750,14 @@ def triple_classification_bert(model: BertForSequenceClassification,
 																			 fake_scores_error)), 2)
 
 	results_eval = {
-		"accuracy"     : float(round(accuracy, n_round)),
-		"f1_macro"     : float(round(f1_macro, n_round)),
-		"f1_pos"       : float(round(f1_pos, n_round)),
-		"f1_neg"       : float(round(f1_neg, n_round)),
-		"precision"    : float(round(precision, n_round)),
-		"recall"       : float(round(recall, n_round)),
-		"Z_statistic"  : float(round(Z_statistic, n_round)),
-		"norm_distance": float(round(norm_distance, n_round))}
+		"accuracy"     : round(float(accuracy), n_round),
+		"f1_macro"     : round(float(f1_macro), n_round),
+		"f1_pos"       : round(float(f1_pos), n_round),
+		"f1_neg"       : round(float(f1_neg), n_round),
+		"precision"    : round(float(precision), n_round),
+		"recall"       : round(float(recall), n_round),
+		"Z_statistic"  : round(float(Z_statistic), n_round),
+		"norm_distance": round(float(norm_distance), n_round)}
 
 	logger.info(results_eval)
 

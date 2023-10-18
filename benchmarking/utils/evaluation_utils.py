@@ -7,17 +7,17 @@ from torch.utils.data import DataLoader, TensorDataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
 
-def get_scores(model, factory):
-	scores = predict_triples(model=model, triples=factory.mapped_triples, mode=None).process(factory)
-	scores = scores.df.sort_values(by='score', ascending=False)[['score']].values
-	return scores
+def get_scores(model, factory, mapped_triples):
+	scores = predict_triples(model=model, triples=factory, triples_factory=mapped_triples, mode=None).process(factory)
+	scores = scores.df[['score']].values
+	return np.sort(scores.ravel())
 
 
 def get_center(real_train_scores):
 	return float(np.mean(real_train_scores))
 
 
-def get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, device: str):
+def get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, device: torch.device):
 	score_test = []
 	with torch.no_grad():
 		for batch in dataloader:

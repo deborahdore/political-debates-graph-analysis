@@ -75,19 +75,21 @@ if __name__ == '__main__':
 											   metrics_file=metrics_file.format(model=name, ratio=noise),
 											   noise_ratio=noise)
 
-					triple_classification(result=result,
-										  model_name=name,
-										  noisy_triples_file=noisy_triples_file,
-										  metrics_file=metrics_file.format(model=name, ratio=noise),
-										  noise_ratio=noise)
-
 					link_deletion_evaluation(result=result,
 											 model_name=name,
 											 noisy_triples_file=noisy_triples_file,
 											 metrics_file=metrics_file.format(model=name, ratio=noise),
 											 noise_ratio=noise)
+
+					# triple_classification(result=result,
+					# 					  model_name=name,
+					# 					  noisy_triples_file=noisy_triples_file,
+					# 					  metrics_file=metrics_file.format(model=name, ratio=noise),
+					# 					  noise_ratio=noise)
+
 				finally:
 					logger.info(f"{name} evaluation completed")
+
 		for name in nlp_models:
 			for noise in valid_noise_ratio:
 				try:
