@@ -24,6 +24,7 @@ from utils.evaluation_utils import adjust_dataset_for_bert, \
 	tokenize_and_generate_dataset
 from utils.utils import read_json, save_json
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # ======================== KGE MODELS EVALUATION  ======================== #
 def link_deletion_evaluation(result: PipelineResult,
@@ -35,7 +36,7 @@ def link_deletion_evaluation(result: PipelineResult,
 	model = result.model
 
 	# load dataset
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
 
 	# get factory
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
@@ -43,7 +44,7 @@ def link_deletion_evaluation(result: PipelineResult,
 																		  test_original,
 																		  False)
 
-	logger.info(f"evaluating {model_name} of dataset with {noise_ratio} noise on link deletion")
+	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
 
 	real_test_scores = get_scores(model, test_factory)
 
@@ -60,24 +61,24 @@ def link_deletion_evaluation(result: PipelineResult,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	nodes = get_nodes(val_original)
+	dataset_original = pd.concat([train_original, val_original, test_original], axis=0)
+	nodes = get_nodes(dataset_original)
 
-	for idx, (h, r, t) in test_original.iterrows():
+	for h, r, t in test_original.values.tolist():
 		fake_head_triple = None
 		fake_tail_triple = None
 
-		while True:
+		new_h = random.choice(nodes)
+		# assert not real triple
+		while [new_h, r, t] in dataset_original.values.tolist():
 			new_h = random.choice(nodes)
-			while new_h == h:
-				new_h = random.choice(nodes)
-			fake_head_triple = [new_h, r, t]
-			if fake_head_triple not in val_original.values.tolist():
-				break
-		while True:
+		fake_head_triple = [new_h, r, t]
+
+		new_t = random.choice(nodes)
+		# assert not real triple
+		while [h, r, new_t] in dataset_original.values.tolist():
 			new_t = random.choice(nodes)
-			fake_tail_triple = [h, r, new_t]
-			if fake_tail_triple not in val_original.values.tolist():
-				break
+		fake_tail_triple = [h, r, new_t]
 
 		fake_factory = get_factory(pd.DataFrame([fake_head_triple, fake_tail_triple], columns=train_original.columns))
 		scores = get_scores(model, fake_factory)
@@ -184,7 +185,7 @@ def link_prediction_evaluation(result: PipelineResult,
 							   model_name: str,
 							   metrics_file: str,
 							   noise_ratio: float):
-	logger.info(f"evaluating {model_name} of dataset with {noise_ratio} noise on link prediction")
+	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
 
 	evaluator = RankBasedEvaluator(metrics=["hits_at_k", "mr", "mrr"],
 								   metrics_kwargs=[{'k': k} if metric == "hits_at_k" else {} for metric, k in
@@ -209,7 +210,8 @@ def link_prediction_evaluation(result: PipelineResult,
 																val_factory_noisy.mapped_triples],
 									 batch_size=result.configuration.get('batch_size'),
 									 use_tqdm=True,
-									 slice_size=None).to_dict()
+									 slice_size=None,
+									 device=device).to_dict()
 
 	results_eval = {}
 
@@ -243,6 +245,9 @@ def triple_classification(result: PipelineResult,
 						  noise_ratio: float):
 	# load model
 	model = result.model
+
+	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on triple classification")
+
 
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
@@ -341,7 +346,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 					   noise_ratio: float):
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-	logger.info(f"evaluating bert with dataset with {noise_ratio} noise on link deletion")
+	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
 
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
@@ -505,7 +510,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 						 noise_ratio: float):
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-	logger.info(f"evaluating bert with dataset with {noise_ratio} noise on link prediction")
+	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
 
 	# load original dataset
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file, 0)

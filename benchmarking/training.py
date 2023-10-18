@@ -18,9 +18,10 @@ from utils.dataset_utils import get_train_val_test_factory, get_train_val_test_f
 from utils.evaluation_utils import adjust_dataset_for_bert, tokenize_and_generate_dataset
 from utils.utils import read_json
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
 
 def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, ratio: float):
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
 	batch_size = 16
 	epochs = 5
 
@@ -152,7 +153,7 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
 	pipeline_config = read_json(pipeline_config)['pipeline']
 
-	logger.info(f"starting pipeline --> {model_name} with ratio {ratio}")
+	logger.info(f"starting pipeline --> {model_name} with ratio {ratio} on {device}")
 	logger.info(f"{pipeline_config}")
 
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
@@ -173,8 +174,9 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 					  optimizer_kwargs=pipeline_config['optimizer_kwargs'],
 					  training_kwargs=pipeline_config['training_kwargs'],
 					  training_loop=pipeline_config['training_loop'],
-					  use_tqdm=False,
-					  random_seed=42, )
+					  use_tqdm=True,
+					  random_seed=123,
+					  device=device)
 
 	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")

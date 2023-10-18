@@ -39,8 +39,8 @@ _Example graph of debate between Gore and Kemp_:
 ## BENCHMARKING
 
 The dataset was tested against 10 state of the art KGE models using the [PyKEEN](https://github.com/pykeen/pykeen)
-library with increasing level of noise (0, 0.1, 0.2, 0.3, random) to test the robustness of this models. A bert model
-was also tested agains this datasets
+library with increasing level of noise (0, 0.1, 0.2, 0.3, random) to test the robustness of these models. A bert model
+was also tested on these datasets to compare its performances against the kge models.
 
 * _TransE_
 * _DistMult_
