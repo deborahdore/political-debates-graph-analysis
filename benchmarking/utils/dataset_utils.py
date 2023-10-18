@@ -12,6 +12,7 @@ def get_nodes(dataset: pd.DataFrame):
 
 	nodes = pd.concat([dataset['subject'], dataset['object']], axis=0)
 	nodes = nodes.dropna().drop_duplicates().reset_index(drop=True)
+	nodes = nodes.sample(frac=1) #shuffle
 	return nodes
 
 

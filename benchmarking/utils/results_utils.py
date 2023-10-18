@@ -6,8 +6,6 @@ from utils.utils import read_json, save_json
 
 
 def process_results():
-	tasks = ['link prediction', 'link deletion', 'triple classification']
-
 	link_prediction_data = {}
 	link_deletion_data = {}
 	triple_classification_data = {}

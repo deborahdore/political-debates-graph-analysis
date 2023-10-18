@@ -5,10 +5,6 @@ from pathlib import Path
 valid_kge_models = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "RotatE", "PairRE", "AutoSF", "BoxE", "TransH"]
 nlp_models = ["bert"]
 valid_noise_ratio = [0, 0.1, 0.2, 0.3, 1]
-link_metrics = ['mr', 'mrr', 'hits_at_1', 'hits_at_3', 'hits_at_5', 'hits_at_10']
-triple_metrics = ['f1_macro', 'f1_neg', 'f1_pos', 'norm_dist', 'z_stat']
-strategies1 = ['head', 'tail', 'both']
-strategies2 = ['optimistic', 'pessimistic', 'realistic']
 
 # ===================== Directories ===================== #
 base_dir = os.path.abspath(".")
@@ -34,6 +30,7 @@ Path(models_dir).mkdir(parents=True, exist_ok=True)
 Path(config_dir).mkdir(parents=True, exist_ok=True)
 Path(results_dir).mkdir(parents=True, exist_ok=True)
 Path(excel_dir).mkdir(parents=True, exist_ok=True)
+Path(os.path.join(results_dir, "all")).mkdir(parents=True, exist_ok=True)
 
 for model in (valid_kge_models + nlp_models):
 	for noise in valid_noise_ratio:

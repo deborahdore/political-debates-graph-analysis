@@ -3,6 +3,7 @@ import os.path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 from loguru import logger
 from pykeen.hpo import hpo_pipeline
@@ -13,36 +14,46 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from tqdm import tqdm
 from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
 
-from utils.bert_utils import adjust_dataset_for_bert, tokenize_and_generate_dataset
 from utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
+from utils.evaluation_utils import adjust_dataset_for_bert, tokenize_and_generate_dataset
 from utils.utils import read_json
 
 
 def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, ratio: float):
 	device = 'cuda' if torch.cuda.is_available() else 'cpu'
+	batch_size = 16
+	epochs = 5
 
 	logger.info(f"Training bert with {ratio} noise ratio")
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file, ratio)
+	train_noise, val_noise, test_noise = get_train_val_test_from_dir(noisy_triples_file, 1)
 
-	train = adjust_dataset_for_bert(train)
-	val = adjust_dataset_for_bert(val)
-	test = adjust_dataset_for_bert(test)
+	# benchmarking dataset where we suppose all triples are correct
+	train = adjust_dataset_for_bert(train, int(True))
+	val = adjust_dataset_for_bert(val, int(True))
+	test = adjust_dataset_for_bert(test, int(True))
+
+	# creation of counter examples
+	train_noise = adjust_dataset_for_bert(train_noise, int(False))
+	val_noise = adjust_dataset_for_bert(val_noise, int(False))
+	test_noise = adjust_dataset_for_bert(test_noise, int(False))
+
+	train = pd.concat([train, train_noise], axis=0)
+	val = pd.concat([val, val_noise], axis=0)
+	test = pd.concat([test, test_noise], axis=0)
 
 	dataset_train = tokenize_and_generate_dataset(train)
 	dataset_val = tokenize_and_generate_dataset(val)
 	dataset_test = tokenize_and_generate_dataset(test)
 
 	# create dataloaders
-	batch_size = 16
-	epochs = 5
-
 	dataloader_train = DataLoader(dataset_train, sampler=RandomSampler(dataset_train), batch_size=batch_size)
 	dataloader_val = DataLoader(dataset_val, sampler=SequentialSampler(dataset_val), batch_size=batch_size)
-	dataloader_test = DataLoader(dataset_val, sampler=SequentialSampler(dataset_test), batch_size=batch_size)
+	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=batch_size)
 
 	# define model
 	model = BertForSequenceClassification.from_pretrained("bert-base-uncased",
-														  num_labels=3,
+														  num_labels=2,
 														  output_attentions=False,
 														  output_hidden_states=False)
 	model.to(device)
@@ -60,12 +71,12 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 		loss_train_total = 0.0
 		model.train()
 
-		with tqdm(total=len(dataloader_train), desc=f"Epoch {epoch + 1}/{epoch}", unit="batch") as pbar:
+		with tqdm(total=len(dataloader_train), desc=f"Epoch {epoch + 1}/{epochs}", unit="batch") as pbar:
 			for batch in dataloader_train:
 				optimizer.zero_grad()
 
 				batch = tuple(b.to(device) for b in batch)
-				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
+				inputs = {'input_ids': batch[0].long(), 'attention_mask': batch[1], 'labels': batch[2]}
 				outputs = model(**inputs)
 
 				loss = outputs.loss
@@ -92,7 +103,7 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
 				outputs = model(**inputs)
 
-				loss = outputs.loss
+				loss = outputs.loss.float()
 				loss_val_total += loss.item()
 
 		loss_val_avg = loss_val_total / len(dataloader_val)
@@ -104,13 +115,15 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 	loss_test_total = 0.0
 	y_true, y_pred = [], []
 
+	model.eval()
+
 	with tqdm(total=len(dataloader_test), desc="Testing", unit="batch") as pbar:
-		with torch.no_grad():
-			for batch in dataloader_test:
+		for batch in dataloader_test:
+			with torch.no_grad():
 				batch = tuple(b.to(device) for b in batch)
 				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
 				outputs = model(**inputs)
-				loss = outputs.loss
+				loss = outputs.loss.float()
 				loss_test_total += loss.item()
 
 				res = outputs.logits.detach().cpu().numpy()

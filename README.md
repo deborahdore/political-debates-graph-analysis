@@ -64,7 +64,7 @@ on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_
 
 * Python 3.9
 * Nvidia V100 32 Gb
-* [requirements.py](benchmarking/config/requirements.txt)
+* [requirements.py](requirements.txt)
 
 #### Data Processing Script
 

@@ -14,8 +14,8 @@ from config.config import (metrics_file,
 						   triplets_file,
 						   valid_kge_models,
 						   valid_noise_ratio, )
-from evaluation import link_deletion_evaluation, \
-	link_deletion_bert, \
+from evaluation import link_deletion_bert, \
+	link_deletion_evaluation, \
 	link_prediction_bert, \
 	link_prediction_evaluation, \
 	triple_classification, \
@@ -59,60 +59,62 @@ if __name__ == '__main__':
 	if not optimization:
 		logger.info("basic training with best pipeline config")
 
-		for name in (nlp_models + valid_kge_models):
+		for name in valid_kge_models:
 			for noise in valid_noise_ratio:
 				try:
 					torch.cuda.empty_cache()
-					if name == 'bert':
-						model = bert_training(model_dir=model_dir.format(model="bert"),
-											  model_name='bert',
-											  noisy_triples_file=noisy_triples_file,
-											  ratio=noise)
-						# todo
-						link_prediction_bert(model=model,
-										   model_dir=model_dir.format(model="bert"),
-										   model_name='bert',
-										   noisy_triples_file=noisy_triples_file,
-										   metrics_file=metrics_file.format(model=name, ratio=noise),
-										   noise_ratio=noise)
+					result = training(model_dir=model_dir.format(model=name),
+									  model_name=name,
+									  noisy_triples_file=noisy_triples_file,
+									  plot_dir=plot_dir,
+									  ratio=noise)
 
-						link_deletion_bert(model=model,
-										   model_dir=model_dir.format(model="bert"),
-										   model_name='bert',
-										   noisy_triples_file=noisy_triples_file,
-										   metrics_file=metrics_file.format(model=name, ratio=noise),
-										   noise_ratio=noise)
+					link_prediction_evaluation(result=result,
+											   noisy_triples_file=noisy_triples_file,
+											   model_name=name,
+											   metrics_file=metrics_file.format(model=name, ratio=noise),
+											   noise_ratio=noise)
 
-						triple_classification_bert(model=model,
-												   model_dir=model_dir.format(model="bert"),
-												   model_name='bert',
-												   noisy_triples_file=noisy_triples_file,
-												   metrics_file=metrics_file.format(model=name, ratio=noise),
-												   noise_ratio=noise)
-					else:
-						result = training(model_dir=model_dir.format(model=name),
+					triple_classification(result=result,
 										  model_name=name,
 										  noisy_triples_file=noisy_triples_file,
-										  plot_dir=plot_dir,
+										  metrics_file=metrics_file.format(model=name, ratio=noise),
+										  noise_ratio=noise)
+
+					link_deletion_evaluation(result=result,
+											 model_name=name,
+											 noisy_triples_file=noisy_triples_file,
+											 metrics_file=metrics_file.format(model=name, ratio=noise),
+											 noise_ratio=noise)
+				finally:
+					logger.info(f"{name} evaluation completed")
+		for name in nlp_models:
+			for noise in valid_noise_ratio:
+				try:
+					model = bert_training(model_dir=model_dir.format(model="bert"),
+										  model_name='bert',
+										  noisy_triples_file=noisy_triples_file,
 										  ratio=noise)
+					link_prediction_bert(model=model,
+										 model_dir=model_dir.format(model="bert"),
+										 model_name='bert',
+										 noisy_triples_file=noisy_triples_file,
+										 metrics_file=metrics_file.format(model=name, ratio=noise),
+										 noise_ratio=noise)
 
-						link_prediction_evaluation(result=result,
-												   noisy_triples_file=noisy_triples_file,
-												   model_name=name,
-												   metrics_file=metrics_file.format(model=name, ratio=noise),
-												   noise_ratio=noise)
+					link_deletion_bert(model=model,
+									   model_dir=model_dir.format(model="bert"),
+									   model_name='bert',
+									   noisy_triples_file=noisy_triples_file,
+									   metrics_file=metrics_file.format(model=name, ratio=noise),
+									   noise_ratio=noise)
 
-						triple_classification(result=result,
-											  model_name=name,
-											  noisy_triples_file=noisy_triples_file,
-											  metrics_file=metrics_file.format(model=name, ratio=noise),
-											  noise_ratio=noise)
-
-						link_deletion_evaluation(result=result,
-												 model_name=name,
-												 noisy_triples_file=noisy_triples_file,
-												 metrics_file=metrics_file.format(model=name, ratio=noise),
-												 noise_ratio=noise)
+					triple_classification_bert(model=model,
+											   model_dir=model_dir.format(model="bert"),
+											   model_name='bert',
+											   noisy_triples_file=noisy_triples_file,
+											   metrics_file=metrics_file.format(model=name, ratio=noise),
+											   noise_ratio=noise)
 				finally:
 					logger.info(f"{name} evaluation completed")
 
