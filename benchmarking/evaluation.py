@@ -525,7 +525,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 		fake_tail_triples = []
 
 		# get a triple [?, rel, tail] where ? corresponds to a fake head
-		while len(fake_head_triples) < 15:
+		while len(fake_head_triples) < 30:
 			new_head = random.choice(nodes)
 			# make sure it's fake
 			while [new_head, rel, tail] in dataset_original.values.tolist():
@@ -534,7 +534,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 			fake_head_triples.append([new_head, rel, tail])
 
 		# get a triple [head, rel, ?] where ? corresponds to a fake tail
-		while len(fake_tail_triples) < 15:
+		while len(fake_tail_triples) < 30:
 			new_tail = random.choice(nodes)
 
 			# make sure it's fake

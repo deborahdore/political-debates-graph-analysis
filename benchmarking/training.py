@@ -232,8 +232,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 													  n_ei_candidates=32, ),
 								   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 								   metric="both.realistic.inverse_harmonic_mean_rank",
-								   direction="maximize",
-								   )
+								   direction="maximize", )
 	else:
 		hpo_results = hpo_pipeline(model=model_name,
 								   training=train_factory,
@@ -265,8 +264,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 													  n_ei_candidates=32, ),
 								   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 								   metric="both.realistic.inverse_harmonic_mean_rank",
-								   direction="maximize",
-								   )
+								   direction="maximize", )
 
 	logger.info(f"model {model_name} training complete")
 

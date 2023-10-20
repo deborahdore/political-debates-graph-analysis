@@ -18,7 +18,6 @@ from evaluation import link_deletion_bert, \
 	link_deletion_evaluation, \
 	link_prediction_bert, \
 	link_prediction_evaluation, \
-	triple_classification, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
 from utils.dataset_utils import generate_noise, generate_triplets
@@ -81,11 +80,9 @@ if __name__ == '__main__':
 											 metrics_file=metrics_file.format(model=name, ratio=noise),
 											 noise_ratio=noise)
 
-					# triple_classification(result=result,
-					# 					  model_name=name,
-					# 					  noisy_triples_file=noisy_triples_file,
-					# 					  metrics_file=metrics_file.format(model=name, ratio=noise),
-					# 					  noise_ratio=noise)
+				# triple_classification(result=result,  # 					  model_name=name,  #
+				# noisy_triples_file=noisy_triples_file,  # 					  metrics_file=metrics_file.format(
+				# model=name, ratio=noise),  # 					  noise_ratio=noise)
 
 				finally:
 					logger.info(f"{name} evaluation completed")

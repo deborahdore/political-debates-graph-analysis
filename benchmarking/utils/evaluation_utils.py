@@ -48,7 +48,7 @@ def tokenize_and_generate_dataset(dataset: pd.DataFrame):
 	return dataset
 
 
-def adjust_dataset_for_bert(dataset: pd.DataFrame, label:float):
+def adjust_dataset_for_bert(dataset: pd.DataFrame, label: float):
 	# create dataset
 	new_dataset = pd.DataFrame()
 	new_dataset['merged_sent'] = dataset['subject'] + "<sep>" + dataset['predicate'] + "<sep>" + dataset['object']
