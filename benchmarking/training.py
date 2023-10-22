@@ -152,33 +152,18 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 
 
 def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir: str, ratio: float):
-	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
-	pipeline_config = read_json(pipeline_config)['pipeline']
-
 	logger.info(f"starting pipeline --> {model_name} with ratio {ratio} on {device}")
-	logger.info(f"{pipeline_config}")
 
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
 
-	result = pipeline(training=train_factory,
-					  testing=test_factory,
-					  validation=val_factory,
-					  model=model_name,
-					  evaluator=pipeline_config['evaluator'],
-					  filter_validation_when_testing=pipeline_config['filter_validation_when_testing'],
-					  loss=pipeline_config['loss'],
-					  loss_kwargs=pipeline_config['loss_kwargs'],
-					  model_kwargs=pipeline_config['model_kwargs'],
-					  negative_sampler=pipeline_config['negative_sampler'],
-					  negative_sampler_kwargs=pipeline_config['negative_sampler_kwargs'],
-					  optimizer=pipeline_config['optimizer'],
-					  optimizer_kwargs=pipeline_config['optimizer_kwargs'],
-					  training_kwargs=pipeline_config['training_kwargs'],
-					  training_loop=pipeline_config['training_loop'],
-					  use_tqdm=True,
-					  random_seed=42,
-					  device=device, )
+	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
+	pipeline_config = read_json(pipeline_config)['pipeline']
+	pipeline_config['testing'] = test_factory
+	pipeline_config['training'] = train_factory
+	pipeline_config['validation'] = val_factory
+
+	result = pipeline(**pipeline_config)
 
 	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")
