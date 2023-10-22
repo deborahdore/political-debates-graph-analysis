@@ -1,5 +1,6 @@
 import os
 import random
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -25,13 +26,16 @@ from utils.evaluation_utils import adjust_dataset_for_bert, \
 from utils.utils import read_json, save_json
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+warnings.filterwarnings("ignore", category=UserWarning, module="torch_max_mem")
+
 
 # ======================== KGE MODELS EVALUATION  ======================== #
-def link_deletion_evaluation(result: PipelineResult,
-							 model_name: str,
-							 noisy_triples_file: str,
-							 metrics_file: str,
-							 noise_ratio: float):
+def link_deletion(result: PipelineResult,
+				  model_name: str,
+				  noisy_triples_file: str,
+				  triplets_file_utils: str,
+				  metrics_file: str,
+				  noise_ratio: float):
 	# load pytorch model
 	model = result.model
 
@@ -42,6 +46,7 @@ def link_deletion_evaluation(result: PipelineResult,
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
+																		  triplets_file_utils,
 																		  False)
 
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
@@ -80,7 +85,8 @@ def link_deletion_evaluation(result: PipelineResult,
 			new_t = random.choice(nodes)
 		fake_tail_triple = [h, r, new_t]
 
-		fake_factory = get_factory(pd.DataFrame([fake_head_triple, fake_tail_triple], columns=train_original.columns))
+		fake_factory = get_factory(pd.DataFrame([fake_head_triple, fake_tail_triple], columns=train_original.columns),
+								   triplets_file_utils=triplets_file_utils)
 		scores = get_scores(model, fake_factory, result.training)
 
 		assert len(scores) == 2
@@ -180,11 +186,12 @@ def link_deletion_evaluation(result: PipelineResult,
 	logger.info(f"Evaluating model {model_name} complete")
 
 
-def link_prediction_evaluation(result: PipelineResult,
-							   noisy_triples_file: str,
-							   model_name: str,
-							   metrics_file: str,
-							   noise_ratio: float):
+def link_prediction(result: PipelineResult,
+					noisy_triples_file: str,
+					triplets_file_utils: str,
+					model_name: str,
+					metrics_file: str,
+					noise_ratio: float):
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
 
 	evaluator = RankBasedEvaluator(filtered=True)
@@ -196,10 +203,12 @@ def link_prediction_evaluation(result: PipelineResult,
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
+																		  triplets_file_utils,
 																		  False)
 	train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
 																							val_noisy,
 																							test_noisy,
+																							triplets_file_utils,
 																							False)
 
 	result_dict = evaluator.evaluate(model=result.model,
@@ -239,6 +248,7 @@ def link_prediction_evaluation(result: PipelineResult,
 def triple_classification(result: PipelineResult,
 						  model_name: str,
 						  noisy_triples_file: str,
+						  triplets_file_utils: str,
 						  metrics_file: str,
 						  noise_ratio: float):
 	# load model
@@ -254,29 +264,31 @@ def triple_classification(result: PipelineResult,
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
+																		  triplets_file_utils,
 																		  False)
 
 	train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
 																							val_noisy,
 																							test_noisy,
+																							triplets_file_utils,
 																							False)
 
 	### INFERENCE ON ORIGINAL TESTING
-	real_train_scores = get_scores(model, train_factory, result.training)
+	real_train_scores = get_scores(model, train_factory, train_factory.mapped_triples)
 	real_train_center = get_center(real_train_scores)
 
 	#### INFERENCE ON VALIDATION
-	real_val_scores = get_scores(model, val_factory, result.training)
+	real_val_scores = get_scores(model, val_factory, val_factory.mapped_triples)
 	real_val_center = get_center(real_val_scores)
 
 	#### INFERENCE ON TESTING
-	real_test_scores = get_scores(model, test_factory, result.training)
+	real_test_scores = get_scores(model, test_factory, test_factory.mapped_triples)
 	real_test_center = get_center(real_test_scores)
 
-	fake_val_scores = get_scores(model, val_factory_noisy, result.training)
+	fake_val_scores = get_scores(model, val_factory_noisy, val_factory_noisy.mapped_triples)
 	fake_val_center = get_center(fake_val_scores)
 
-	fake_test_scores = get_scores(model, test_factory_noisy, result.training)
+	fake_test_scores = get_scores(model, test_factory_noisy, test_factory_noisy.mapped_triples)
 	fake_test_center = get_center(fake_test_scores)
 
 	threshold = fake_val_center + ((real_val_center - fake_val_center) / 2)
@@ -511,6 +523,16 @@ def link_prediction_bert(model: BertForSequenceClassification,
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file, 0)
 	test = pd.concat([val, test], axis=0).reset_index(drop=True)
 
+	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, 1)
+	test_noisy = pd.concat([val_noisy, test_noisy], axis=0).reset_index(drop=True)
+	fake_triples = pd.DataFrame(test_noisy, columns=['subject', 'predicate', 'object'])
+	dataset_fake_triple = tokenize_and_generate_dataset(adjust_dataset_for_bert(fake_triples, label=int(False)))
+	dataloader_fake_triple = DataLoader(dataset_fake_triple,
+										sampler=SequentialSampler(dataset_fake_triple),
+										batch_size=1)
+
+	score_fake_triple = get_probabilities_bert(model, dataloader_fake_triple, device)
+
 	ranks_head = []
 	ranks_tail = []
 	ranks = []
@@ -520,63 +542,29 @@ def link_prediction_bert(model: BertForSequenceClassification,
 
 	# for each real triple, sample 15 negatives
 	for head, rel, tail in test.values.tolist():
-		fake_head_triples = []
-		fake_tail_triples = []
-
-		# get a triple [?, rel, tail] where ? corresponds to a fake head
-		while len(fake_head_triples) < 30:
-			new_head = random.choice(nodes)
-			# make sure it's fake
-			while [new_head, rel, tail] in dataset_original.values.tolist():
-				new_head = random.choice(nodes)
-
-			fake_head_triples.append([new_head, rel, tail])
-
-		# get a triple [head, rel, ?] where ? corresponds to a fake tail
-		while len(fake_tail_triples) < 30:
-			new_tail = random.choice(nodes)
-
-			# make sure it's fake
-			while [head, rel, new_tail] in dataset_original.values.tolist():
-				new_tail = random.choice(nodes)
-
-			fake_tail_triples.append([head, rel, new_tail])
-
-		fake_head_triples = pd.DataFrame(fake_head_triples, columns=['subject', 'predicate', 'object'])
-		fake_tail_triples = pd.DataFrame(fake_tail_triples, columns=['subject', 'predicate', 'object'])
 		real_triple = pd.DataFrame([[head, rel, tail]], columns=['subject', 'predicate', 'object'])
 
 		# create datasets
-		fake_head_triples = adjust_dataset_for_bert(fake_head_triples, label=int(False))
-		fake_tail_triples = adjust_dataset_for_bert(fake_tail_triples, label=int(False))
 		real_triple = adjust_dataset_for_bert(real_triple, label=int(True))
 
 		# Load the BERT tokenizer
-		dataset_fake_head = tokenize_and_generate_dataset(fake_head_triples)
-		dataset_fake_tail = tokenize_and_generate_dataset(fake_tail_triples)
 		dataset_real_triple = tokenize_and_generate_dataset(real_triple)
 
-		dataloader_fake_head = DataLoader(dataset_fake_head, sampler=SequentialSampler(dataset_fake_head),
-										  batch_size=1)
-		dataloader_fake_tail = DataLoader(dataset_fake_tail, sampler=SequentialSampler(dataset_fake_tail),
-										  batch_size=1)
 		dataloader_real_triple = DataLoader(dataset_real_triple,
 											sampler=SequentialSampler(dataset_real_triple),
 											batch_size=1)
 
-		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, device)
-		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, device)
 		score_real_triple = get_probabilities_bert(model, dataloader_real_triple, device)
 
 		# scores are sorted in ascending order, meaning from the lowest to the highest
 		# in link prediction we expect the score of the real to be as high as possible
 		# therefore close to the bottom -> invert results to get hits@k metrics
-		rank_head = len(score_fake_head) - np.searchsorted(a=score_fake_head[::-1],
-														   v=score_real_triple,
-														   side='right') + 1
-		rank_tail = len(score_fake_tail) - np.searchsorted(a=score_fake_tail[::-1],
-														   v=score_real_triple,
-														   side='right') + 1
+		rank_head = len(score_fake_triple) - np.searchsorted(a=score_fake_triple[::-1],
+															 v=score_real_triple,
+															 side='right') + 1
+		rank_tail = len(score_fake_triple) - np.searchsorted(a=score_fake_triple[::-1],
+															 v=score_real_triple,
+															 side='right') + 1
 
 		rank = int((rank_head + rank_tail) / 2.0)
 		ranks_head.append(rank_head)

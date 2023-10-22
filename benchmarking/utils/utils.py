@@ -31,7 +31,7 @@ def save_tsv(df: pd.DataFrame, tsv_file_path: str):
 
 def read_tsv(tsv_file_path: str):
 	logger.info(f"Loading {tsv_file_path}")
-	return pd.read_csv(tsv_file_path, sep='\t', index_col=False, header=True)
+	return pd.read_csv(tsv_file_path, index_col=False, header=0)
 
 
 def read_json(json_file_name: str):

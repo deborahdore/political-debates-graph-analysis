@@ -151,11 +151,16 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 	return model
 
 
-def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir: str, ratio: float):
+def training(model_dir: str,
+			 model_name: str,
+			 noisy_triples_file: str,
+			 triplets_file_utils: str,
+			 plot_dir: str,
+			 ratio: float):
 	logger.info(f"starting pipeline --> {model_name} with ratio {ratio} on {device}")
 
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, triplets_file_utils)
 
 	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
 	pipeline_config = read_json(pipeline_config)['pipeline']
@@ -179,11 +184,15 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 	return result
 
 
-def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_file: str, ratio: float):
+def hyperparameter_optimization(model_name: str,
+								model_dir: str,
+								noisy_triples_file: str,
+								triplets_file_utils: str,
+								ratio: float):
 	logger.info(f"starting optimizer pipeline - {model_name} with ratio {ratio}")
 
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test)
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, triplets_file_utils)
 
 	if model_name == 'TransH':
 		hpo_results = hpo_pipeline(model=model_name,
@@ -192,6 +201,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   validation=val_factory,
 								   n_trials=15,
 								   optimizer="Adam",
+								   regularizer=None,
 								   optimizer_kwargs_ranges=dict(lr=dict(type=float,
 																		low=0.0001,
 																		high=0.01,
@@ -200,7 +210,6 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
 															   batch_size=dict(type=int, low=64, high=256, q=64), ),
 								   negative_sampler="basic",
-								   stopper=None,
 								   evaluator="RankBasedEvaluator",
 								   evaluation_kwargs={
 									   "use_tqdm"                 : True,
@@ -231,7 +240,6 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
 															   batch_size=dict(type=int, low=64, high=256, q=64), ),
 								   negative_sampler="basic",
-								   stopper=None,
 								   evaluator="RankBasedEvaluator",
 								   evaluation_kwargs={
 									   "use_tqdm"                 : True,

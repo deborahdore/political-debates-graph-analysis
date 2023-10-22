@@ -12,15 +12,17 @@ from config.config import (metrics_file,
 						   original_dataset_file,
 						   plot_dir,
 						   triplets_file,
+						   triplets_file_utils,
 						   valid_kge_models,
 						   valid_noise_ratio, )
-from evaluation import link_deletion_bert, \
-	link_deletion_evaluation, \
+from evaluation import link_deletion, \
+	link_deletion_bert, \
+	link_prediction, \
 	link_prediction_bert, \
-	link_prediction_evaluation, \
+	triple_classification, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
-from utils.dataset_utils import generate_noise, generate_triplets
+from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
 
 
 def parse_command_line():
@@ -51,6 +53,7 @@ if __name__ == '__main__':
 
 	if generate_dataset:
 		generate_triplets(original_dataset_file=original_dataset_file, triples_file=triplets_file)
+		generate_mappings(triplets_file=triplets_file, triplets_file_utils=triplets_file_utils)
 		generate_noise(triplets_file=triplets_file,
 					   noisy_triples_file=noisy_triples_file,
 					   valid_noise=config.valid_noise_ratio)
@@ -65,24 +68,30 @@ if __name__ == '__main__':
 					result = training(model_dir=model_dir.format(model=name),
 									  model_name=name,
 									  noisy_triples_file=noisy_triples_file,
+									  triplets_file_utils=triplets_file_utils,
 									  plot_dir=plot_dir,
 									  ratio=noise)
 
-					link_prediction_evaluation(result=result,
-											   noisy_triples_file=noisy_triples_file,
-											   model_name=name,
-											   metrics_file=metrics_file.format(model=name, ratio=noise),
-											   noise_ratio=noise)
+					link_prediction(result=result,
+									noisy_triples_file=noisy_triples_file,
+									triplets_file_utils=triplets_file_utils,
+									model_name=name,
+									metrics_file=metrics_file.format(model=name, ratio=noise),
+									noise_ratio=noise)
 
-					link_deletion_evaluation(result=result,
-											 model_name=name,
-											 noisy_triples_file=noisy_triples_file,
-											 metrics_file=metrics_file.format(model=name, ratio=noise),
-											 noise_ratio=noise)
+					link_deletion(result=result,
+								  model_name=name,
+								  noisy_triples_file=noisy_triples_file,
+								  triplets_file_utils=triplets_file_utils,
+								  metrics_file=metrics_file.format(model=name, ratio=noise),
+								  noise_ratio=noise)
 
-				# triple_classification(result=result,  # 					  model_name=name,  #
-				# noisy_triples_file=noisy_triples_file,  # 					  metrics_file=metrics_file.format(
-				# model=name, ratio=noise),  # 					  noise_ratio=noise)
+					triple_classification(result=result,
+										  model_name=name,
+										  noisy_triples_file=noisy_triples_file,
+										  triplets_file_utils=triplets_file_utils,
+										  metrics_file=metrics_file.format(model=name, ratio=noise),
+										  noise_ratio=noise)
 
 				finally:
 					logger.info(f"{name} evaluation completed")
@@ -90,6 +99,7 @@ if __name__ == '__main__':
 		for name in nlp_models:
 			for noise in valid_noise_ratio:
 				try:
+					torch.cuda.empty_cache()
 					model = bert_training(model_dir=model_dir.format(model="bert"),
 										  model_name='bert',
 										  noisy_triples_file=noisy_triples_file,
@@ -126,6 +136,7 @@ if __name__ == '__main__':
 		hyperparameter_optimization(model_name=model,
 									model_dir=model_dir.format(model=model),
 									noisy_triples_file=noisy_triples_file,
+									triplets_file_utils=triplets_file_utils,
 									ratio=noise)
 	finally:
 		logger.info(f"Training {model} complete")

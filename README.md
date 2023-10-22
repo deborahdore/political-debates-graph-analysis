@@ -53,7 +53,8 @@ was also tested on these datasets to compare its performances against the kge mo
 * _BoxE_
 * _TransH_
 
-Result of the model's optimization are available [in this folder](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Eob1CqlF5Z5EiOWaL_1u9CsBhczFAMUJR5dn2yydMON7Cw?e=hLCA8e).
+Result of the model's optimization are
+available [in this folder](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Eob1CqlF5Z5EiOWaL_1u9CsBhczFAMUJR5dn2yydMON7Cw?e=hLCA8e).
 
 ### DATASET
 

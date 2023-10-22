@@ -4,7 +4,7 @@ import pandas as pd
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sklearn.model_selection import train_test_split
-from utils.utils import load, save
+from utils.utils import load, read_json, read_tsv, save, save_json
 
 
 def get_nodes(dataset: pd.DataFrame):
@@ -117,24 +117,46 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	return final_df
 
 
+def get_mapping(dataset: pd.DataFrame):
+	dataset = TriplesFactory.from_labeled_triples(triples=dataset[['subject', 'predicate', 'object']].values,
+												  create_inverse_triples=False)
+	return dataset.entity_to_id, dataset.relation_to_id
+
+
 def get_train_val_test_factory(train: pd.DataFrame,
 							   val: pd.DataFrame,
 							   test: pd.DataFrame,
+							   triplets_file_utils: str,
 							   create_inverse_triples: bool = True):
 	logger.info("creating train, test and val TriplesFactory")
 
-	train_factory = TriplesFactory.from_labeled_triples(triples=train[['subject', 'predicate', 'object']].values,
-														create_inverse_triples=create_inverse_triples)
-	val_factory = TriplesFactory.from_labeled_triples(triples=val[['subject', 'predicate', 'object']].values,
-													  create_inverse_triples=create_inverse_triples)
-	test_factory = TriplesFactory.from_labeled_triples(triples=test[['subject', 'predicate', 'object']].values,
-													   create_inverse_triples=create_inverse_triples)
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
+	train_factory = TriplesFactory.from_labeled_triples(triples=train[['subject', 'predicate', 'object']].values,
+														entity_to_id=entity_to_id,
+														relation_to_id=relation_to_id,
+														create_inverse_triples=create_inverse_triples)
+
+	val_factory = TriplesFactory.from_labeled_triples(triples=val[['subject', 'predicate', 'object']].values,
+													  entity_to_id=entity_to_id,
+													  relation_to_id=relation_to_id,
+													  create_inverse_triples=create_inverse_triples)
+
+	test_factory = TriplesFactory.from_labeled_triples(triples=test[['subject', 'predicate', 'object']].values,
+													   entity_to_id=entity_to_id,
+													   relation_to_id=relation_to_id,
+													   create_inverse_triples=create_inverse_triples)
 	return train_factory, val_factory, test_factory
 
 
-def get_factory(dataset: pd.DataFrame, create_inverse_triples: bool = False):
+def get_factory(dataset: pd.DataFrame, triplets_file_utils: str, create_inverse_triples: bool = False):
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
+
 	factory = TriplesFactory.from_labeled_triples(triples=dataset[['subject', 'predicate', 'object']].values,
+												  entity_to_id=entity_to_id,
+												  relation_to_id=relation_to_id,
 												  create_inverse_triples=create_inverse_triples)
 	return factory
 
@@ -155,3 +177,17 @@ def get_train_val_test_from_dir(noisy_triples_file: str, noise: float, drop_col_
 		test = test.drop("noisy", axis=1)
 
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
+
+
+def generate_mappings(triplets_file: str, triplets_file_utils: str):
+	triplets = read_tsv(triplets_file)
+	factory = TriplesFactory.from_labeled_triples(triples=triplets[['subject', 'predicate', 'object']].values,
+												  create_inverse_triples=False)
+	entity_to_id = factory.entity_to_id
+	relation_to_id = factory.relation_to_id
+
+	entity_to_id_file = triplets_file_utils.format(file_name="entity_to_id")
+	save_json(entity_to_id, entity_to_id_file)
+
+	relation_to_id_file = triplets_file_utils.format(file_name="relation_to_id")
+	save_json(relation_to_id, relation_to_id_file)

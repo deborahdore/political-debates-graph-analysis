@@ -20,6 +20,7 @@ excel_dir = os.path.join(results_dir, "excel")
 # ======================== Files ======================== #
 original_dataset_file = os.path.join(dataset_dir, "original_dataset.csv")
 triplets_file = os.path.join(dataset_dir, "triplets_file.tsv")
+triplets_file_utils = os.path.join(dataset_dir, "{file_name}.json")
 noisy_triples_file = os.path.join(noisy_dir, "triplets_file_{use}.tsv")
 metrics_file = os.path.join(results_dir, "all/metrics_{model}_{ratio}.json")
 
