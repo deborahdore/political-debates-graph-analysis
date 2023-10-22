@@ -26,7 +26,6 @@ from utils.utils import read_json, save_json
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-
 # ======================== KGE MODELS EVALUATION  ======================== #
 def link_deletion_evaluation(result: PipelineResult,
 							 model_name: str,
@@ -94,7 +93,7 @@ def link_deletion_evaluation(result: PipelineResult,
 
 	# Metrics
 	test_size = len(test_original)
-	n_round = 4
+	n_round = 10
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
 	ranks_tail_array = np.array(ranks_tail, dtype=int)
@@ -213,7 +212,7 @@ def link_prediction_evaluation(result: PipelineResult,
 									 device=torch.device(device)).to_dict()
 
 	results_eval = {}
-	n_round = 4
+	n_round = 10
 	for key in ['head', 'both', 'tail']:
 		sub_dict = result_dict[key]['realistic']
 		results_eval[key] = {
@@ -287,7 +286,7 @@ def triple_classification(result: PipelineResult,
 	y_pred = [1 if y >= threshold else 0 for y in real_test_scores] + [1 if y >= threshold else 0 for y in
 																	   fake_test_scores]
 
-	n_round = 4
+	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
 	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
 	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
@@ -411,7 +410,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	hits_at_10_calculator = HitsAtK(k=10)
 
 	test_size = len(test_original.values.tolist())
-	n_round = 4
+	n_round = 10
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
 	ranks_tail_array = np.array(ranks_tail, dtype=int)
@@ -595,7 +594,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 	hits_at_10_calculator = HitsAtK(k=10)
 
 	test_size = len(test.values.tolist())
-	n_round = 4
+	n_round = 10
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
 	ranks_tail_array = np.array(ranks_tail, dtype=int)
@@ -725,7 +724,7 @@ def triple_classification_bert(model: BertForSequenceClassification,
 	y_true = [1 for _ in score_test] + [0 for _ in score_test_noisy]
 	y_pred = [1 if y >= threshold else 0 for y in score_test] + [1 if y >= threshold else 0 for y in score_test_noisy]
 
-	n_round = 4
+	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
 	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
 	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)

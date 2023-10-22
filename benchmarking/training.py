@@ -163,7 +163,7 @@ def training(model_dir: str, model_name: str, noisy_triples_file: str, plot_dir:
 	pipeline_config['training'] = train_factory
 	pipeline_config['validation'] = val_factory
 
-	result = pipeline(**pipeline_config)
+	result = pipeline(**pipeline_config, device=device, random_seed=123)
 
 	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	logger.info(f"{model_name} training complete")
@@ -191,7 +191,6 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   testing=test_factory,
 								   validation=val_factory,
 								   n_trials=15,
-								   regularizer=None,
 								   optimizer="Adam",
 								   optimizer_kwargs_ranges=dict(lr=dict(type=float,
 																		low=0.0001,
@@ -206,8 +205,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   evaluation_kwargs={
 									   "use_tqdm"                 : True,
 									   "additional_filter_triples": [train_factory.mapped_triples,
-																	 val_factory.mapped_triples], },
-								   evaluator_kwargs={"filtered": True, },
+																	 val_factory.mapped_triples]},
 								   filter_validation_when_testing=True,
 								   sampler=TPESampler(consider_prior=True,
 													  prior_weight=1.0,
@@ -238,8 +236,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 								   evaluation_kwargs={
 									   "use_tqdm"                 : True,
 									   "additional_filter_triples": [train_factory.mapped_triples,
-																	 val_factory.mapped_triples], },
-								   evaluator_kwargs={"filtered": True, },
+																	 val_factory.mapped_triples]},
 								   filter_validation_when_testing=True,
 								   sampler=TPESampler(consider_prior=True,
 													  prior_weight=1.0,
