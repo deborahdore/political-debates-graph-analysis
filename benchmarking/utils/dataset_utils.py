@@ -68,7 +68,7 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 		edges_correct['noisy'] = 0
 		return edges_correct
 
-	edges_correct_sample = edges_correct.sample(frac=noise_ratio, random_state=42)
+	edges_correct_sample = edges_correct.sample(frac=noise_ratio, random_state=42).reset_index(drop=True)
 	edges_noisy = []
 
 	nodes = get_nodes(edges_correct)
@@ -80,28 +80,23 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 			continue
 		elif choice < 0.66:  # swap link
 			new_predicate = random.choice(["attack", "support", "equivalent"])
-			while new_predicate == predicate:  # avoid same predicate
+			while (new_predicate == predicate) or (
+					[subject, new_predicate, obj] in edges_correct.values.tolist()):  # avoid same predicate
 				new_predicate = random.choice(["attack", "support", "equivalent"])
 			edges_noisy.append([subject, new_predicate, obj, 1])
 
 		else:  # introduce new incorrect link
-			while True:
+			subject_node = random.choice(nodes)
+			object_node = random.choice(nodes)
+			predicate_label = random.choice(["attack", "support", "equivalent"])
+
+			# Avoid the same node
+			# Check if the combination already exists in edges_correct
+			while (subject_node == object_node) or (
+					[subject_node, predicate_label, object_node] in edges_correct.values.tolist()):
 				subject_node = random.choice(nodes)
 				object_node = random.choice(nodes)
 				predicate_label = random.choice(["attack", "support", "equivalent"])
-
-				# Avoid the same node
-				if subject_node == object_node:
-					continue
-
-				# Check if the combination already exists in edges_correct
-				is_combination_unique = (
-						(edges_correct['subject'] == subject_node) & (edges_correct['object'] == object_node) & (
-						edges_correct['predicate'] == predicate_label))
-
-				if not is_combination_unique.any():
-					# The combination is unique, break the loop
-					break
 
 			edges_noisy.append([subject_node, predicate_label, object_node, 1])
 
@@ -150,10 +145,7 @@ def get_train_val_test_factory(train: pd.DataFrame,
 	return train_factory, val_factory, test_factory
 
 
-def get_factory(dataset: pd.DataFrame, triplets_file_utils: str, create_inverse_triples: bool = False):
-	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
-	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
-
+def get_factory(dataset: pd.DataFrame, entity_to_id: dict, relation_to_id: dict, create_inverse_triples: bool = False):
 	factory = TriplesFactory.from_labeled_triples(triples=dataset[['subject', 'predicate', 'object']].values,
 												  entity_to_id=entity_to_id,
 												  relation_to_id=relation_to_id,

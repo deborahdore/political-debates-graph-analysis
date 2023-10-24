@@ -159,7 +159,7 @@ def training(model_dir: str,
 			 ratio: float):
 	logger.info(f"starting pipeline --> {model_name} with ratio {ratio} on {device}")
 
-	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
+	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, drop_col_noise=False)
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, triplets_file_utils)
 
 	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"

@@ -1,6 +1,5 @@
 import os
 import random
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,6 @@ from utils.evaluation_utils import adjust_dataset_for_bert, \
 from utils.utils import read_json, save_json
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-warnings.filterwarnings("ignore", category=UserWarning, module="torch_max_mem")
 
 
 # ======================== KGE MODELS EVALUATION  ======================== #
@@ -38,6 +36,9 @@ def link_deletion(result: PipelineResult,
 				  noise_ratio: float):
 	# load pytorch model
 	model = result.model
+
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
 	# load dataset
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
@@ -51,7 +52,7 @@ def link_deletion(result: PipelineResult,
 
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
 
-	real_test_scores = get_scores(model, test_factory, result.training)
+	real_test_scores = get_scores(model, test_factory)
 
 	ranks = []
 	ranks_head = []
@@ -86,8 +87,9 @@ def link_deletion(result: PipelineResult,
 		fake_tail_triple = [h, r, new_t]
 
 		fake_factory = get_factory(pd.DataFrame([fake_head_triple, fake_tail_triple], columns=train_original.columns),
-								   triplets_file_utils=triplets_file_utils)
-		scores = get_scores(model, fake_factory, result.training)
+								   entity_to_id=entity_to_id,
+								   relation_to_id=relation_to_id)
+		scores = get_scores(model, fake_factory)
 
 		assert len(scores) == 2
 		fake_h_score, fake_t_score = scores[0], scores[1]
@@ -274,21 +276,21 @@ def triple_classification(result: PipelineResult,
 																							False)
 
 	### INFERENCE ON ORIGINAL TESTING
-	real_train_scores = get_scores(model, train_factory, train_factory.mapped_triples)
+	real_train_scores = get_scores(model, train_factory)
 	real_train_center = get_center(real_train_scores)
 
 	#### INFERENCE ON VALIDATION
-	real_val_scores = get_scores(model, val_factory, val_factory.mapped_triples)
+	real_val_scores = get_scores(model, val_factory)
 	real_val_center = get_center(real_val_scores)
 
 	#### INFERENCE ON TESTING
-	real_test_scores = get_scores(model, test_factory, test_factory.mapped_triples)
+	real_test_scores = get_scores(model, test_factory)
 	real_test_center = get_center(real_test_scores)
 
-	fake_val_scores = get_scores(model, val_factory_noisy, val_factory_noisy.mapped_triples)
+	fake_val_scores = get_scores(model, val_factory_noisy)
 	fake_val_center = get_center(fake_val_scores)
 
-	fake_test_scores = get_scores(model, test_factory_noisy, test_factory_noisy.mapped_triples)
+	fake_test_scores = get_scores(model, test_factory_noisy)
 	fake_test_center = get_center(fake_test_scores)
 
 	threshold = fake_val_center + ((real_val_center - fake_val_center) / 2)

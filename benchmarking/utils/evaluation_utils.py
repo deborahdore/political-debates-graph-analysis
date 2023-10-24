@@ -6,9 +6,12 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-def get_scores(model, factory, mapped_triples):
-	scores = predict_triples(model=model, triples=factory, triples_factory=mapped_triples, mode=None).process(factory)
+
+def get_scores(model, factory):
+	factory.mapped_triples = factory.mapped_triples.to(device)
+	scores = predict_triples(model=model, triples=factory, mode=None).process(factory)
 	scores = scores.df[['score']].values
 	return np.sort(scores.ravel())
 
