@@ -1,8 +1,13 @@
 import os.path
 
 import pandas as pd
-from config.config import excel_dir, metrics_file, nlp_models, results_dir, valid_kge_models, valid_noise_ratio
+from config.config import metrics_file, nlp_models, results_dir, valid_kge_models, valid_noise_ratio
 from utils.utils import read_json, save_json
+
+
+def highlight_max(s):
+	is_max = s == s.max()
+	return ['font-weight: bold' if v else '' for v in is_max]
 
 
 def process_results():
@@ -10,26 +15,42 @@ def process_results():
 	link_deletion_data = {}
 	triple_classification_data = {}
 
-	for model in (valid_kge_models + nlp_models):
-		for noise in valid_noise_ratio:
+	for noise in valid_noise_ratio:
+		link_prediction_data_noise = {}
+		link_deletion_data_noise = {}
+		triple_classification_data_noise = {}
+
+		for model in (valid_kge_models + nlp_models):
 			metrics = read_json(metrics_file.format(model=model, ratio=noise))
-			link_prediction_data[noise][model] = metrics['link prediction']
-			link_deletion_data[noise][model] = metrics['link deletion']
-			triple_classification_data[noise][model] = metrics['triple classification']
+			link_prediction_data_noise.update({model: metrics['link prediction']['both']})
+			link_deletion_data_noise.update({model: metrics['link deletion']['both']})
+			triple_classification_data_noise.update({model: metrics['triple classification']})
+
+		link_prediction_data.update({str(noise): link_prediction_data_noise})
+		link_deletion_data.update({str(noise): link_deletion_data_noise})
+		triple_classification_data.update({str(noise): triple_classification_data_noise})
 
 	save_json(link_prediction_data, os.path.join(results_dir, "link_prediction.json"))
 	save_json(link_deletion_data, os.path.join(results_dir, "link_deletion.json"))
 	save_json(triple_classification_data, os.path.join(results_dir, "triple_classification.json"))
 
-	# create excel
-	for noise in link_prediction_data.keys():
-		file = os.path.join(excel_dir, f"link_prediction_{noise}.xlsx")
-		pd.DataFrame(link_prediction_data[noise]).to_excel(file)
+	with pd.ExcelWriter(os.path.join(results_dir, 'excel/link_prediction.xlsx')) as writer:
+		for noise in valid_noise_ratio:
+			df = pd.DataFrame(link_prediction_data[str(noise)])
+			df = df.style.apply(highlight_max, axis=1)
+			df.to_excel(writer, sheet_name=str(noise), float_format="%.5f")
+		writer.close()
 
-	for noise in link_deletion_data.keys():
-		file = os.path.join(excel_dir, f"link_deletion_{noise}.xlsx")
-		pd.DataFrame(link_deletion_data[noise]).to_excel(file)
+	with pd.ExcelWriter(os.path.join(results_dir, 'excel/link_deletion.xlsx')) as writer:
+		for noise in valid_noise_ratio:
+			df = pd.DataFrame(link_deletion_data[str(noise)])
+			df = df.style.apply(highlight_max, axis=1)
+			df.to_excel(writer, sheet_name=str(noise), float_format="%.5f", engine='openpyxl', index=False)
+		writer.close()
 
-	for noise in link_prediction_data.keys():
-		file = os.path.join(excel_dir, f"triple_classification_{noise}.xlsx")
-		pd.DataFrame(triple_classification_data[noise]).to_excel(file)
+	with pd.ExcelWriter(os.path.join(results_dir, 'excel/triple_classification.xlsx')) as writer:
+		for noise in valid_noise_ratio:
+			df = pd.DataFrame(triple_classification_data[str(noise)])
+			df = df.style.apply(highlight_max, axis=1)
+			df.to_excel(writer, sheet_name=str(noise), float_format="%.5f")
+		writer.close()

@@ -23,6 +23,7 @@ from evaluation import link_deletion, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
 from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
+from utils.results_utils import process_results
 
 
 def parse_command_line():
@@ -140,3 +141,5 @@ if __name__ == '__main__':
 									ratio=noise)
 	finally:
 		logger.info(f"Training {model} complete")
+
+	process_results()

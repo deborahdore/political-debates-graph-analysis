@@ -1,0 +1,76 @@
+{
+    "link prediction": {
+        "head": {
+            "hits_at_1": 0.0,
+            "hits_at_3": 0.0,
+            "hits_at_5": 0.0001916076,
+            "hits_at_10": 0.0005748228,
+            "mr": 18139.720703125,
+            "mrr": 0.0004062085,
+            "adjusted_mr": 0.9792887037,
+            "adjusted_mrr": 0.000106688
+        },
+        "both": {
+            "hits_at_1": 0.0,
+            "hits_at_3": 0.0,
+            "hits_at_5": 0.0001916076,
+            "hits_at_10": 0.0006706266,
+            "mr": 18256.0703125,
+            "mrr": 0.0003949715,
+            "adjusted_mr": 0.985567574,
+            "adjusted_mrr": 9.54483e-05
+        },
+        "tail": {
+            "hits_at_1": 0.0,
+            "hits_at_3": 0.0,
+            "hits_at_5": 0.0001916076,
+            "hits_at_10": 0.0007664304,
+            "mr": 18372.423828125,
+            "mrr": 0.0003837343,
+            "adjusted_mr": 0.9918466251,
+            "adjusted_mrr": 8.42084e-05
+        }
+    },
+    "link deletion": {
+        "head": {
+            "hits_at_1": 0.0,
+            "hits_at_3": 0.0003832152,
+            "hits_at_5": 0.0007664304,
+            "hits_at_10": 0.0028741138,
+            "mr": 1710.0327648975,
+            "adjusted_mr": 0.6551849674,
+            "mrr": 0.0025738684,
+            "adjusted_mrr": 0.000824522
+        },
+        "both": {
+            "hits_at_1": 0.0,
+            "hits_at_3": 0.0001916076,
+            "hits_at_5": 0.0003832152,
+            "hits_at_10": 0.0014370569,
+            "mr": 2587,
+            "adjusted_mr": 2587,
+            "mrr": 0.0014796457,
+            "adjusted_mrr": 0.0014796457
+        },
+        "tail": {
+            "hits_at_1": 0.0,
+            "hits_at_3": 0.0,
+            "hits_at_5": 0.0,
+            "hits_at_10": 0.0,
+            "mr": 3465.9147346235,
+            "adjusted_mr": 1.3279366799,
+            "mrr": 0.000385423,
+            "adjusted_mrr": -0.0013677616
+        }
+    },
+    "triple classification": {
+        "accuracy": 0.5062650879,
+        "f1_macro": 0.5004318215,
+        "f1_pos": 0.5544143583,
+        "f1_neg": 0.4464492847,
+        "precision": 0.504646178,
+        "recall": 0.5048383118,
+        "Z_statistic": 1.01,
+        "norm_distance": 0.0026622826
+    }
+}
