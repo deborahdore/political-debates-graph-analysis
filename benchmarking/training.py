@@ -24,8 +24,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 
 def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, ratio: float):
-	batch_size = 16
-	epochs = 5
+	batch_size = 32
+	epochs = 3
 
 	logger.info(f"Training bert with {ratio} noise ratio")
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file, ratio)
@@ -164,9 +164,13 @@ def training(model_dir: str,
 
 	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
 	pipeline_config = read_json(pipeline_config)['pipeline']
-	pipeline_config['testing'] = test_factory
 	pipeline_config['training'] = train_factory
 	pipeline_config['validation'] = val_factory
+	pipeline_config['testing'] = test_factory
+
+	# train_factory.mapped_triples = train_factory.mapped_triples.to(device)
+	# val_factory.mapped_triples = val_factory.mapped_triples.to(device)
+	# test_factory.mapped_triples = test_factory.mapped_triples.to(device)
 
 	result = pipeline(**pipeline_config, device=device, random_seed=123)
 

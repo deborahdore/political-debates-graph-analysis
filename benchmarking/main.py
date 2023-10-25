@@ -25,6 +25,8 @@ from training import bert_training, hyperparameter_optimization, training
 from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
 from utils.results_utils import process_results
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
 
 def parse_command_line():
 	if len(sys.argv) < 5:
@@ -50,6 +52,10 @@ def parse_command_line():
 
 
 if __name__ == '__main__':
+	process_results()
+
+
+def main():
 	generate_dataset, optimization, noise, model = parse_command_line()
 
 	if generate_dataset:
@@ -65,13 +71,14 @@ if __name__ == '__main__':
 		for name in valid_kge_models:
 			for noise in valid_noise_ratio:
 				try:
-					torch.cuda.empty_cache()
 					result = training(model_dir=model_dir.format(model=name),
 									  model_name=name,
 									  noisy_triples_file=noisy_triples_file,
 									  triplets_file_utils=triplets_file_utils,
 									  plot_dir=plot_dir,
 									  ratio=noise)
+
+					torch.cuda.empty_cache()
 
 					link_prediction(result=result,
 									noisy_triples_file=noisy_triples_file,
@@ -80,12 +87,16 @@ if __name__ == '__main__':
 									metrics_file=metrics_file.format(model=name, ratio=noise),
 									noise_ratio=noise)
 
+					torch.cuda.empty_cache()
+
 					link_deletion(result=result,
 								  model_name=name,
 								  noisy_triples_file=noisy_triples_file,
 								  triplets_file_utils=triplets_file_utils,
 								  metrics_file=metrics_file.format(model=name, ratio=noise),
 								  noise_ratio=noise)
+
+					torch.cuda.empty_cache()
 
 					triple_classification(result=result,
 										  model_name=name,
@@ -101,16 +112,21 @@ if __name__ == '__main__':
 			for noise in valid_noise_ratio:
 				try:
 					torch.cuda.empty_cache()
+
 					model = bert_training(model_dir=model_dir.format(model="bert"),
 										  model_name='bert',
 										  noisy_triples_file=noisy_triples_file,
 										  ratio=noise)
+
+					torch.cuda.empty_cache()
+
 					link_prediction_bert(model=model,
 										 model_dir=model_dir.format(model="bert"),
 										 model_name='bert',
 										 noisy_triples_file=noisy_triples_file,
 										 metrics_file=metrics_file.format(model=name, ratio=noise),
 										 noise_ratio=noise)
+					torch.cuda.empty_cache()
 
 					link_deletion_bert(model=model,
 									   model_dir=model_dir.format(model="bert"),
@@ -118,6 +134,7 @@ if __name__ == '__main__':
 									   noisy_triples_file=noisy_triples_file,
 									   metrics_file=metrics_file.format(model=name, ratio=noise),
 									   noise_ratio=noise)
+					torch.cuda.empty_cache()
 
 					triple_classification_bert(model=model,
 											   model_dir=model_dir.format(model="bert"),
@@ -127,6 +144,7 @@ if __name__ == '__main__':
 											   noise_ratio=noise)
 				finally:
 					logger.info(f"{name} evaluation completed")
+
 
 	else:
 		logger.info(f"hyperparameter tuning with {model} - noise {noise}")
@@ -141,5 +159,3 @@ if __name__ == '__main__':
 									ratio=noise)
 	finally:
 		logger.info(f"Training {model} complete")
-
-	process_results()

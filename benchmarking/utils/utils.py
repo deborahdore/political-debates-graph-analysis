@@ -49,5 +49,5 @@ def save_json(json_obj: json, json_file_name: str):
 	file.close()
 
 
-def load_model(model_file: str):
-	return torch.load(model_file)
+def load_model(model_file: str, device:torch.device):
+	return torch.load(model_file, map_location=device)

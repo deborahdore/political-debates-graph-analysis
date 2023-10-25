@@ -54,12 +54,12 @@ was also tested on these datasets to compare its performances against the kge mo
 * _TransH_
 
 Result of the model's optimization are
-available [in this folder](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Eob1CqlF5Z5EiOWaL_1u9CsBhczFAMUJR5dn2yydMON7Cw?e=hLCA8e).
+available [in this folder](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Eob1CqlF5Z5EiOWaL_1u9CsBz-cAxDULqe2lSHQ4d1hr5Q?e=pVxSgB).
 
 ### DATASET
 
 Original dataset and datasets without noise are available
-on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Ek_00pPwRgNBrR6HuKIrEyoBwghlx6NSONKM6T21r0Yv2A?e=cIPJ12)
+on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Ek_00pPwRgNBrR6HuKIrEyoBJ5wMVDkt3epQTjwbTl5NVg?e=GExo7w)
 
 ### REPRODUCIBILITY
 

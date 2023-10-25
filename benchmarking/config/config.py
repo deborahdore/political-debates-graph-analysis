@@ -2,10 +2,9 @@ import os
 from pathlib import Path
 
 # ======================== utils ======================== #
-valid_kge_models = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "BoxE", "RotatE", "TransH"]
-nlp_models = ["bert"]
-valid_noise_ratio = [0, 0.1, 0.2, 0.3, 1]
-
+valid_kge_models = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "BoxE", "RotatE"] #"TransH"
+nlp_models = [] #"bert"
+valid_noise_ratio = [0.1, 0.2, 0.3, 1] # todo
 # ===================== Directories ===================== #
 base_dir = os.path.abspath(".")
 dataset_dir = os.path.join(base_dir, "dataset")

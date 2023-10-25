@@ -6,7 +6,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
 def get_scores(model, factory):

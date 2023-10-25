@@ -1,11 +1,12 @@
 import random
-
+import torch
 import pandas as pd
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sklearn.model_selection import train_test_split
 from utils.utils import load, read_json, read_tsv, save, save_json
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def get_nodes(dataset: pd.DataFrame):
 	logger.info("extracting nodes from dataset")
@@ -142,6 +143,11 @@ def get_train_val_test_factory(train: pd.DataFrame,
 													   entity_to_id=entity_to_id,
 													   relation_to_id=relation_to_id,
 													   create_inverse_triples=create_inverse_triples)
+
+	# train_factory.mapped_triples = train_factory.mapped_triples.to(device)
+	# val_factory.mapped_triples = val_factory.mapped_triples.to(device)
+	# test_factory.mapped_triples = test_factory.mapped_triples.to(device)
+
 	return train_factory, val_factory, test_factory
 
 
@@ -150,6 +156,8 @@ def get_factory(dataset: pd.DataFrame, entity_to_id: dict, relation_to_id: dict,
 												  entity_to_id=entity_to_id,
 												  relation_to_id=relation_to_id,
 												  create_inverse_triples=create_inverse_triples)
+
+	# factory.mapped_triples = factory.mapped_triples.to(device)
 	return factory
 
 

@@ -212,7 +212,6 @@ def link_prediction(result: PipelineResult,
 																							test_noisy,
 																							triplets_file_utils,
 																							False)
-
 	result_dict = evaluator.evaluate(model=result.model,
 									 mapped_triples=test_factory.mapped_triples,
 									 batch_size=result.configuration.get('batch_size'),
@@ -220,7 +219,7 @@ def link_prediction(result: PipelineResult,
 																val_factory_noisy.mapped_triples],
 									 use_tqdm=True,
 									 slice_size=None,
-									 device=torch.device(device)).to_dict()
+									 device=device).to_dict()
 
 	results_eval = {}
 	n_round = 10
@@ -517,8 +516,6 @@ def link_prediction_bert(model: BertForSequenceClassification,
 						 noisy_triples_file: str,
 						 metrics_file: str,
 						 noise_ratio: float):
-	device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
 
 	# load original dataset
@@ -535,14 +532,8 @@ def link_prediction_bert(model: BertForSequenceClassification,
 
 	score_fake_triple = get_probabilities_bert(model, dataloader_fake_triple, device)
 
-	ranks_head = []
-	ranks_tail = []
 	ranks = []
 
-	dataset_original = pd.concat([train, val, test], axis=0).reset_index(drop=True)
-	nodes = get_nodes(dataset_original)
-
-	# for each real triple, sample 15 negatives
 	for head, rel, tail in test.values.tolist():
 		real_triple = pd.DataFrame([[head, rel, tail]], columns=['subject', 'predicate', 'object'])
 
@@ -561,16 +552,10 @@ def link_prediction_bert(model: BertForSequenceClassification,
 		# scores are sorted in ascending order, meaning from the lowest to the highest
 		# in link prediction we expect the score of the real to be as high as possible
 		# therefore close to the bottom -> invert results to get hits@k metrics
-		rank_head = len(score_fake_triple) - np.searchsorted(a=score_fake_triple[::-1],
-															 v=score_real_triple,
-															 side='right') + 1
-		rank_tail = len(score_fake_triple) - np.searchsorted(a=score_fake_triple[::-1],
-															 v=score_real_triple,
-															 side='right') + 1
+		rank = len(score_fake_triple) - np.searchsorted(a=score_fake_triple[::-1],
+														v=score_real_triple,
+														side='right') + 1
 
-		rank = int((rank_head + rank_tail) / 2.0)
-		ranks_head.append(rank_head)
-		ranks_tail.append(rank_tail)
 		ranks.append(rank)
 
 	# Metrics
@@ -586,59 +571,33 @@ def link_prediction_bert(model: BertForSequenceClassification,
 	test_size = len(test.values.tolist())
 	n_round = 10
 
-	ranks_head_array = np.array(ranks_head, dtype=int)
-	ranks_tail_array = np.array(ranks_tail, dtype=int)
+	ranks_array = np.array(ranks, dtype=int)
 
 	# MR
-	mr_head = round(float(mr_calculator(ranks_head_array, test_size)), n_round)
-	mr_tail = round(float(mr_calculator(ranks_tail_array, test_size)), n_round)
-	mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+	mr = round(float(mr_calculator(ranks_array, test_size)), n_round)
 
 	# ADJUSTED MR
-	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
-	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+	adjusted_mr = round(float(adjusted_mr_calculator(ranks_array, test_size)), n_round)
 
 	# MRR
-	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
-	mrr_tail = round(float(mrr_calculator(ranks_tail_array, test_size)), n_round)
-	mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+	mrr = round(float(mrr_calculator(ranks_array, test_size)), n_round)
 
 	# ADJUSTED MRR
-	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
-	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+	adjusted_mrr = round(float(adjusted_mrr_calculator(ranks_array, test_size)), n_round)
 
 	# HITS AT 1
-	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
-	hits_at_1_tail = round(float(hits_at_1_calculator(ranks_tail_array)), n_round)
-	hits_at_1 = round(float((hits_at_1_head + hits_at_1_tail) / 2.0), n_round)
+	hits_at_1 = round(float(hits_at_1_calculator(ranks_array)), n_round)
 
 	# HITS AT 3
-	hits_at_3_head = round(float(hits_at_3_calculator(ranks_head_array)), n_round)
-	hits_at_3_tail = round(float(hits_at_3_calculator(ranks_tail_array)), n_round)
-	hits_at_3 = round(float((hits_at_3_head + hits_at_3_tail) / 2.0), n_round)
+	hits_at_3 = round(float(hits_at_3_calculator(ranks_array)), n_round)
 
 	# HITS AT 5
-	hits_at_5_head = round(float(hits_at_5_calculator(ranks_head_array)), n_round)
-	hits_at_5_tail = round(float(hits_at_5_calculator(ranks_tail_array)), n_round)
-	hits_at_5 = round(float((hits_at_5_head + hits_at_5_tail) / 2.0), n_round)
+	hits_at_5 = round(float(hits_at_5_calculator(ranks_array)), n_round)
 
 	# HITS AT 10
-	hits_at_10_head = round(float(hits_at_10_calculator(ranks_head_array)), n_round)
-	hits_at_10_tail = round(float(hits_at_10_calculator(ranks_tail_array)), n_round)
-	hits_at_10 = round(float((hits_at_10_head + hits_at_10_tail) / 2.0), n_round)
+	hits_at_10 = round(float(hits_at_10_calculator(ranks_array)), n_round)
 
 	results_eval = {
-		'head': {
-			'hits_at_1'   : hits_at_1_head,
-			'hits_at_3'   : hits_at_3_head,
-			'hits_at_5'   : hits_at_5_head,
-			'hits_at_10'  : hits_at_10_head,
-			'mr'          : mr_head,
-			'adjusted_mr' : adjusted_mr_head,
-			'mrr'         : mrr_head,
-			'adjusted_mrr': adjusted_mrr_head},
 		'both': {
 			'hits_at_1'   : hits_at_1,
 			'hits_at_3'   : hits_at_3,
@@ -647,17 +606,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 			'mr'          : mr,
 			'adjusted_mr' : adjusted_mr,
 			'mrr'         : mrr,
-			'adjusted_mrr': adjusted_mrr},
-		'tail': {
-			'hits_at_1'   : hits_at_1_tail,
-			'hits_at_3'   : hits_at_3_tail,
-			'hits_at_5'   : hits_at_5_tail,
-			'hits_at_10'  : hits_at_10_tail,
-			'mr'          : mr_tail,
-			'adjusted_mr' : adjusted_mr_tail,
-			'mrr'         : mrr_tail,
-			'adjusted_mrr': adjusted_mrr_tail},
-
+			'adjusted_mrr': adjusted_mrr}
 	}
 
 	# Check if the JSON file exists

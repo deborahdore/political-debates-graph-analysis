@@ -1,0 +1,370 @@
+{
+    "0.1": {
+        "TransE": {
+            "accuracy": 0.6416829521,
+            "f1_macro": 0.6382941906,
+            "f1_pos": 0.673304685,
+            "f1_neg": 0.6032836961,
+            "precision": 0.6423206072,
+            "recall": 0.6482390272,
+            "Z_statistic": 28.25,
+            "norm_distance": 0.2482746754
+        },
+        "DistMult": {
+            "accuracy": 0.6458213588,
+            "f1_macro": 0.6426147022,
+            "f1_pos": 0.6764674997,
+            "f1_neg": 0.6087619048,
+            "precision": 0.6468830487,
+            "recall": 0.6529805717,
+            "Z_statistic": 43.02,
+            "norm_distance": 0.2263689284
+        },
+        "ComplEx": {
+            "accuracy": 0.6439820669,
+            "f1_macro": 0.6408683071,
+            "f1_pos": 0.6743085498,
+            "f1_neg": 0.6074280644,
+            "precision": 0.6453766163,
+            "recall": 0.6513998366,
+            "Z_statistic": 41.59,
+            "norm_distance": 0.1637296886
+        },
+        "HolE": {
+            "accuracy": 0.6707667548,
+            "f1_macro": 0.669372,
+            "f1_pos": 0.6908462867,
+            "f1_neg": 0.6478977133,
+            "precision": 0.678639877,
+            "recall": 0.6851640943,
+            "Z_statistic": 46.55,
+            "norm_distance": 0.1633807969
+        },
+        "ConvE": {
+            "accuracy": 0.5345442005,
+            "f1_macro": 0.4849237893,
+            "f1_pos": 0.6447934029,
+            "f1_neg": 0.3250541757,
+            "precision": 0.4908592753,
+            "recall": 0.4921651492,
+            "Z_statistic": 3.14,
+            "norm_distance": 0.012545597
+        },
+        "PairRE": {
+            "accuracy": 0.6543280837,
+            "f1_macro": 0.6519169497,
+            "f1_pos": 0.6808871909,
+            "f1_neg": 0.6229467085,
+            "precision": 0.6578483969,
+            "recall": 0.6642351223,
+            "Z_statistic": 50.71,
+            "norm_distance": 0.3076412228
+        },
+        "AutoSF": {
+            "accuracy": 0.729049316,
+            "f1_macro": 0.7290364254,
+            "f1_pos": 0.7309053545,
+            "f1_neg": 0.7271674962,
+            "precision": 0.7565381052,
+            "recall": 0.7579610475,
+            "Z_statistic": 64.47,
+            "norm_distance": 0.133042276
+        },
+        "BoxE": {
+            "accuracy": 0.6412231291,
+            "f1_macro": 0.6379907323,
+            "f1_pos": 0.6721982985,
+            "f1_neg": 0.6037831662,
+            "precision": 0.6423316815,
+            "recall": 0.6482388069,
+            "Z_statistic": 33.31,
+            "norm_distance": 0.2539210552
+        },
+        "RotatE": {
+            "accuracy": 0.7623864812,
+            "f1_macro": 0.762174026,
+            "f1_pos": 0.7550657661,
+            "f1_neg": 0.769282286,
+            "precision": 0.809193941,
+            "recall": 0.8003458297,
+            "Z_statistic": 78.06,
+            "norm_distance": 0.361741432
+        }
+    },
+    "0.2": {
+        "TransE": {
+            "accuracy": 0.6206460513,
+            "f1_macro": 0.6196417379,
+            "f1_pos": 0.6391865296,
+            "f1_neg": 0.6000969462,
+            "precision": 0.631597057,
+            "recall": 0.6357816158,
+            "Z_statistic": 30.95,
+            "norm_distance": 0.1839896402
+        },
+        "DistMult": {
+            "accuracy": 0.6208759628,
+            "f1_macro": 0.6198267216,
+            "f1_pos": 0.6397990389,
+            "f1_neg": 0.5998544043,
+            "precision": 0.6315385529,
+            "recall": 0.6357817259,
+            "Z_statistic": 29.51,
+            "norm_distance": 0.1823017775
+        },
+        "ComplEx": {
+            "accuracy": 0.6200712726,
+            "f1_macro": 0.6191835534,
+            "f1_pos": 0.637569909,
+            "f1_neg": 0.6007971977,
+            "precision": 0.6318087903,
+            "recall": 0.6358292149,
+            "Z_statistic": 41.23,
+            "norm_distance": 0.1761075727
+        },
+        "HolE": {
+            "accuracy": 0.6368548109,
+            "f1_macro": 0.6365149422,
+            "f1_pos": 0.6476296709,
+            "f1_neg": 0.6254002134,
+            "precision": 0.6536822803,
+            "recall": 0.6569977238,
+            "Z_statistic": 39.68,
+            "norm_distance": 0.1623873412
+        },
+        "ConvE": {
+            "accuracy": 0.6192665824,
+            "f1_macro": 0.6183727318,
+            "f1_pos": 0.6368421053,
+            "f1_neg": 0.5999033583,
+            "precision": 0.6309659006,
+            "recall": 0.6349670908,
+            "Z_statistic": 28.24,
+            "norm_distance": 0.1232051538
+        },
+        "PairRE": {
+            "accuracy": 0.6577767559,
+            "f1_macro": 0.6577200173,
+            "f1_pos": 0.6621268868,
+            "f1_neg": 0.6533131478,
+            "precision": 0.6806642691,
+            "recall": 0.682476908,
+            "Z_statistic": 49.5,
+            "norm_distance": 0.2810021317
+        },
+        "AutoSF": {
+            "accuracy": 0.6861708242,
+            "f1_macro": 0.6861060109,
+            "f1_pos": 0.6815955213,
+            "f1_neg": 0.6906165005,
+            "precision": 0.7205555264,
+            "recall": 0.7177260419,
+            "Z_statistic": 53.44,
+            "norm_distance": 0.1297566538
+        },
+        "BoxE": {
+            "accuracy": 0.6196114496,
+            "f1_macro": 0.618697019,
+            "f1_pos": 0.637369863,
+            "f1_neg": 0.600024175,
+            "precision": 0.6311670811,
+            "recall": 0.6352066279,
+            "Z_statistic": 32.55,
+            "norm_distance": 0.2292221979
+        },
+        "RotatE": {
+            "accuracy": 0.6842165766,
+            "f1_macro": 0.6838098347,
+            "f1_pos": 0.6951503718,
+            "f1_neg": 0.6724692977,
+            "precision": 0.7003192933,
+            "recall": 0.7052298961,
+            "Z_statistic": 53.48,
+            "norm_distance": 0.1944057026
+        }
+    },
+    "0.3": {
+        "TransE": {
+            "accuracy": 0.5897229567,
+            "f1_macro": 0.5897059534,
+            "f1_pos": 0.5870646766,
+            "f1_neg": 0.5923472302,
+            "precision": 0.6162551214,
+            "recall": 0.6156116962,
+            "Z_statistic": 23.13,
+            "norm_distance": 0.1687368666
+        },
+        "DistMult": {
+            "accuracy": 0.5879986205,
+            "f1_macro": 0.5879865932,
+            "f1_pos": 0.5857605178,
+            "f1_neg": 0.5902126686,
+            "precision": 0.6141276239,
+            "recall": 0.6136001469,
+            "Z_statistic": 27.07,
+            "norm_distance": 0.1420734129
+        },
+        "ComplEx": {
+            "accuracy": 0.5834003908,
+            "f1_macro": 0.5834003413,
+            "f1_pos": 0.5835440129,
+            "f1_neg": 0.5832566697,
+            "precision": 0.6075827992,
+            "recall": 0.6076136486,
+            "Z_statistic": 23.78,
+            "norm_distance": 0.0993192051
+        },
+        "HolE": {
+            "accuracy": 0.5939763191,
+            "f1_macro": 0.5939053476,
+            "f1_pos": 0.5885368127,
+            "f1_neg": 0.5992738825,
+            "precision": 0.6228971286,
+            "recall": 0.6214544062,
+            "Z_statistic": 31.92,
+            "norm_distance": 0.125387209
+        },
+        "ConvE": {
+            "accuracy": 0.5890332222,
+            "f1_macro": 0.5890050667,
+            "f1_pos": 0.5856033384,
+            "f1_neg": 0.5924067951,
+            "precision": 0.6161098371,
+            "recall": 0.6152762453,
+            "Z_statistic": 25.21,
+            "norm_distance": 0.1002086434
+        },
+        "PairRE": {
+            "accuracy": 0.6038625129,
+            "f1_macro": 0.6036754292,
+            "f1_pos": 0.5950646298,
+            "f1_neg": 0.6122862286,
+            "precision": 0.6362572515,
+            "recall": 0.6335234818,
+            "Z_statistic": 44.59,
+            "norm_distance": 0.2602211668
+        },
+        "AutoSF": {
+            "accuracy": 0.6257041039,
+            "f1_macro": 0.6251873538,
+            "f1_pos": 0.6112702961,
+            "f1_neg": 0.6391044114,
+            "precision": 0.6655528657,
+            "recall": 0.6594818501,
+            "Z_statistic": 41.81,
+            "norm_distance": 0.090597408
+        },
+        "BoxE": {
+            "accuracy": 0.5867341074,
+            "f1_macro": 0.5867335612,
+            "f1_pos": 0.5862584877,
+            "f1_neg": 0.5872086347,
+            "precision": 0.6115046986,
+            "recall": 0.6113973204,
+            "Z_statistic": 18.51,
+            "norm_distance": 0.136613855
+        },
+        "RotatE": {
+            "accuracy": 0.6478905621,
+            "f1_macro": 0.6475253836,
+            "f1_pos": 0.6588706983,
+            "f1_neg": 0.6361800689,
+            "precision": 0.6644585755,
+            "recall": 0.6681577371,
+            "Z_statistic": 42.43,
+            "norm_distance": 0.164918421
+        }
+    },
+    "1": {
+        "TransE": {
+            "accuracy": 0.5329348201,
+            "f1_macro": 0.4980264994,
+            "f1_pos": 0.3656518345,
+            "f1_neg": 0.6304011644,
+            "precision": 0.7242765154,
+            "recall": 0.6100310702,
+            "Z_statistic": 37.37,
+            "norm_distance": 0.1841991085
+        },
+        "DistMult": {
+            "accuracy": 0.4970686286,
+            "f1_macro": 0.4911777629,
+            "f1_pos": 0.5459263103,
+            "f1_neg": 0.4364292155,
+            "precision": 0.4955393775,
+            "recall": 0.4953547824,
+            "Z_statistic": -0.02,
+            "norm_distance": Infinity
+        },
+        "ComplEx": {
+            "accuracy": 0.5615587999,
+            "f1_macro": 0.5502904232,
+            "f1_pos": 0.6214767765,
+            "f1_neg": 0.4791040699,
+            "precision": 0.5505848313,
+            "recall": 0.5519731727,
+            "Z_statistic": 15.8,
+            "norm_distance": 0.0328758672
+        },
+        "HolE": {
+            "accuracy": 0.5062650879,
+            "f1_macro": 0.5004318215,
+            "f1_pos": 0.5544143583,
+            "f1_neg": 0.4464492847,
+            "precision": 0.504646178,
+            "recall": 0.5048383118,
+            "Z_statistic": 1.01,
+            "norm_distance": 0.0026622826
+        },
+        "ConvE": {
+            "accuracy": 0.5577652604,
+            "f1_macro": 0.5522899553,
+            "f1_pos": 0.6018010558,
+            "f1_neg": 0.5027788549,
+            "precision": 0.5556647329,
+            "recall": 0.5579556517,
+            "Z_statistic": 20.77,
+            "norm_distance": 0.0588547056
+        },
+        "PairRE": {
+            "accuracy": 0.5524772962,
+            "f1_macro": 0.5494076093,
+            "f1_pos": 0.5865987045,
+            "f1_neg": 0.5122165142,
+            "precision": 0.5560268276,
+            "recall": 0.5582882395,
+            "Z_statistic": 16.81,
+            "norm_distance": 0.0411376674
+        },
+        "AutoSF": {
+            "accuracy": 0.5031612829,
+            "f1_macro": 0.4982227966,
+            "f1_pos": 0.5480025099,
+            "f1_neg": 0.4484430832,
+            "precision": 0.503310664,
+            "recall": 0.5034484686,
+            "Z_statistic": 1.82,
+            "norm_distance": 0.0045602588
+        },
+        "BoxE": {
+            "accuracy": 0.5110932291,
+            "f1_macro": 0.5075100666,
+            "f1_pos": 0.5495180595,
+            "f1_neg": 0.4655020736,
+            "precision": 0.5140353131,
+            "recall": 0.5146069952,
+            "Z_statistic": 14.84,
+            "norm_distance": 0.0589571373
+        },
+        "RotatE": {
+            "accuracy": 0.5046557076,
+            "f1_macro": 0.49319753,
+            "f1_pos": 0.569401419,
+            "f1_neg": 0.4169936409,
+            "precision": 0.4945230576,
+            "recall": 0.4943530546,
+            "Z_statistic": 1.16,
+            "norm_distance": 0.0030713398
+        }
+    }
+}
