@@ -39,18 +39,15 @@ def process_results():
 			df = pd.DataFrame(link_prediction_data[str(noise)])
 			df = df.style.apply(highlight_max, axis=1)
 			df.to_excel(writer, sheet_name=str(noise), float_format="%.5f")
-	writer.close()
 
 	with pd.ExcelWriter(os.path.join(results_dir, 'excel/link_deletion.xlsx')) as writer:
 		for noise in valid_noise_ratio:
 			df = pd.DataFrame(link_deletion_data[str(noise)])
 			df = df.style.apply(highlight_max, axis=1)
 			df.to_excel(writer, sheet_name=str(noise), float_format="%.5f", engine='openpyxl', index=False)
-	writer.close()
 
 	with pd.ExcelWriter(os.path.join(results_dir, 'excel/triple_classification.xlsx')) as writer:
 		for noise in valid_noise_ratio:
 			df = pd.DataFrame(triple_classification_data[str(noise)])
 			df = df.style.apply(highlight_max, axis=1)
 			df.to_excel(writer, sheet_name=str(noise), float_format="%.5f")
-	writer.close()

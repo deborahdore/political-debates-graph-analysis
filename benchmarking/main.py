@@ -52,6 +52,7 @@ def parse_command_line():
 
 
 if __name__ == '__main__':
+	# main()
 	process_results()
 
 
