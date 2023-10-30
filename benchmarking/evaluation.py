@@ -16,11 +16,12 @@ from sklearn import metrics
 from torch.utils.data import DataLoader, SequentialSampler
 from transformers import BertForSequenceClassification
 
-from utils.dataset_utils import get_factory, get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
+from utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
 from utils.evaluation_utils import adjust_dataset_for_bert, \
 	get_center, \
 	get_probabilities_bert, \
 	get_scores, \
+	get_scores_tensor, \
 	tokenize_and_generate_dataset
 from utils.utils import read_json, save_json
 
@@ -34,23 +35,25 @@ def link_deletion(result: PipelineResult,
 				  triplets_file_utils: str,
 				  metrics_file: str,
 				  noise_ratio: float):
+	logger.info(f"# --- evaluating {model_name} trained with {noise_ratio} noise on link deletion --- #")
+
 	# load pytorch model
 	model = result.model
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
-	# load dataset
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
-
-	# get factory
+	# load original dataset
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  noise=0,
+																			  drop_col_noise=True,
+																			  get_noisy_test=False)
+	# triples factories from original dataset
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
 																		  triplets_file_utils,
-																		  False)
-
-	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
+																		  create_inverse_triples=False)
 
 	real_test_scores = get_scores(model, test_factory)
 
@@ -58,6 +61,38 @@ def link_deletion(result: PipelineResult,
 	ranks_head = []
 	ranks_tail = []
 
+	original_df = pd.concat([train_original, test_original, val_original], axis=0).reset_index(drop=True)
+	nodes = get_nodes(original_df)
+
+	for h, r, t in test_original.values.tolist():
+		fake_head_triple = None
+		fake_tail_triple = None
+
+		# create fake head triple
+		while True:
+			new_h = random.choice(nodes)
+			fake_head_triple = [new_h, r, t]
+			if fake_head_triple not in original_df.values.tolist():
+				break
+
+		# create fake tail triple
+		while True:
+			new_t = random.choice(nodes)
+			fake_tail_triple = [h, r, new_t]
+			if fake_tail_triple not in original_df.values.tolist():
+				break
+
+		# get scores
+		fake_h_score = get_scores_tensor(model, fake_head_triple, entity_to_id, relation_to_id)
+		fake_t_score = get_scores_tensor(model, fake_tail_triple, entity_to_id, relation_to_id)
+
+		rank_head = np.searchsorted(a=real_test_scores, v=fake_h_score, side='left') + 1
+		rank_tail = np.searchsorted(a=real_test_scores, v=fake_t_score, side='left') + 1
+		ranks.append(int((rank_head + rank_tail) / 2.0))
+		ranks_head.append(rank_head)
+		ranks_tail.append(rank_tail)
+
+	# Metrics
 	mr_calculator = ArithmeticMeanRank()
 	adjusted_mr_calculator = AdjustedArithmeticMeanRank()
 	mrr_calculator = InverseHarmonicMeanRank()
@@ -67,39 +102,6 @@ def link_deletion(result: PipelineResult,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	dataset_original = pd.concat([train_original, val_original, test_original], axis=0).reset_index(drop=True)
-	nodes = get_nodes(dataset_original)
-
-	for h, r, t in test_original.values.tolist():
-		fake_head_triple = None
-		fake_tail_triple = None
-
-		new_h = random.choice(nodes)
-		# assert not real triple
-		while [new_h, r, t] in dataset_original.values.tolist():
-			new_h = random.choice(nodes)
-		fake_head_triple = [new_h, r, t]
-
-		new_t = random.choice(nodes)
-		# assert not real triple
-		while [h, r, new_t] in dataset_original.values.tolist():
-			new_t = random.choice(nodes)
-		fake_tail_triple = [h, r, new_t]
-
-		fake_factory = get_factory(pd.DataFrame([fake_head_triple, fake_tail_triple], columns=train_original.columns),
-								   entity_to_id=entity_to_id,
-								   relation_to_id=relation_to_id)
-		scores = get_scores(model, fake_factory)
-
-		assert len(scores) == 2
-		fake_h_score, fake_t_score = scores[0], scores[1]
-		rank_head = np.searchsorted(a=real_test_scores, v=fake_h_score, side='left') + 1
-		rank_tail = np.searchsorted(a=real_test_scores, v=fake_t_score, side='left') + 1
-		ranks.append(int((rank_head + rank_tail) / 2.0))
-		ranks_head.append(rank_head)
-		ranks_tail.append(rank_tail)
-
-	# Metrics
 	test_size = len(test_original)
 	n_round = 10
 
@@ -194,32 +196,53 @@ def link_prediction(result: PipelineResult,
 					model_name: str,
 					metrics_file: str,
 					noise_ratio: float):
-	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
+	"""
+	The link_prediction function evaluates the model on link prediction.
 
-	evaluator = RankBasedEvaluator(filtered=True)
+	:param result: PipelineResult: Get the model and its configuration
+	:param noisy_triples_file: str: Load the noisy triples file
+	:param triplets_file_utils: str: Load the entity-to-id and relation-to-id mapping
+	:param model_name: str: name of the model
+	:param metrics_file: str: Save the results of the evaluation in a json file
+	:param noise_ratio: float: Specify the noise ratio of the dataset
 
-	# load dataset
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
-	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, noise_ratio, False)
+	"""
+	logger.info(f"# -------- evaluating {model_name} trained with {noise_ratio} noise on link prediction -------- #")
 
+	# load original dataset
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  noise=0,
+																			  drop_col_noise=False,
+																			  get_noisy_test=False)
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
 																		  triplets_file_utils,
-																		  False)
+																		  create_inverse_triples=False)
+
+	# load noisy dataset
+	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file,
+																	 noise=noise_ratio,
+																	 drop_col_noise=False,
+																	 get_noisy_test=True)
 	train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
 																							val_noisy,
 																							test_noisy,
 																							triplets_file_utils,
-																							False)
+																							create_inverse_triples=False)
+	# Launch evaluation pipeline
+	evaluator = RankBasedEvaluator(filtered=True)
 	result_dict = evaluator.evaluate(model=result.model,
 									 mapped_triples=test_factory.mapped_triples,
-									 batch_size=result.configuration.get('batch_size'),
 									 additional_filter_triples=[train_factory_noisy.mapped_triples,
-																val_factory_noisy.mapped_triples],
-									 use_tqdm=True,
+																# filter on training triples with noisy
+																val_factory_noisy.mapped_triples,
+																# filter on validation triples with noisy
+																],
+									 batch_size=result.configuration.get('batch_size'),
 									 slice_size=None,
-									 device=device).to_dict()
+									 device=device,
+									 use_tqdm=True).to_dict()
 
 	results_eval = {}
 	n_round = 10
@@ -243,7 +266,7 @@ def link_prediction(result: PipelineResult,
 	else:
 		save_json({"link prediction": results_eval}, metrics_file)
 
-	logger.info(f"Evaluating model {model_name} complete")
+	logger.info(f"# ------ Evaluating model {model_name} complete ----- #")
 
 
 def triple_classification(result: PipelineResult,
@@ -257,72 +280,100 @@ def triple_classification(result: PipelineResult,
 
 	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on triple classification")
 
-	# load dataset gold
+	# ===== LOAD ORIGINAL
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
-	# load dataset random
-	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, 1, False)
-
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
 																		  triplets_file_utils,
-																		  False)
+																		  create_inverse_triples=False)
 
-	train_factory_noisy, val_factory_noisy, test_factory_noisy = get_train_val_test_factory(train_noisy,
-																							val_noisy,
-																							test_noisy,
-																							triplets_file_utils,
-																							False)
+	# ===== LOAD ALL FAKE
+	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_triples_file, 100, False)
+	train_fake = train_fake[train_fake['noise'] == 1].copy()
+	val_fake = val_fake[val_fake['noise'] == 1]
+	test_fake = test_fake[test_fake['noise'] == 1].copy()
+	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
+																						 val_fake,
+																						 test_fake,
+																						 triplets_file_utils,
+																						 create_inverse_triples=False)
 
-	### INFERENCE ON ORIGINAL TESTING
-	real_train_scores = get_scores(model, train_factory)
-	real_train_center = get_center(real_train_scores)
+	# ===== Inference (computation of KGE scores) on Original Training Set ====== #
+	# REAL
+	training_scores_vector = get_scores(model=model, factory=train_factory)
+	training_scores_center = get_center(scores=training_scores_vector)
 
-	#### INFERENCE ON VALIDATION
-	real_val_scores = get_scores(model, val_factory)
-	real_val_center = get_center(real_val_scores)
+	# ===== Inference (computation of KGE scores) on Validation Set ====== #
+	# FAKE
+	fake_validation_scores = get_scores(model=model, factory=val_fake_factory)
+	fake_validation_scores_center = get_center(scores=fake_validation_scores)
 
-	#### INFERENCE ON TESTING
-	real_test_scores = get_scores(model, test_factory)
-	real_test_center = get_center(real_test_scores)
+	# REAL
+	real_validation_scores = get_scores(model=model, factory=val_factory)
+	real_validation_scores_center = get_center(scores=real_validation_scores)
 
-	fake_val_scores = get_scores(model, val_factory_noisy)
-	fake_val_center = get_center(fake_val_scores)
+	# ===== Inference (computation of KGE scores) on Testing Set ====== #
+	# FAKE
+	fake_testing_scores = get_scores(model=model, factory=test_fake_factory)
+	fake_testing_scores_center = get_center(scores=fake_testing_scores)
 
-	fake_test_scores = get_scores(model, test_factory_noisy)
-	fake_test_center = get_center(fake_test_scores)
+	# REAL
+	real_testing_scores = get_scores(model=model, factory=test_factory)
+	real_testing_scores_center = get_center(scores=real_testing_scores)
 
-	threshold = fake_val_center + ((real_val_center - fake_val_center) / 2)
+	logger.info("Triples Classification statistics:".upper())
+	logger.info(f"training_scores_center: {training_scores_center}")
+	logger.info(f"fake_validation_scores_center: {fake_validation_scores_center}")
+	logger.info(f"real_validation_scores_center: {real_validation_scores_center}")
+	logger.info(f"fake_testing_scores_center: {fake_testing_scores_center}")
+	logger.info(f"real_testing_scores_center: {real_testing_scores_center}")
+
+	threshold = fake_validation_scores_center + ((real_validation_scores_center - fake_validation_scores_center) / 2)
 	logger.info(f"classification threshold: {threshold}")
 
-	y_true = [1 for _ in real_test_scores] + [0 for _ in fake_test_scores]
-	y_pred = [1 if y >= threshold else 0 for y in real_test_scores] + [1 if y >= threshold else 0 for y in
-																	   fake_test_scores]
+	y_true = [1 for _ in real_testing_scores] + [0 for _ in fake_testing_scores]
+	y_pred = [1 if y >= threshold else 0 for y in real_testing_scores] + [1 if y >= threshold else 0 for y in
+																		  fake_testing_scores]
+	assert len(y_pred) == len(y_true)
+	assert sum(y_true) == len(real_testing_scores)
+	assert sum(y_pred) <= len(y_true)
+	assert sum(y_pred) >= 0
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
+	logger.info("accuracy:", accuracy)
 	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info("f1:", f1_macro)
 	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
+	logger.info("f1_pos:", f1_pos)
 	f1_neg = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=0), n_round)
+	logger.info("f1_neg:", f1_neg)
 	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info("precision:", precision)
 	recall = round(metrics.recall_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info("recall:", recall)
 
-	maximum = np.max(real_train_scores)
-	minimum = np.min(fake_test_scores)
-	if real_test_center > fake_test_center:
-		norm_distance = abs(real_test_center - fake_test_center) / abs(maximum - minimum)
-		norm_distance = round(norm_distance, n_round)
+	# compute distance among the two distribution (greater is better)
+	maximum = np.max(training_scores_vector)
+	minimum = np.min(fake_testing_scores)
+	if real_testing_scores_center > fake_testing_scores_center:
+		norm_distance = round(abs(real_testing_scores_center - fake_testing_scores_center) / abs(maximum - minimum),
+							  n_round)
+		print(f"distance: {norm_distance}")
 	else:
 		norm_distance = float('inf')
-		logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
+		print("WARNING: real_testing_scores_center <= fake_testing_scores_center")
 
 	# Compute Z-test (http://homework.uoregon.edu/pub/class/es202/ztest.html)
 	# Z = (mean_1 - mean_2) / sqrt{ (std1/sqrt(N1))**2 + (std2/sqrt(N2))**2 }
-	real_scores_error = (real_test_scores.std() / (np.sqrt(real_test_scores.shape[0]))) ** 2
-	fake_scores_error = (fake_test_scores.std() / (np.sqrt(fake_test_scores.shape[0]))) ** 2
-
-	Z_statistic = round((real_test_scores.mean() - fake_test_scores.mean()) / (
-		np.sqrt(real_scores_error + fake_scores_error)), 2)
+	real_scores_error = (real_testing_scores.std() / (np.sqrt(real_testing_scores.shape[0]))) ** 2
+	fake_scores_error = (fake_testing_scores.std() / (np.sqrt(fake_testing_scores.shape[0]))) ** 2
+	Z_statistic = round((
+								real_testing_scores.mean() - fake_testing_scores.mean()) / np.sqrt(real_scores_error +
+																								   fake_scores_error),
+						2)
+	print(f"Z-statistic: {round(Z_statistic, n_round)}")
 
 	results_eval = {
 		"accuracy"     : accuracy,
@@ -606,8 +657,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 			'mr'          : mr,
 			'adjusted_mr' : adjusted_mr,
 			'mrr'         : mrr,
-			'adjusted_mrr': adjusted_mrr}
-	}
+			'adjusted_mrr': adjusted_mrr}}
 
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
@@ -641,7 +691,13 @@ def triple_classification_bert(model: BertForSequenceClassification,
 	score_test = np.array(get_probabilities_bert(model, dataloader_test, device))
 
 	# load dataset random
-	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, 1)
+	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file,
+																	 100,
+																	 drop_col_noise=False,
+																	 get_noisy_test=True)
+	train_noisy = train_noisy[train_noisy['noise'] == 1].copy()
+	val_noisy = val_noisy[val_noisy['noise'] == 1].copy()
+	test_noisy = test_noisy[test_noisy['noise'] == 1].copy()
 
 	# get prediction for test noisy
 	dataset_test_noisy = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_noisy, label=int(False)))

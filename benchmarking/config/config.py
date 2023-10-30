@@ -2,9 +2,9 @@ import os
 from pathlib import Path
 
 # ======================== utils ======================== #
-valid_kge_models = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "BoxE", "RotatE", "TransH"]
-nlp_models = ['bert']
-valid_noise_ratio = [0, 0.1, 0.2, 0.3, 1]
+valid_models = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "BoxE", "RotatE", "TransH",
+				"Bert"]
+valid_noise_ratio = [0, 10, 20, 30, 100]
 # ===================== Directories ===================== #
 base_dir = os.path.abspath(".")
 dataset_dir = os.path.join(base_dir, "dataset")
@@ -32,7 +32,7 @@ Path(results_dir).mkdir(parents=True, exist_ok=True)
 Path(excel_dir).mkdir(parents=True, exist_ok=True)
 Path(os.path.join(results_dir, "all")).mkdir(parents=True, exist_ok=True)
 
-for model in (valid_kge_models + nlp_models):
+for model in valid_models:
 	for noise in valid_noise_ratio:
 		model_dir_ratio = os.path.join(model_dir.format(model=model), str(noise))
 		Path(model_dir_ratio).mkdir(exist_ok=True, parents=True)

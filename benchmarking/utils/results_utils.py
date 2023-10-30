@@ -1,7 +1,7 @@
 import os.path
 
 import pandas as pd
-from config.config import metrics_file, nlp_models, results_dir, valid_kge_models, valid_noise_ratio
+from config.config import metrics_file, results_dir, valid_models, valid_noise_ratio
 from utils.utils import read_json, save_json
 
 
@@ -20,7 +20,7 @@ def process_results():
 		link_deletion_data_noise = {}
 		triple_classification_data_noise = {}
 
-		for model in (valid_kge_models + nlp_models):
+		for model in valid_models:
 			metrics = read_json(metrics_file.format(model=model, ratio=noise))
 			link_prediction_data_noise.update({model: metrics['link prediction']['both']})
 			link_deletion_data_noise.update({model: metrics['link deletion']['both']})

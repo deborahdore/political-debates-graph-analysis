@@ -157,30 +157,53 @@ def training(model_dir: str,
 			 triplets_file_utils: str,
 			 plot_dir: str,
 			 ratio: float):
-	logger.info(f"starting pipeline --> {model_name} with ratio {ratio} on {device}")
+	"""
+	The training function is the main function of this module and trains the model with the optimal hyperparameter.
 
-	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, drop_col_noise=False)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, triplets_file_utils)
+	:param model_dir: str: Specify the directory where the model's hyperparameters are saved
+	:param model_name: str: Name of the model to train
+	:param noisy_triples_file: str: Specify the location of the noisy triples file
+	:param triplets_file_utils: str: Contains entity-to-id and relation-to-id mappings
+	:param plot_dir: str: Save the plot of the loss function
+	:param ratio: float: Determine the amount of noise in the training data
+	:return: A result object, which contains the trained model
+	"""
+	logger.info(f"# ---- starting training pipeline with model {model_name} and ratio {ratio} on {device} ---- # ")
 
+	# load datasets
+	train, val, test = get_train_val_test_from_dir(noisy_triples_file,
+												   noise=ratio,
+												   drop_col_noise=False,
+												   get_noisy_test=False)
+	# creates triples factory
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
+																		  val,
+																		  test,
+																		  triplets_file_utils,
+																		  create_inverse_triples=True)
+
+	# read best hyperparameters
 	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
 	pipeline_config = read_json(pipeline_config)['pipeline']
 	pipeline_config['training'] = train_factory
 	pipeline_config['validation'] = val_factory
 	pipeline_config['testing'] = test_factory
+	pipeline_config['evaluation_kwargs'] = {}
+	pipeline_config['evaluation_kwargs']['additional_filter_triples'] = [train_factory.mapped_triples,
+																		 val_factory.mapped_triples]
 
-	# train_factory.mapped_triples = train_factory.mapped_triples.to(device)
-	# val_factory.mapped_triples = val_factory.mapped_triples.to(device)
-	# test_factory.mapped_triples = test_factory.mapped_triples.to(device)
+	result = pipeline(**pipeline_config,
+					  device=device,
+					  use_testing_data=True,
+					  evaluation_fallback=True,
+					  use_tqdm=True, )
 
-	result = pipeline(**pipeline_config, device=device, random_seed=123)
-
+	# save trained model
 	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
-	logger.info(f"{model_name} training complete")
-	logger.info(f"saving {model_name} to {model_file}")
 	result.save_model(path=model_file)
 
+	# plot losses
 	result.plot_losses()
-
 	plot_file = os.path.join(plot_dir, f"{model_name}_{ratio}_loss.svg")
 	plt.savefig(plot_file)
 	gc.collect()
@@ -193,78 +216,54 @@ def hyperparameter_optimization(model_name: str,
 								noisy_triples_file: str,
 								triplets_file_utils: str,
 								ratio: float):
-	logger.info(f"starting optimizer pipeline - {model_name} with ratio {ratio}")
+	logger.info(f"# ------- starting optimizer pipeline - {model_name} with ratio {ratio} ------- #")
 
-	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train, val, test, triplets_file_utils)
+	# get train, val, test
+	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, get_noisy_test=False)
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
+																		  val,
+																		  test,
+																		  triplets_file_utils,
+																		  create_inverse_triples=False)
 
-	if model_name == 'TransH':
-		hpo_results = hpo_pipeline(model=model_name,
-								   training=train_factory,
-								   testing=test_factory,
-								   validation=val_factory,
-								   n_trials=15,
-								   optimizer="Adam",
-								   regularizer=None,
-								   optimizer_kwargs_ranges=dict(lr=dict(type=float,
-																		low=0.0001,
-																		high=0.01,
-																		scale="log"), ),
-								   training_loop="slcwa",
-								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
-															   batch_size=dict(type=int, low=64, high=256, q=64), ),
-								   negative_sampler="basic",
-								   evaluator="RankBasedEvaluator",
-								   evaluation_kwargs={
-									   "use_tqdm"                 : True,
-									   "additional_filter_triples": [train_factory.mapped_triples,
-																	 val_factory.mapped_triples]},
-								   filter_validation_when_testing=True,
-								   sampler=TPESampler(consider_prior=True,
-													  prior_weight=1.0,
-													  consider_magic_clip=True,
-													  consider_endpoints=False,
-													  n_startup_trials=10,
-													  n_ei_candidates=32, ),
-								   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
-								   metric="both.realistic.inverse_harmonic_mean_rank",
-								   direction="maximize", )
-	else:
-		hpo_results = hpo_pipeline(model=model_name,
-								   training=train_factory,
-								   testing=test_factory,
-								   validation=val_factory,
-								   n_trials=15,
-								   optimizer="Adam",
-								   optimizer_kwargs_ranges=dict(lr=dict(type=float,
-																		low=0.0001,
-																		high=0.01,
-																		scale="log"), ),
-								   training_loop="slcwa",
-								   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
-															   batch_size=dict(type=int, low=64, high=256, q=64), ),
-								   negative_sampler="basic",
-								   evaluator="RankBasedEvaluator",
-								   evaluation_kwargs={
-									   "use_tqdm"                 : True,
-									   "additional_filter_triples": [train_factory.mapped_triples,
-																	 val_factory.mapped_triples]},
-								   filter_validation_when_testing=True,
-								   sampler=TPESampler(consider_prior=True,
-													  prior_weight=1.0,
-													  consider_magic_clip=True,
-													  consider_endpoints=False,
-													  n_startup_trials=10,
-													  n_ei_candidates=32, ),
-								   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
-								   metric="both.realistic.inverse_harmonic_mean_rank",
-								   direction="maximize", )
+	# TODO: HYPERTRAIN ONLY ON ORIGINAL DATASET
+	# Hyper-training pipeline
+	hpo_results = hpo_pipeline(training=train_factory,
+							   validation=val_factory,
+							   testing=test_factory,
+							   model=model_name,
+							   optimizer="Adam",
+							   optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),
+							   training_loop="slcwa",
+							   negative_sampler="basic",
+							   negative_sampler_kwargs={"filtered": True, "filterer": "python-set", },
+							   training_kwargs={"use_tqdm_batch": False, },
+							   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
+														   batch_size=dict(type=int, low=64, high=256, q=64), ),
+							   stopper=None,
+							   evaluator="RankBasedEvaluator",
+							   evaluation_kwargs={
+								   "use_tqdm"                 : True,
+								   "additional_filter_triples": [train_factory.mapped_triples,
+																 val_factory.mapped_triples, ], },
+							   evaluator_kwargs={"filtered": True},
+							   metric="both.realistic.inverse_harmonic_mean_rank",
+							   filter_validation_when_testing=True,
+							   device=device,
+							   sampler=TPESampler(consider_prior=True,
+												  prior_weight=1.0,
+												  consider_magic_clip=True,
+												  consider_endpoints=False,
+												  n_startup_trials=10,
+												  n_ei_candidates=24, ),
+							   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
+							   direction="maximize",
+							   n_trials=10, )
 
-	logger.info(f"model {model_name} training complete")
+	logger.info(f"{model_name} training complete".upper())
 
 	model_dir_ratio = model_dir + f"/{ratio}"
 	logger.info(f"saving {model_name} to {model_dir_ratio}")
-
-	hpo_results.objective.evaluation_kwargs = None
+	hpo_results.objective.evaluation_kwargs.additional_filter_triples = None
 	hpo_results.save_to_directory(model_dir_ratio)
 	gc.collect()
