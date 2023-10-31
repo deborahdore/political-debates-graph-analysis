@@ -1,5 +1,6 @@
 import os
 import random
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,6 @@ from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
 	ArithmeticMeanRank, \
 	HitsAtK, \
 	InverseHarmonicMeanRank
-from pykeen.pipeline import PipelineResult
 from sklearn import metrics
 from torch.utils.data import DataLoader, SequentialSampler
 from transformers import BertForSequenceClassification
@@ -29,16 +29,23 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 
 # ======================== KGE MODELS EVALUATION  ======================== #
-def link_deletion(result: PipelineResult,
+def link_deletion(model: Any,
 				  model_name: str,
 				  noisy_triples_file: str,
 				  triplets_file_utils: str,
 				  metrics_file: str,
 				  noise_ratio: float):
-	logger.info(f"# --- evaluating {model_name} trained with {noise_ratio} noise on link deletion --- #")
+	"""
+	The link_deletion function is used to evaluate the performance of a model on link deletion.
 
-	# load pytorch model
-	model = result.model
+	:param model: Any: Pass the model to the function
+	:param model_name: str: Save the metrics in a json file
+	:param noisy_triples_file: str: Specify the location of the noisy triples file
+	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: Save the results of the link deletion experiment
+	:param noise_ratio: float: Specify the amount of noise to be added to the dataset
+	"""
+	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
@@ -83,9 +90,9 @@ def link_deletion(result: PipelineResult,
 				break
 
 		# get scores
-		fake_h_score = get_scores_tensor(model, fake_head_triple, entity_to_id, relation_to_id)
-		fake_t_score = get_scores_tensor(model, fake_tail_triple, entity_to_id, relation_to_id)
+		fake_score = get_scores_tensor(model, [fake_head_triple, fake_tail_triple], entity_to_id, relation_to_id)
 
+		fake_h_score, fake_t_score = fake_score[0], fake_score[1]
 		rank_head = np.searchsorted(a=real_test_scores, v=fake_h_score, side='left') + 1
 		rank_tail = np.searchsorted(a=real_test_scores, v=fake_t_score, side='left') + 1
 		ranks.append(int((rank_head + rank_tail) / 2.0))
@@ -187,10 +194,10 @@ def link_deletion(result: PipelineResult,
 	else:
 		save_json({"link deletion": results_eval}, metrics_file)
 
-	logger.info(f"Evaluating model {model_name} complete")
+	logger.info(f"## ===== LINK DELETION COMPLETE ===== ##")
 
 
-def link_prediction(result: PipelineResult,
+def link_prediction(model: Any,
 					noisy_triples_file: str,
 					triplets_file_utils: str,
 					model_name: str,
@@ -199,7 +206,7 @@ def link_prediction(result: PipelineResult,
 	"""
 	The link_prediction function evaluates the model on link prediction.
 
-	:param result: PipelineResult: Get the model and its configuration
+	:param model: torch.nn.Module: Get the model
 	:param noisy_triples_file: str: Load the noisy triples file
 	:param triplets_file_utils: str: Load the entity-to-id and relation-to-id mapping
 	:param model_name: str: name of the model
@@ -207,7 +214,7 @@ def link_prediction(result: PipelineResult,
 	:param noise_ratio: float: Specify the noise ratio of the dataset
 
 	"""
-	logger.info(f"# -------- evaluating {model_name} trained with {noise_ratio} noise on link prediction -------- #")
+	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on link prediction ===== ##".upper())
 
 	# load original dataset
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
@@ -232,14 +239,14 @@ def link_prediction(result: PipelineResult,
 																							create_inverse_triples=False)
 	# Launch evaluation pipeline
 	evaluator = RankBasedEvaluator(filtered=True)
-	result_dict = evaluator.evaluate(model=result.model,
+	result_dict = evaluator.evaluate(model=model,
 									 mapped_triples=test_factory.mapped_triples,
 									 additional_filter_triples=[train_factory_noisy.mapped_triples,
 																# filter on training triples with noisy
 																val_factory_noisy.mapped_triples,
 																# filter on validation triples with noisy
 																],
-									 batch_size=result.configuration.get('batch_size'),
+									 batch_size=None,
 									 slice_size=None,
 									 device=device,
 									 use_tqdm=True).to_dict()
@@ -266,19 +273,26 @@ def link_prediction(result: PipelineResult,
 	else:
 		save_json({"link prediction": results_eval}, metrics_file)
 
-	logger.info(f"# ------ Evaluating model {model_name} complete ----- #")
+	logger.info(f"## ===== LINK PREDICTION COMPLETE ===== ##")
 
 
-def triple_classification(result: PipelineResult,
+def triple_classification(model: Any,
 						  model_name: str,
 						  noisy_triples_file: str,
 						  triplets_file_utils: str,
 						  metrics_file: str,
 						  noise_ratio: float):
-	# load model
-	model = result.model
+	"""
+	The triple_classification function is used to evaluate the performance of a KGE model on triple classification.
 
-	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on triple classification")
+	:param model: Any: Pass the model to be evaluated
+	:param model_name: str: Identify the model in the metrics file
+	:param noisy_triples_file: str: Specify the path to the directory containing all of the noisy triples
+	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: Save the results of the triple classification
+	:param noise_ratio: float: Specify the percentage of noise in the training set
+	"""
+	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
 
 	# ===== LOAD ORIGINAL
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
@@ -289,10 +303,13 @@ def triple_classification(result: PipelineResult,
 																		  create_inverse_triples=False)
 
 	# ===== LOAD ALL FAKE
-	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_triples_file, 100, False)
-	train_fake = train_fake[train_fake['noise'] == 1].copy()
-	val_fake = val_fake[val_fake['noise'] == 1]
-	test_fake = test_fake[test_fake['noise'] == 1].copy()
+	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_triples_file,
+																  100,
+																  drop_col_noise=False,
+																  get_noisy_test=True)
+	train_fake = train_fake[train_fake['noise'] == str(1)].copy()
+	val_fake = val_fake[val_fake['noise'] == str(1)].copy()
+	test_fake = test_fake[test_fake['noise'] == str(1)].copy()
 	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
 																						 val_fake,
 																						 test_fake,
@@ -342,17 +359,17 @@ def triple_classification(result: PipelineResult,
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
-	logger.info("accuracy:", accuracy)
+	logger.info(f"accuracy: {accuracy}")
 	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
-	logger.info("f1:", f1_macro)
+	logger.info(f"f1_macro: {f1_macro}")
 	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
-	logger.info("f1_pos:", f1_pos)
+	logger.info(f"f1_pos: {f1_pos}")
 	f1_neg = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=0), n_round)
-	logger.info("f1_neg:", f1_neg)
+	logger.info(f"f1_neg: {f1_neg}")
 	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
-	logger.info("precision:", precision)
+	logger.info(f"precision: {precision}")
 	recall = round(metrics.recall_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
-	logger.info("recall:", recall)
+	logger.info(f"recall: {recall}")
 
 	# compute distance among the two distribution (greater is better)
 	maximum = np.max(training_scores_vector)
@@ -360,10 +377,10 @@ def triple_classification(result: PipelineResult,
 	if real_testing_scores_center > fake_testing_scores_center:
 		norm_distance = round(abs(real_testing_scores_center - fake_testing_scores_center) / abs(maximum - minimum),
 							  n_round)
-		print(f"distance: {norm_distance}")
+		logger.info(f"distance: {norm_distance}")
 	else:
 		norm_distance = float('inf')
-		print("WARNING: real_testing_scores_center <= fake_testing_scores_center")
+		logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
 
 	# Compute Z-test (http://homework.uoregon.edu/pub/class/es202/ztest.html)
 	# Z = (mean_1 - mean_2) / sqrt{ (std1/sqrt(N1))**2 + (std2/sqrt(N2))**2 }
@@ -373,7 +390,7 @@ def triple_classification(result: PipelineResult,
 								real_testing_scores.mean() - fake_testing_scores.mean()) / np.sqrt(real_scores_error +
 																								   fake_scores_error),
 						2)
-	print(f"Z-statistic: {round(Z_statistic, n_round)}")
+	logger.info(f"Z-statistic: {round(Z_statistic, n_round)}")
 
 	results_eval = {
 		"accuracy"     : accuracy,
@@ -395,7 +412,7 @@ def triple_classification(result: PipelineResult,
 	else:
 		save_json({"triple classification": results_eval}, metrics_file)
 
-	logger.info(f"Evaluating model {model_name} complete")
+	logger.info(f"## ===== TRIPLE CLASSIFICATION COMPLETE ===== ##")
 
 
 # ======================== BERT EVALUATION  ======================== #
@@ -405,7 +422,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 					   noisy_triples_file: str,
 					   metrics_file: str,
 					   noise_ratio: float):
-	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link deletion")
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
 
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
@@ -558,7 +575,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	else:
 		save_json({"link deletion": results_eval}, metrics_file)
 
-	logger.info(f"Evaluating model {model_name} complete")
+	logger.info(f"## ===== LINK DELETION COMPLETE ===== ##".upper())
 
 
 def link_prediction_bert(model: BertForSequenceClassification,
@@ -567,7 +584,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 						 noisy_triples_file: str,
 						 metrics_file: str,
 						 noise_ratio: float):
-	logger.info(f"evaluating {model_name} trained with {noise_ratio} noise ratio dataset on link prediction")
+	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on link predicion ===== ##".upper())
 
 	# load original dataset
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file, 0)
@@ -667,7 +684,7 @@ def link_prediction_bert(model: BertForSequenceClassification,
 	else:
 		save_json({"link prediction": results_eval}, metrics_file)
 
-	logger.info(f"Evaluating model {model_name} complete")
+	logger.info(f"## ===== LINK PREDICTION COMPLETE ===== ##".upper())
 
 
 def triple_classification_bert(model: BertForSequenceClassification,
@@ -676,6 +693,8 @@ def triple_classification_bert(model: BertForSequenceClassification,
 							   noisy_triples_file: str,
 							   metrics_file: str,
 							   noise_ratio: float):
+	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
+
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
 
@@ -763,4 +782,4 @@ def triple_classification_bert(model: BertForSequenceClassification,
 	else:
 		save_json({"triple classification": results_eval}, metrics_file)
 
-	logger.info(f"Evaluating model {model_name} complete")
+	logger.info(f"## ===== EVALUATION COMPLETE ===== ##".upper())

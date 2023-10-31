@@ -1,4 +1,5 @@
 import ast
+import os.path
 import sys
 
 import torch
@@ -22,7 +23,7 @@ from evaluation import link_deletion, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
 from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
-from utils.results_utils import process_results
+from utils.utils import load_model
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -57,9 +58,112 @@ def parse_command_line():
 	return gen_arg, opt_arg, noise_arg, model_arg
 
 
-def main():
-	# Command line must contain 4 arguments: generate, optimize, model, noise
-	generate_dataset, optimization, noise, model = parse_command_line()
+def bert_basic(model_name: str, noise: int):
+	"""
+	The bert_basic function is used to train a BERT model on the noisy triples file, and then evaluate it using link
+	prediction, link deletion, and triple classification.
+
+	:param model_name:str: Name the model
+	:param noise:int: Specify the noise ratio
+	"""
+	# check if model exists
+	model_file = os.path.join(model_dir.format(model="Bert"), f"{noise}/{model_name}_{noise}.pt")
+	if not os.path.exists(model_file):
+		# bert training
+		model = bert_training(model_file=model_file,
+							  model_name='bert',
+							  noisy_triples_file=noisy_triples_file,
+							  ratio=noise)
+	else:
+		model = load_model(model_file, device)
+
+	# evaluation
+	link_prediction_bert(model=model,
+						 model_dir=model_dir.format(model="bert"),
+						 model_name='bert',
+						 noisy_triples_file=noisy_triples_file,
+						 metrics_file=metrics_file.format(model=model_name, ratio=noise),
+						 noise_ratio=noise)
+	link_deletion_bert(model=model,
+					   model_dir=model_dir.format(model="bert"),
+					   model_name='bert',
+					   noisy_triples_file=noisy_triples_file,
+					   metrics_file=metrics_file.format(model=model_name, ratio=noise),
+					   noise_ratio=noise)
+	triple_classification_bert(model=model,
+							   model_dir=model_dir.format(model="bert"),
+							   model_name='bert',
+							   noisy_triples_file=noisy_triples_file,
+							   metrics_file=metrics_file.format(model=model_name, ratio=noise),
+							   noise_ratio=noise)
+
+
+def kge_basic(model_name: str, noise: int):
+	"""
+	The kge_basic function is a wrapper function that trains and evaluates the KGE model.
+
+	:param model_name: str: Name the model
+	:param noise: int: Specify the noise ratio of the dataset
+	"""
+	# check if model exists already
+	model_file = os.path.join(model_dir.format(model=model_name), f"{noise}/{model_name}_{noise}.pt")
+	if not os.path.exists(model_file):
+		result = training(model_dir=model_dir.format(model=model_name),
+						  model_name=model_name,
+						  model_file=model_file,
+						  noisy_triples_file=noisy_triples_file,
+						  triplets_file_utils=triplets_file_utils,
+						  plot_dir=plot_dir,
+						  ratio=noise)
+		model = result.model
+
+	else:
+		model = load_model(model_file, device)
+
+	# evaluation
+	link_prediction(model=model,
+					noisy_triples_file=noisy_triples_file,
+					triplets_file_utils=triplets_file_utils,
+					model_name=model_name,
+					metrics_file=metrics_file.format(model=model_name, ratio=noise),
+					noise_ratio=noise)
+	link_deletion(model=model,
+				  model_name=model_name,
+				  noisy_triples_file=noisy_triples_file,
+				  triplets_file_utils=triplets_file_utils,
+				  metrics_file=metrics_file.format(model=model_name, ratio=noise),
+				  noise_ratio=noise)
+	triple_classification(model=model,
+						  model_name=model_name,
+						  noisy_triples_file=noisy_triples_file,
+						  triplets_file_utils=triplets_file_utils,
+						  metrics_file=metrics_file.format(model=model_name, ratio=noise),
+						  noise_ratio=noise)
+
+
+def hyper_optimization(model_name: str, noise: int):
+	"""
+	The hyper_optimization function is used to optimize the hyperparameters of a model.
+		It takes as input:
+		- model_name: the name of the model that we want to optimize (e.g., 'TransH')
+		- noise: an integer representing how many noisy triples we want to add in our training set
+
+	:param model_name: str: Specify the name of the model
+	:param noise: int: Specify the noise ratio
+	"""
+	hyperparameter_optimization(model_name=model_name,
+								model_dir=model_dir.format(model=model_name),
+								noisy_triples_file=noisy_triples_file,
+								triplets_file_utils=triplets_file_utils,
+								ratio=noise)
+
+
+if __name__ == '__main__':
+	# Command line must contain 4 arguments: generate, optimize, model_name, noise
+	generate_dataset, optimization, noise, model_name = parse_command_line()
+
+	assert noise in valid_noise_ratio
+	assert model_name in valid_models
 
 	if generate_dataset:
 		# generates triples from original file
@@ -70,85 +174,13 @@ def main():
 		generate_noise(triplets_file=triplets_file,
 					   noisy_triples_file=noisy_triples_file,
 					   valid_noise=config.valid_noise_ratio)
+	if optimization:
+		if model_name == 'bert':
+			exit(1)
+		hyper_optimization(model_name, noise)
 
-	if not optimization:
-		logger.info("# -------- basic training with best pipeline config -------- # \n ")
-		assert noise in valid_noise_ratio
-		assert model in valid_models
-
-		try:
-			if model != "Bert":
-				result = training(model_dir=model_dir.format(model=model),
-								  model_name=model,
-								  noisy_triples_file=noisy_triples_file,
-								  triplets_file_utils=triplets_file_utils,
-								  plot_dir=plot_dir,
-								  ratio=noise)
-
-				link_prediction(result=result,
-								noisy_triples_file=noisy_triples_file,
-								triplets_file_utils=triplets_file_utils,
-								model_name=model,
-								metrics_file=metrics_file.format(model=model, ratio=noise),
-								noise_ratio=noise)
-
-				link_deletion(result=result,
-							  model_name=model,
-							  noisy_triples_file=noisy_triples_file,
-							  triplets_file_utils=triplets_file_utils,
-							  metrics_file=metrics_file.format(model=model, ratio=noise),
-							  noise_ratio=noise)
-
-				triple_classification(result=result,
-									  model_name=model,
-									  noisy_triples_file=noisy_triples_file,
-									  triplets_file_utils=triplets_file_utils,
-									  metrics_file=metrics_file.format(model=model, ratio=noise),
-									  noise_ratio=noise)
-			else:
-
-				model = bert_training(model_dir=model_dir.format(model="bert"),
-									  model_name='bert',
-									  noisy_triples_file=noisy_triples_file,
-									  ratio=noise)
-
-				link_prediction_bert(model=model,
-									 model_dir=model_dir.format(model="bert"),
-									 model_name='bert',
-									 noisy_triples_file=noisy_triples_file,
-									 metrics_file=metrics_file.format(model=model, ratio=noise),
-									 noise_ratio=noise)
-
-				link_deletion_bert(model=model,
-								   model_dir=model_dir.format(model="bert"),
-								   model_name='bert',
-								   noisy_triples_file=noisy_triples_file,
-								   metrics_file=metrics_file.format(model=model, ratio=noise),
-								   noise_ratio=noise)
-
-				triple_classification_bert(model=model,
-										   model_dir=model_dir.format(model="bert"),
-										   model_name='bert',
-										   noisy_triples_file=noisy_triples_file,
-										   metrics_file=metrics_file.format(model=model, ratio=noise),
-										   noise_ratio=noise)
-		finally:
-			logger.info(f"# -------- {model} training and evaluation completed -------- # \n \n")
 	else:
-		logger.info(f"# -------- hyperparameter tuning with {model} - noise {noise} -------- # \n")
-		try:
-			if model == 'bert':
-				exit(1)
-			torch.cuda.empty_cache()
-			hyperparameter_optimization(model_name=model,
-										model_dir=model_dir.format(model=model),
-										noisy_triples_file=noisy_triples_file,
-										triplets_file_utils=triplets_file_utils,
-										ratio=noise)
-		finally:
-			logger.info(f"# -------- hyperparameter optimization for {model} complete -------- # \n \n")
-
-
-if __name__ == '__main__':
-	main()
-	process_results()
+		if model_name == "Bert":
+			bert_basic(model_name, noise)
+		else:
+			kge_basic(model_name, noise)

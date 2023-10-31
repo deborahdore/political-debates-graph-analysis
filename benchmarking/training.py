@@ -23,7 +23,7 @@ from utils.utils import read_json
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
-def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, ratio: float):
+def bert_training(model_file: str, model_name: str, noisy_triples_file: str, ratio: float):
 	batch_size = 32
 	epochs = 3
 
@@ -140,7 +140,6 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 	logger.info(f"[test] Average Test Loss: {avg_test_loss:.20f}")
 
 	# saving model
-	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	logger.info(f"saving {model_name} to {model_file}")
 	torch.save(model, model_file)
 
@@ -153,6 +152,7 @@ def bert_training(model_dir: str, model_name: str, noisy_triples_file: str, rati
 
 def training(model_dir: str,
 			 model_name: str,
+			 model_file: str,
 			 noisy_triples_file: str,
 			 triplets_file_utils: str,
 			 plot_dir: str,
@@ -160,6 +160,7 @@ def training(model_dir: str,
 	"""
 	The training function is the main function of this module and trains the model with the optimal hyperparameter.
 
+	:param model_file: str: Specify where to save model
 	:param model_dir: str: Specify the directory where the model's hyperparameters are saved
 	:param model_name: str: Name of the model to train
 	:param noisy_triples_file: str: Specify the location of the noisy triples file
@@ -168,7 +169,7 @@ def training(model_dir: str,
 	:param ratio: float: Determine the amount of noise in the training data
 	:return: A result object, which contains the trained model
 	"""
-	logger.info(f"# ---- starting training pipeline with model {model_name} and ratio {ratio} on {device} ---- # ")
+	logger.info(f"## ===== BASIC TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
 
 	# load datasets
 	train, val, test = get_train_val_test_from_dir(noisy_triples_file,
@@ -199,7 +200,6 @@ def training(model_dir: str,
 					  use_tqdm=True, )
 
 	# save trained model
-	model_file = os.path.join(model_dir, f"{ratio}/{model_name}_{ratio}.pt")
 	result.save_model(path=model_file)
 
 	# plot losses
@@ -207,6 +207,8 @@ def training(model_dir: str,
 	plot_file = os.path.join(plot_dir, f"{model_name}_{ratio}_loss.svg")
 	plt.savefig(plot_file)
 	gc.collect()
+
+	logger.info(f"## ===== BASIC TRAINING COMPLETE ===== ##".upper())
 
 	return result
 
@@ -216,7 +218,7 @@ def hyperparameter_optimization(model_name: str,
 								noisy_triples_file: str,
 								triplets_file_utils: str,
 								ratio: float):
-	logger.info(f"# ------- starting optimizer pipeline - {model_name} with ratio {ratio} ------- #")
+	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
 
 	# get train, val, test
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, get_noisy_test=False)
@@ -260,10 +262,10 @@ def hyperparameter_optimization(model_name: str,
 							   direction="maximize",
 							   n_trials=10, )
 
-	logger.info(f"{model_name} training complete".upper())
+	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())
 
 	model_dir_ratio = model_dir + f"/{ratio}"
 	logger.info(f"saving {model_name} to {model_dir_ratio}")
-	hpo_results.objective.evaluation_kwargs.additional_filter_triples = None
+	hpo_results.objective.evaluation_kwargs = None
 	hpo_results.save_to_directory(model_dir_ratio)
 	gc.collect()
