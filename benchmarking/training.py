@@ -218,6 +218,15 @@ def hyperparameter_optimization(model_name: str,
 								noisy_triples_file: str,
 								triplets_file_utils: str,
 								ratio: float):
+	"""
+	The hyperparameter_optimization function is used to optimize the hyperparameters of a model.
+
+	:param model_name: str: Specify the model to be used for training
+	:param model_dir: str: Save the model
+	:param noisy_triples_file: str: Load the triples from a file
+	:param triplets_file_utils: str: Load entity-to-id and relation-to-id mappings
+	:param ratio: float: Indicate the noise ratio of the dataset to be used
+	"""
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
 
 	# get train, val, test

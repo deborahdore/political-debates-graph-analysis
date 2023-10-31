@@ -6,11 +6,26 @@ from utils.utils import read_json, save_json
 
 
 def highlight_max(s):
+	"""
+	The highlight_max function takes a pandas series as an argument and returns a list of strings.
+	The function first determines if the value in each row is equal to the maximum value in that column.
+	If it is, then it adds bold font weighting to that cell.
+
+	:param s: Pass in the dataframe column that we want to highlight
+	:return: A list of strings
+	"""
 	is_max = s == s.max()
 	return ['font-weight: bold' if v else '' for v in is_max]
 
 
 def process_results():
+	"""
+	The process_results function reads the metrics files for each model and noise ratio,
+	and saves them in a dictionary. The function then saves the dictionary as a json file,
+	and also creates an excel file with all of the data.
+
+	:return: A dictionary of dictionaries
+	"""
 	link_prediction_data = {}
 	link_deletion_data = {}
 	triple_classification_data = {}

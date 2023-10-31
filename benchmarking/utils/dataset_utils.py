@@ -12,6 +12,12 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 
 def get_nodes(dataset: pd.DataFrame):
+	"""
+	The get_nodes function takes a dataset as input and returns the unique nodes in that dataset.
+
+	:param dataset: pd.DataFrame: Extract the nodes from the dataset
+	:return: A list of all unique nodes in the dataset
+	"""
 	logger.info("extracting nodes from dataset")
 
 	nodes = pd.concat([dataset['head'], dataset['tail']], axis=0)
@@ -142,6 +148,14 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 
 
 def get_mapping(dataset: pd.DataFrame):
+	"""
+	The get_mapping function takes a dataset as input and returns two dictionaries:
+		- entity_to_id: maps each entity to an integer id.
+		- relation_to_id: maps each relation to an integer id.
+
+	:param dataset: pd.DataFrame: Get the mapping from entities to ids and relations to ids
+	:return: A mapping from entities to ids and a mapping from relations to ids
+	"""
 	dataset = TriplesFactory.from_labeled_triples(triples=dataset[['head', 'relation', 'tail']].values,
 												  create_inverse_triples=False)
 	return dataset.entity_to_id, dataset.relation_to_id
