@@ -83,6 +83,9 @@ on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_
 `benchmarking/utils/metrics.py`</br>
 `benchmarking/utils/evaluation_utils.py`
 
+Results of the evaluation are available
+on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/EpNZvJMw6ZVEmPKkyYG9W5kBo8F7VsXP-abJIMEnSGPV4g?e=sdaE5G)
+
 ## ACKNOWLEDGEMENT
 
 This work was supported by the French government, through the UCAJEDI Investments in the Future project managed by the

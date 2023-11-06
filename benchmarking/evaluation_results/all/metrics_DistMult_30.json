@@ -1,76 +1,76 @@
 {
-    "link prediction": {
-        "head": {
-            "hits_at_1": 0.0045977011,
-            "hits_at_3": 0.0095785441,
-            "hits_at_5": 0.0118773946,
-            "hits_at_10": 0.0153256705,
-            "mr": 18807.4609375,
-            "mrr": 0.0089714462,
-            "adjusted_mr": 1.0153540554,
-            "adjusted_mrr": 0.0086744878
-        },
-        "both": {
-            "hits_at_1": 0.0045977011,
-            "hits_at_3": 0.0082375479,
-            "hits_at_5": 0.0118773946,
-            "hits_at_10": 0.0174329502,
-            "mr": 18647.154296875,
-            "mrr": 0.0090792105,
-            "adjusted_mr": 1.0066903203,
-            "adjusted_mrr": 0.0087822868
-        },
-        "tail": {
-            "hits_at_1": 0.0045977011,
-            "hits_at_3": 0.0068965517,
-            "hits_at_5": 0.0118773946,
-            "hits_at_10": 0.0195402299,
-            "mr": 18486.849609375,
-            "mrr": 0.0091869747,
-            "adjusted_mr": 0.9980268507,
-            "adjusted_mrr": 0.0088900859
-        }
+  "link prediction"      : {
+    "head": {
+      "hits_at_1"   : 0.0045977011,
+      "hits_at_3"   : 0.0095785441,
+      "hits_at_5"   : 0.0118773946,
+      "hits_at_10"  : 0.0153256705,
+      "mr"          : 18807.4609375,
+      "mrr"         : 0.0089714462,
+      "adjusted_mr" : 1.0153540554,
+      "adjusted_mrr": 0.0086744878
     },
-    "link deletion": {
-        "head": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0,
-            "mr": 1300.146743295,
-            "adjusted_mr": 0.9958994587,
-            "mrr": 0.0011271502,
-            "adjusted_mrr": -0.0021151387
-        },
-        "both": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0,
-            "mr": 1302,
-            "adjusted_mr": 1302,
-            "mrr": 0.0011338656,
-            "adjusted_mrr": 0.0011338656
-        },
-        "tail": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0,
-            "mr": 1304.8264367816,
-            "adjusted_mr": 0.9994840573,
-            "mrr": 0.001140581,
-            "adjusted_mrr": -0.0021016643
-        }
+    "both": {
+      "hits_at_1"   : 0.0045977011,
+      "hits_at_3"   : 0.0082375479,
+      "hits_at_5"   : 0.0118773946,
+      "hits_at_10"  : 0.0174329502,
+      "mr"          : 18647.154296875,
+      "mrr"         : 0.0090792105,
+      "adjusted_mr" : 1.0066903203,
+      "adjusted_mrr": 0.0087822868
     },
-    "triple classification": {
-        "accuracy": 0.4930063231,
-        "f1_macro": 0.4929540323,
-        "f1_pos": 0.4981031866,
-        "f1_neg": 0.487804878,
-        "precision": 0.4930015629,
-        "recall": 0.4930043953,
-        "Z_statistic": -0.52,
-        "norm_distance": Infinity
+    "tail": {
+      "hits_at_1"   : 0.0045977011,
+      "hits_at_3"   : 0.0068965517,
+      "hits_at_5"   : 0.0118773946,
+      "hits_at_10"  : 0.0195402299,
+      "mr"          : 18486.849609375,
+      "mrr"         : 0.0091869747,
+      "adjusted_mr" : 0.9980268507,
+      "adjusted_mrr": 0.0088900859
     }
+  },
+  "link deletion"        : {
+    "head": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0,
+      "mr"          : 1300.146743295,
+      "adjusted_mr" : 0.9958994587,
+      "mrr"         : 0.0011271502,
+      "adjusted_mrr": -0.0021151387
+    },
+    "both": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0,
+      "mr"          : 1302,
+      "adjusted_mr" : 1302,
+      "mrr"         : 0.0011338656,
+      "adjusted_mrr": 0.0011338656
+    },
+    "tail": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0,
+      "mr"          : 1304.8264367816,
+      "adjusted_mr" : 0.9994840573,
+      "mrr"         : 0.001140581,
+      "adjusted_mrr": -0.0021016643
+    }
+  },
+  "triple classification": {
+    "accuracy"     : 0.4930063231,
+    "f1_macro"     : 0.4929540323,
+    "f1_pos"       : 0.4981031866,
+    "f1_neg"       : 0.487804878,
+    "precision"    : 0.4930015629,
+    "recall"       : 0.4930043953,
+    "Z_statistic"  : -0.52,
+    "norm_distance": Infinity
+  }
 }
