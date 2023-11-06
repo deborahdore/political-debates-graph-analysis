@@ -5,6 +5,7 @@ import sys
 import torch
 from loguru import logger
 
+from utils.results_utils import process_results
 from config import config
 from config.config import (metrics_file,
 						   model_dir,
@@ -184,3 +185,5 @@ if __name__ == '__main__':
 			bert_basic(model_name, noise)
 		else:
 			kge_basic(model_name, noise)
+
+	process_results()
