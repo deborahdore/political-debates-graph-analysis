@@ -49,7 +49,7 @@ def get_scores_tensor(model: Any,
 		r_id = relation_label_id_map[r]
 		t_id = entities_label_id_map[t]
 		mapped_triples.append([h_id, r_id, t_id])
-	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device="cpu", requires_grad=False)
+	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=device, requires_grad=False)
 
 	scores = predict_triples(model=model,
 							 triples=mapped_triples_tensor,
@@ -76,17 +76,41 @@ def get_center(scores: []):
 	return float(np.mean(a=scores))
 
 
-def get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, device: torch.device):
+def get_probabilities_bert(model: BertForSequenceClassification,
+						   dataloader: DataLoader,
+						   device: torch.device,
+						   sort: bool = False):
+	prob, index = __get_probabilities_bert(model, dataloader, device, sort)
+	return prob
+
+
+def get_probabilities_bert_index(model: BertForSequenceClassification,
+								 dataloader: DataLoader,
+								 device: torch.device,
+								 sort: bool = False):
+	prob, index = __get_probabilities_bert(model, dataloader, device, sort)
+	return index
+
+
+def __get_probabilities_bert(model: BertForSequenceClassification,
+							 dataloader: DataLoader,
+							 device: torch.device,
+							 sort: bool = False):
 	score_test = []
+	score_test_index = []
 	with torch.no_grad():
 		for batch in dataloader:
 			batch = tuple(b.to(device) for b in batch)
 			inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
 			outputs = model(**inputs)
 			probs = F.softmax(outputs.logits, dim=-1).detach().cpu()
-			max_values, _ = torch.max(probs, dim=-1)
-			score_test.append(max_values.numpy())
-	return sorted(np.ravel(score_test))
+			max_values, index = torch.max(probs, dim=-1)
+			score_test.append(max_values.item())
+			score_test_index.append(index.item())
+
+	if sort:
+		return sorted(score_test), sorted(score_test_index)
+	return score_test, score_test_index
 
 
 def tokenize_and_generate_dataset(dataset: pd.DataFrame):

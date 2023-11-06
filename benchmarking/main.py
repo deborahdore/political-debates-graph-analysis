@@ -71,7 +71,7 @@ def bert_basic(model_name: str, noise: int):
 	if not os.path.exists(model_file):
 		# bert training
 		model = bert_training(model_file=model_file,
-							  model_name='bert',
+							  model_name='Bert',
 							  noisy_triples_file=noisy_triples_file,
 							  ratio=noise)
 	else:
@@ -79,20 +79,20 @@ def bert_basic(model_name: str, noise: int):
 
 	# evaluation
 	link_prediction_bert(model=model,
-						 model_dir=model_dir.format(model="bert"),
-						 model_name='bert',
+						 model_dir=model_dir.format(model="Bert"),
+						 model_name='Bert',
 						 noisy_triples_file=noisy_triples_file,
 						 metrics_file=metrics_file.format(model=model_name, ratio=noise),
 						 noise_ratio=noise)
 	link_deletion_bert(model=model,
-					   model_dir=model_dir.format(model="bert"),
-					   model_name='bert',
+					   model_dir=model_dir.format(model="Bert"),
+					   model_name='Bert',
 					   noisy_triples_file=noisy_triples_file,
 					   metrics_file=metrics_file.format(model=model_name, ratio=noise),
 					   noise_ratio=noise)
 	triple_classification_bert(model=model,
-							   model_dir=model_dir.format(model="bert"),
-							   model_name='bert',
+							   model_dir=model_dir.format(model="Bert"),
+							   model_name='Bert',
 							   noisy_triples_file=noisy_triples_file,
 							   metrics_file=metrics_file.format(model=model_name, ratio=noise),
 							   noise_ratio=noise)

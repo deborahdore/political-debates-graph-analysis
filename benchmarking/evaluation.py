@@ -20,6 +20,7 @@ from utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train
 from utils.evaluation_utils import adjust_dataset_for_bert, \
 	get_center, \
 	get_probabilities_bert, \
+	get_probabilities_bert_index, \
 	get_scores, \
 	get_scores_tensor, \
 	tokenize_and_generate_dataset
@@ -45,7 +46,7 @@ def link_deletion(model: Any,
 	:param metrics_file: str: Save the results of the link deletion experiment
 	:param noise_ratio: float: Specify the amount of noise to be added to the dataset
 	"""
-	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
@@ -214,7 +215,7 @@ def link_prediction(model: Any,
 	:param noise_ratio: float: Specify the noise ratio of the dataset
 
 	"""
-	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on link prediction ===== ##".upper())
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link prediction ===== ##".upper())
 
 	# load original dataset
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
@@ -292,7 +293,7 @@ def triple_classification(model: Any,
 	:param metrics_file: str: Save the results of the triple classification
 	:param noise_ratio: float: Specify the percentage of noise in the training set
 	"""
-	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
 
 	# ===== LOAD ORIGINAL
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
@@ -425,7 +426,10 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
 
 	# load dataset gold
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  0,
+																			  drop_col_noise=True,
+																			  get_noisy_test=False)
 	dataset_original = pd.concat([train_original, val_original, test_original], axis=0).reset_index(drop=True)
 	test_original = pd.concat([val_original, test_original], axis=0).reset_index(drop=True)
 
@@ -433,7 +437,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 
 	dataset_test = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_original, label=int(True)))
 	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=1)
-	score_test = get_probabilities_bert(model, dataloader_test, device)
+	score_test_sorted = get_probabilities_bert(model, dataloader_test, device, sort=True)
 
 	ranks_head = []
 	ranks_tail = []
@@ -454,8 +458,8 @@ def link_deletion_bert(model: BertForSequenceClassification,
 			new_t = random.choice(nodes)
 		fake_tail_triple = [head, rel, new_t]
 
-		fake_head_triples = pd.DataFrame([fake_head_triple], columns=['subject', 'predicate', 'object'])
-		fake_tail_triples = pd.DataFrame([fake_tail_triple], columns=['subject', 'predicate', 'object'])
+		fake_head_triples = pd.DataFrame([fake_head_triple], columns=['head', 'relation', 'tail'])
+		fake_tail_triples = pd.DataFrame([fake_tail_triple], columns=['head', 'relation', 'tail'])
 
 		# Load the BERT tokenizer
 		dataset_fake_head = tokenize_and_generate_dataset(adjust_dataset_for_bert(fake_head_triples, label=int(False)))
@@ -466,14 +470,14 @@ def link_deletion_bert(model: BertForSequenceClassification,
 		dataloader_fake_tail = DataLoader(dataset_fake_tail, sampler=SequentialSampler(dataset_fake_tail),
 										  batch_size=1)
 
-		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, device)
-		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, device)
+		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, device, sort=False)
+		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, device, sort=False)
 
 		# scores are sorted in ascending order, meaning from the lowest to the highest
 		# in link deletion we expect the score of the fake to be as low as possible (close to 0)
 		# therefore close to the top of the list
-		rank_head = np.searchsorted(a=score_test, v=score_fake_head, side='left') + 1
-		rank_tail = np.searchsorted(a=score_test, v=score_fake_tail, side='left') + 1
+		rank_head = np.searchsorted(a=score_test_sorted, v=score_fake_head, side='left') + 1
+		rank_tail = np.searchsorted(a=score_test_sorted, v=score_fake_tail, side='left') + 1
 		rank = int((rank_head + rank_tail) / 2.0)
 
 		ranks_head.append(rank_head)
@@ -584,47 +588,63 @@ def link_prediction_bert(model: BertForSequenceClassification,
 						 noisy_triples_file: str,
 						 metrics_file: str,
 						 noise_ratio: float):
-	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on link predicion ===== ##".upper())
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link predicion ===== ##".upper())
 
 	# load original dataset
-	train, val, test = get_train_val_test_from_dir(noisy_triples_file, 0)
-	test = pd.concat([val, test], axis=0).reset_index(drop=True)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  0,
+																			  drop_col_noise=True,
+																			  get_noisy_test=False)
+	ranks_head = []
+	ranks_tail = []
 
-	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file, 1)
-	test_noisy = pd.concat([val_noisy, test_noisy], axis=0).reset_index(drop=True)
-	fake_triples = pd.DataFrame(test_noisy, columns=['subject', 'predicate', 'object'])
-	dataset_fake_triple = tokenize_and_generate_dataset(adjust_dataset_for_bert(fake_triples, label=int(False)))
-	dataloader_fake_triple = DataLoader(dataset_fake_triple,
-										sampler=SequentialSampler(dataset_fake_triple),
-										batch_size=1)
+	dataset_original = pd.concat([train_original, val_original, test_original], axis=0).reset_index(drop=True)
+	nodes = get_nodes(dataset_original.sample(n=100))
 
-	score_fake_triple = get_probabilities_bert(model, dataloader_fake_triple, device)
+	for head, rel, tail in test_original.values.tolist():
+		fake_heads = []
+		fake_tails = []
 
-	ranks = []
+		for node in nodes.values.tolist():
+			if (node != head) and ([node, rel, tail] not in dataset_original.values.tolist()):
+				fake_heads.append([node, rel, tail])
 
-	for head, rel, tail in test.values.tolist():
-		real_triple = pd.DataFrame([[head, rel, tail]], columns=['subject', 'predicate', 'object'])
+			if (node != tail) and ([head, rel, node] not in dataset_original.values.tolist()):
+				fake_tails.append([head, rel, node])
 
-		# create datasets
-		real_triple = adjust_dataset_for_bert(real_triple, label=int(True))
+		fake_heads = pd.DataFrame(fake_heads, columns=['head', 'relation', 'tail'])
+		fake_tails = pd.DataFrame(fake_tails, columns=['head', 'relation', 'tail'])
+		real_triple = pd.DataFrame([[head, rel, tail]], columns=['head', 'relation', 'tail'])
 
-		# Load the BERT tokenizer
-		dataset_real_triple = tokenize_and_generate_dataset(real_triple)
+		dataset_fake_heads = tokenize_and_generate_dataset(adjust_dataset_for_bert(fake_heads, label=int(False)))
+		dataloader_fake_heads = DataLoader(dataset_fake_heads,
+										   sampler=SequentialSampler(dataset_fake_heads),
+										   batch_size=1)
+		score_fake_head_triples_sorted = get_probabilities_bert(model, dataloader_fake_heads, device, sort=True)
 
+		dataset_fake_tails = tokenize_and_generate_dataset(adjust_dataset_for_bert(fake_tails, label=int(False)))
+		dataloader_fake_tails = DataLoader(dataset_fake_tails,
+										   sampler=SequentialSampler(dataset_fake_tails),
+										   batch_size=1)
+		score_fake_tail_triples_sorted = get_probabilities_bert(model, dataloader_fake_tails, device, sort=True)
+
+		dataset_real_triple = tokenize_and_generate_dataset(adjust_dataset_for_bert(real_triple, label=int(True)))
 		dataloader_real_triple = DataLoader(dataset_real_triple,
 											sampler=SequentialSampler(dataset_real_triple),
 											batch_size=1)
-
-		score_real_triple = get_probabilities_bert(model, dataloader_real_triple, device)
+		score_real_triple = get_probabilities_bert(model, dataloader_real_triple, device, sort=False)
 
 		# scores are sorted in ascending order, meaning from the lowest to the highest
 		# in link prediction we expect the score of the real to be as high as possible
 		# therefore close to the bottom -> invert results to get hits@k metrics
-		rank = len(score_fake_triple) - np.searchsorted(a=score_fake_triple[::-1],
-														v=score_real_triple,
-														side='right') + 1
-
-		ranks.append(rank)
+		rank_head = len(score_fake_head_triples_sorted) - np.searchsorted(a=score_fake_head_triples_sorted[::-1],
+																		  v=score_real_triple,
+																		  side='right') + 1
+		rank_tail = len(score_fake_tail_triples_sorted) - np.searchsorted(a=score_fake_tail_triples_sorted[::-1],
+																		  v=score_real_triple,
+																		  side='right') + 1
+		ranks_head.append(rank_head)
+		ranks_tail.append(rank_tail)
 
 	# Metrics
 	mr_calculator = ArithmeticMeanRank()
@@ -636,36 +656,62 @@ def link_prediction_bert(model: BertForSequenceClassification,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	test_size = len(test.values.tolist())
+	test_size = len(test_original)
 	n_round = 10
 
-	ranks_array = np.array(ranks, dtype=int)
+	ranks_head_array = np.array(ranks_head, dtype=int)
+	ranks_tail_array = np.array(ranks_tail, dtype=int)
 
 	# MR
-	mr = round(float(mr_calculator(ranks_array, test_size)), n_round)
+	mr_head = round(float(mr_calculator(ranks_head_array, test_size)), n_round)
+	mr_tail = round(float(mr_calculator(ranks_tail_array, test_size)), n_round)
+	mr = round(int((mr_head + mr_tail) / 2.0), n_round)
 
 	# ADJUSTED MR
-	adjusted_mr = round(float(adjusted_mr_calculator(ranks_array, test_size)), n_round)
+	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
+	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
+	adjusted_mr = round(int((mr_head + mr_tail) / 2.0), n_round)
 
 	# MRR
-	mrr = round(float(mrr_calculator(ranks_array, test_size)), n_round)
+	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
+	mrr_tail = round(float(mrr_calculator(ranks_tail_array, test_size)), n_round)
+	mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
 
 	# ADJUSTED MRR
-	adjusted_mrr = round(float(adjusted_mrr_calculator(ranks_array, test_size)), n_round)
+	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
+	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
+	adjusted_mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
 
 	# HITS AT 1
-	hits_at_1 = round(float(hits_at_1_calculator(ranks_array)), n_round)
+	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
+	hits_at_1_tail = round(float(hits_at_1_calculator(ranks_tail_array)), n_round)
+	hits_at_1 = round(float((hits_at_1_head + hits_at_1_tail) / 2.0), n_round)
 
 	# HITS AT 3
-	hits_at_3 = round(float(hits_at_3_calculator(ranks_array)), n_round)
+	hits_at_3_head = round(float(hits_at_3_calculator(ranks_head_array)), n_round)
+	hits_at_3_tail = round(float(hits_at_3_calculator(ranks_tail_array)), n_round)
+	hits_at_3 = round(float((hits_at_3_head + hits_at_3_tail) / 2.0), n_round)
 
 	# HITS AT 5
-	hits_at_5 = round(float(hits_at_5_calculator(ranks_array)), n_round)
+	hits_at_5_head = round(float(hits_at_5_calculator(ranks_head_array)), n_round)
+	hits_at_5_tail = round(float(hits_at_5_calculator(ranks_tail_array)), n_round)
+	hits_at_5 = round(float((hits_at_5_head + hits_at_5_tail) / 2.0), n_round)
 
 	# HITS AT 10
-	hits_at_10 = round(float(hits_at_10_calculator(ranks_array)), n_round)
+	hits_at_10_head = round(float(hits_at_10_calculator(ranks_head_array)), n_round)
+	hits_at_10_tail = round(float(hits_at_10_calculator(ranks_tail_array)), n_round)
+	hits_at_10 = round(float((hits_at_10_head + hits_at_10_tail) / 2.0), n_round)
 
 	results_eval = {
+		'head': {
+			'hits_at_1'   : hits_at_1_head,
+			'hits_at_3'   : hits_at_3_head,
+			'hits_at_5'   : hits_at_5_head,
+			'hits_at_10'  : hits_at_10_head,
+			'mr'          : mr_head,
+			'adjusted_mr' : adjusted_mr_head,
+			'mrr'         : mrr_head,
+			'adjusted_mrr': adjusted_mrr_head},
 		'both': {
 			'hits_at_1'   : hits_at_1,
 			'hits_at_3'   : hits_at_3,
@@ -674,7 +720,18 @@ def link_prediction_bert(model: BertForSequenceClassification,
 			'mr'          : mr,
 			'adjusted_mr' : adjusted_mr,
 			'mrr'         : mrr,
-			'adjusted_mrr': adjusted_mrr}}
+			'adjusted_mrr': adjusted_mrr},
+		'tail': {
+			'hits_at_1'   : hits_at_1_tail,
+			'hits_at_3'   : hits_at_3_tail,
+			'hits_at_5'   : hits_at_5_tail,
+			'hits_at_10'  : hits_at_10_tail,
+			'mr'          : mr_tail,
+			'adjusted_mr' : adjusted_mr_tail,
+			'mrr'         : mrr_tail,
+			'adjusted_mrr': adjusted_mrr_tail},
+
+	}
 
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
@@ -693,50 +750,46 @@ def triple_classification_bert(model: BertForSequenceClassification,
 							   noisy_triples_file: str,
 							   metrics_file: str,
 							   noise_ratio: float):
-	logger.info(f"## ====={model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
 
 	# load dataset gold
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  0,
+																			  drop_col_noise=True,
+																			  get_noisy_test=False)
 
 	# get prediction for train gold
 	dataset_train = tokenize_and_generate_dataset(adjust_dataset_for_bert(train_original, label=int(True)))
 	dataloader_train = DataLoader(dataset_train, sampler=SequentialSampler(dataset_train), batch_size=1)
-	score_train = np.array(get_probabilities_bert(model, dataloader_train, device))
+	score_train = np.array(get_probabilities_bert(model, dataloader_train, device, sort=False))
 
 	# get prediction for test gold
 	test = pd.concat([val_original, test_original], axis=0).reset_index(drop=True)
 	dataset_test = tokenize_and_generate_dataset(adjust_dataset_for_bert(test, label=int(True)))
 	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=1)
-	score_test = np.array(get_probabilities_bert(model, dataloader_test, device))
+	score_test = np.array(get_probabilities_bert(model, dataloader_test, device, sort=False))
 
 	# load dataset random
 	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file,
 																	 100,
 																	 drop_col_noise=False,
 																	 get_noisy_test=True)
-	train_noisy = train_noisy[train_noisy['noise'] == 1].copy()
-	val_noisy = val_noisy[val_noisy['noise'] == 1].copy()
-	test_noisy = test_noisy[test_noisy['noise'] == 1].copy()
+	test_noisy = test_noisy[test_noisy['noise'] == str(1)].copy()
 
 	# get prediction for test noisy
 	dataset_test_noisy = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_noisy, label=int(False)))
 	dataloader_test_noisy = DataLoader(dataset_test_noisy, sampler=SequentialSampler(dataset_test_noisy), batch_size=1)
-	score_test_noisy = np.array(get_probabilities_bert(model, dataloader_test_noisy, device))
+	score_test_noisy = np.array(get_probabilities_bert(model, dataloader_test_noisy, device, sort=False))
 
-	# get prediction for val noisy
-	dataset_val_noisy = tokenize_and_generate_dataset(adjust_dataset_for_bert(val_noisy, label=int(False)))
-	dataloader_val_noisy = DataLoader(dataset_val_noisy, sampler=SequentialSampler(dataset_val_noisy), batch_size=1)
-	score_val_noisy = np.array(get_probabilities_bert(model, dataloader_val_noisy, device))
-
-	score_val_noisy_mean = get_center(score_val_noisy)
 	score_test_mean = get_center(score_test)
 	score_test_noisy_mean = get_center(score_test_noisy)
 
-	threshold = score_val_noisy_mean + ((score_test_mean - score_val_noisy_mean) / 2)
-	logger.info(f"classification threshold: {threshold}")
-
 	y_true = [1 for _ in score_test] + [0 for _ in score_test_noisy]
-	y_pred = [1 if y >= threshold else 0 for y in score_test] + [1 if y >= threshold else 0 for y in score_test_noisy]
+	y_pred = get_probabilities_bert_index(model, dataloader_test, device, sort=False) + get_probabilities_bert_index(
+		model,
+		dataloader_test_noisy,
+		device,
+		sort=False)
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)

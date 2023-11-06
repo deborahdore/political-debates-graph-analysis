@@ -27,16 +27,24 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	batch_size = 32
 	epochs = 3
 
-	logger.info(f"Training bert with {ratio} noise ratio")
-	train, val, test = get_train_val_test_from_dir(noisy_triples_file, ratio)
-	train_noise, val_noise, test_noise = get_train_val_test_from_dir(noisy_triples_file, 1)
+	logger.info(f"## ===== BASIC TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
+	# load dataset
+	train, val, test = get_train_val_test_from_dir(noisy_triples_file, ratio, drop_col_noise=True,
+												   get_noisy_test=False)
 
-	# benchmarking dataset where we suppose all triples are correct
-	train = adjust_dataset_for_bert(train, int(True))
+	train = adjust_dataset_for_bert(train, int(True))  # benchmarking dataset where we suppose all triples are correct
 	val = adjust_dataset_for_bert(val, int(True))
 	test = adjust_dataset_for_bert(test, int(True))
 
-	# creation of counter examples
+	# creation of counter examples where we have all fake triples
+	train_noise, val_noise, test_noise = get_train_val_test_from_dir(noisy_triples_file,
+																	 100,
+																	 drop_col_noise=False,
+																	 get_noisy_test=True)
+	train_noise = train_noise[train_noise['noise'] == str(1)].copy()
+	val_noise = val_noise[val_noise['noise'] == str(1)].copy()
+	test_noise = test_noise[test_noise['noise'] == str(1)].copy()
+
 	train_noise = adjust_dataset_for_bert(train_noise, int(False))
 	val_noise = adjust_dataset_for_bert(val_noise, int(False))
 	test_noise = adjust_dataset_for_bert(test_noise, int(False))
@@ -146,6 +154,8 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	class_report = classification_report(y_true, y_pred)
 	logger.info("Classification report")
 	logger.info(class_report)
+
+	logger.info(f"## ===== BASIC TRAINING COMPLETE ===== ##".upper())
 
 	return model
 
