@@ -104,8 +104,7 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	logger.info(f"source file: {triplets_file}")
 
 	# loading real triples
-	edges_correct = load(triplets_file)
-	edges_correct = pd.DataFrame(edges_correct[1:], columns=edges_correct[0])
+	edges_correct = read_tsv(triplets_file)
 
 	# ------ special case : leave original dataset as it is ------ #
 	if noise_ratio == 0.0:
@@ -233,18 +232,14 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 	:param get_noisy_test: bool: specify if to return test with noise or not
 	:return: A tuple of dataframes, one for each dataset
 	"""
-	train = load(noisy_triples_file.format(use="train", noise=noise))
-	train = pd.DataFrame(data=train[1:], columns=train[0])
+	train = read_tsv(noisy_triples_file.format(use="train", noise=noise))
 
-	val = load(noisy_triples_file.format(use="val", noise=noise))
-	val = pd.DataFrame(data=val[1:], columns=val[0])
+	val = read_tsv(noisy_triples_file.format(use="val", noise=noise))
 
 	if get_noisy_test:
-		test = load(noisy_triples_file.format(use="test", noise=noise))
+		test = read_tsv(noisy_triples_file.format(use="test", noise=noise))
 	else:
-		test = load(noisy_triples_file.format(use="test", noise=0))
-
-	test = pd.DataFrame(data=test[1:], columns=test[0])
+		test = read_tsv(noisy_triples_file.format(use="test", noise=0))
 
 	if drop_col_noise:
 		train = train.drop("noise", axis=1)
