@@ -104,7 +104,7 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	logger.info(f"source file: {triplets_file}")
 
 	# loading real triples
-	edges_correct = read_tsv(triplets_file)
+	edges_correct = pd.read_csv(triplets_file, index_col=False, header=0, delimiter="\s+")
 
 	# ------ special case : leave original dataset as it is ------ #
 	if noise_ratio == 0.0:
@@ -117,25 +117,18 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	else:
 		noise_to_add = int(math.ceil((noise_ratio / 100) * len(edges_correct)))
 
-	edges_noisy = []
 	nodes = get_nodes(edges_correct)
-	relations = ["attack", "support", "equivalent"]
+	relations = edges_correct['relation'].value_counts().index.to_series()
 
-	for _ in range(noise_to_add):
-		head = random.choice(nodes)
-		rel = random.choice(relations)
-		tail = random.choice(nodes)
+	heads = nodes.sample(n=noise_to_add, replace=True).sample(frac=1).reset_index(drop=True)
+	tails = nodes.sample(n=noise_to_add, replace=True).sample(frac=1).reset_index(drop=True)
+	rel = relations.sample(n=noise_to_add, replace=True).sample(frac=1).reset_index(drop=True)
 
-		while [head, rel, tail] in edges_correct.values.tolist():
-			# avoid creating fake triple that already exists in list of correct ones
-			head = random.choice(nodes)
-			rel = random.choice(relations)
-			tail = random.choice(nodes)
+	edges_noisy = pd.DataFrame({'head': heads, 'relation': rel, 'tail': tails})
+	edges_noisy = edges_noisy.dropna().drop_duplicates().reset_index(drop=True)
 
-		edges_noisy.append([head, rel, tail])
-
-	edges_noisy = pd.DataFrame(edges_noisy, columns=['head', 'relation', 'tail'])
-	edges_noisy = edges_noisy.dropna()
+	if not pd.merge(edges_correct, edges_noisy, how='inner').empty:
+		edges_noisy = edges_noisy[~edges_noisy.isin(edges_correct.to_dict(orient='list')).all(axis=1)]
 
 	edges_correct['noise'] = 0
 	edges_noisy['noise'] = 1  # identify noisy triples
