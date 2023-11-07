@@ -150,8 +150,6 @@ if __name__ == '__main__':
 	assert model_name in valid_models
 
 	if generate_dataset:
-		# generates triples from original file
-		generate_triplets(original_dataset_file=original_dataset_file, triples_file=triplets_file)
 		# generate node to label mappings
 		generate_mappings(triplets_file=triplets_file, triplets_file_utils=triplets_file_utils)
 		# for every level of noise, create a dataset
