@@ -142,23 +142,6 @@ def kge_basic(model_name: str, noise: int):
 						  noise_ratio=noise)
 
 
-def hyper_optimization(model_name: str, noise: int):
-	"""
-	The hyper_optimization function is used to optimize the hyperparameters of a model.
-		It takes as input:
-		- model_name: the name of the model that we want to optimize (e.g., 'TransH')
-		- noise: an integer representing how many noisy triples we want to add in our training set
-
-	:param model_name: str: Specify the name of the model
-	:param noise: int: Specify the noise ratio
-	"""
-	hyperparameter_optimization(model_name=model_name,
-								model_dir=model_dir.format(model=model_name),
-								noisy_triples_file=noisy_triples_file,
-								triplets_file_utils=triplets_file_utils,
-								ratio=noise)
-
-
 if __name__ == '__main__':
 	# Command line must contain 4 arguments: generate, optimize, model_name, noise
 	generate_dataset, optimization, noise, model_name = parse_command_line()
@@ -176,9 +159,12 @@ if __name__ == '__main__':
 					   noisy_triples_file=noisy_triples_file,
 					   valid_noise=config.valid_noise_ratio)
 	if optimization:
-		if model_name == 'bert':
-			exit(1)
-		hyper_optimization(model_name, noise)
+		if model_name in ['Bert', 'TransH']: exit(1)
+
+		hyperparameter_optimization(model_name=model_name,
+									model_dir=model_dir.format(model=model_name),
+									noisy_triples_file=noisy_triples_file,
+									triplets_file_utils=triplets_file_utils)
 
 	else:
 		if model_name == "Bert":
@@ -186,4 +172,4 @@ if __name__ == '__main__':
 		else:
 			kge_basic(model_name, noise)
 
-	process_results()
+# process_results()

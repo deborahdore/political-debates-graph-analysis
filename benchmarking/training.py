@@ -194,7 +194,7 @@ def training(model_dir: str,
 																		  create_inverse_triples=True)
 
 	# read best hyperparameters
-	pipeline_config = model_dir + f"/{ratio}/best_pipeline/pipeline_config.json"
+	pipeline_config = os.path.join(model_dir, "best_pipeline/pipeline_config.json")
 	pipeline_config = read_json(pipeline_config)['pipeline']
 	pipeline_config['training'] = train_factory
 	pipeline_config['validation'] = val_factory
@@ -223,11 +223,7 @@ def training(model_dir: str,
 	return result
 
 
-def hyperparameter_optimization(model_name: str,
-								model_dir: str,
-								noisy_triples_file: str,
-								triplets_file_utils: str,
-								ratio: float):
+def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_file: str, triplets_file_utils: str):
 	"""
 	The hyperparameter_optimization function is used to optimize the hyperparameters of a model.
 
@@ -237,6 +233,8 @@ def hyperparameter_optimization(model_name: str,
 	:param triplets_file_utils: str: Load entity-to-id and relation-to-id mappings
 	:param ratio: float: Indicate the noise ratio of the dataset to be used
 	"""
+	ratio = 0  # only hypertrain on gold
+
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
 
 	# get train, val, test
@@ -246,8 +244,6 @@ def hyperparameter_optimization(model_name: str,
 																		  test,
 																		  triplets_file_utils,
 																		  create_inverse_triples=False)
-
-	# TODO: HYPERTRAIN ONLY ON ORIGINAL DATASET
 	# Hyper-training pipeline
 	hpo_results = hpo_pipeline(training=train_factory,
 							   validation=val_factory,
@@ -283,8 +279,7 @@ def hyperparameter_optimization(model_name: str,
 
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())
 
-	model_dir_ratio = model_dir + f"/{ratio}"
-	logger.info(f"saving {model_name} to {model_dir_ratio}")
+	logger.info(f"saving {model_name} to {model_dir}")
 	hpo_results.objective.evaluation_kwargs = None
-	hpo_results.save_to_directory(model_dir_ratio)
+	hpo_results.save_to_directory(model_dir)
 	gc.collect()
