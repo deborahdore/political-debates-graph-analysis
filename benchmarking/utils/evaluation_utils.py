@@ -65,7 +65,7 @@ def get_scores_tensor(model: Any,
 	return scores.ravel()
 
 
-def get_center(scores: []):
+def get_center(scores: np.array):
 	"""
 	The get_center function takes a list of scores and returns the mean of those scores.
 

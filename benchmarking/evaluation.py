@@ -65,38 +65,49 @@ def link_deletion(model: Any,
 
 	real_test_scores = get_scores(model, test_factory)
 
-	ranks = []
 	ranks_head = []
 	ranks_tail = []
 
-	original_df = pd.concat([train_original, test_original, val_original], axis=0).reset_index(drop=True)
-	nodes = get_nodes(original_df)
+	original_df = pd.concat([train_original, test_original, val_original],
+							axis=0).dropna().drop_duplicates().reset_index(drop=True).values.tolist()
+
+	# get only nodes/relations that the model has seen
+	nodes = get_nodes(train_original)
+	relations = train_original['relation'].drop_duplicates().values.tolist()
+
+	test_size = len(test_original)
 
 	for h, r, t in test_original.values.tolist():
-		fake_head_triple = None
-		fake_tail_triple = None
+		if r not in relations:
+			test_size = test_size - 1
+			continue
 
 		# create fake head triple
 		while True:
 			new_h = random.choice(nodes)
 			fake_head_triple = [new_h, r, t]
-			if fake_head_triple not in original_df.values.tolist():
+			if fake_head_triple not in original_df:
 				break
 
 		# create fake tail triple
 		while True:
 			new_t = random.choice(nodes)
 			fake_tail_triple = [h, r, new_t]
-			if fake_tail_triple not in original_df.values.tolist():
+			if fake_tail_triple not in original_df:
 				break
 
 		# get scores
-		fake_score = get_scores_tensor(model, [fake_head_triple, fake_tail_triple], entity_to_id, relation_to_id)
+		fake_score = get_scores_tensor(model=model,
+									   triples=[fake_head_triple, fake_tail_triple],
+									   entities_label_id_map=entity_to_id,
+									   relation_label_id_map=relation_to_id)
 
-		fake_h_score, fake_t_score = fake_score[0], fake_score[1]
+		fake_h_score = fake_score[0]
+		fake_t_score = fake_score[1]
+
 		rank_head = np.searchsorted(a=real_test_scores, v=fake_h_score, side='left') + 1
 		rank_tail = np.searchsorted(a=real_test_scores, v=fake_t_score, side='left') + 1
-		ranks.append(int((rank_head + rank_tail) / 2.0))
+
 		ranks_head.append(rank_head)
 		ranks_tail.append(rank_tail)
 
@@ -110,7 +121,6 @@ def link_deletion(model: Any,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	test_size = len(test_original)
 	n_round = 10
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
@@ -124,7 +134,7 @@ def link_deletion(model: Any,
 	# ADJUSTED MR
 	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
 	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+	adjusted_mr = round(float((adjusted_mr_head + adjusted_mr_tail) / 2.0), n_round)
 
 	# MRR
 	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
@@ -134,7 +144,7 @@ def link_deletion(model: Any,
 	# ADJUSTED MRR
 	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
 	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+	adjusted_mrr = round(float((adjusted_mrr_head + adjusted_mrr_tail) / 2.0), n_round)
 
 	# HITS AT 1
 	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
@@ -308,9 +318,14 @@ def triple_classification(model: Any,
 																  100,
 																  drop_col_noise=False,
 																  get_noisy_test=True)
-	train_fake = train_fake[train_fake['noise'] == str(1)].copy()
-	val_fake = val_fake[val_fake['noise'] == str(1)].copy()
-	test_fake = test_fake[test_fake['noise'] == str(1)].copy()
+	train_fake = train_fake[train_fake['noise'] == 1].copy()
+	val_fake = val_fake[val_fake['noise'] == 1].copy()
+	test_fake = test_fake[test_fake['noise'] == 1].copy()
+
+	assert len(train_fake) > 0
+	assert len(val_fake) > 0
+	assert len(test_fake) > 0
+
 	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
 																						 val_fake,
 																						 test_fake,
@@ -774,7 +789,8 @@ def triple_classification_bert(model: BertForSequenceClassification,
 																	 100,
 																	 drop_col_noise=False,
 																	 get_noisy_test=True)
-	test_noisy = test_noisy[test_noisy['noise'] == str(1)].copy()
+	test_noisy = test_noisy[test_noisy['noise'] == 1].copy()
+	assert len(test_noisy) > 0
 
 	# get prediction for test noisy
 	dataset_test_noisy = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_noisy, label=int(False)))

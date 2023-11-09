@@ -5,7 +5,6 @@ import sys
 import torch
 from loguru import logger
 
-from utils.results_utils import process_results
 from config import config
 from config.config import (metrics_file,
 						   model_dir,
