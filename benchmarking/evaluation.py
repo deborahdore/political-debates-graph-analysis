@@ -65,12 +65,11 @@ def link_deletion(model: Any,
 
 	real_test_scores = get_scores(model, test_factory)
 
-	ranks = []
 	ranks_head = []
 	ranks_tail = []
 
 	original_df = pd.concat([train_original, test_original, val_original],
-							axis=0).reset_index(drop=True).values.tolist()
+							axis=0).dropna().drop_duplicates().reset_index(drop=True).values.tolist()
 
 	# get only nodes/relations that the model has seen
 	nodes = get_nodes(train_original)
@@ -80,7 +79,7 @@ def link_deletion(model: Any,
 
 	for h, r, t in test_original.values.tolist():
 		if r not in relations:
-			test_size -= 1
+			test_size = test_size - 1
 			continue
 
 		# create fake head triple
@@ -105,9 +104,10 @@ def link_deletion(model: Any,
 
 		fake_h_score = fake_score[0]
 		fake_t_score = fake_score[1]
+
 		rank_head = np.searchsorted(a=real_test_scores, v=fake_h_score, side='left') + 1
 		rank_tail = np.searchsorted(a=real_test_scores, v=fake_t_score, side='left') + 1
-		ranks.append(int((rank_head + rank_tail) / 2.0))
+
 		ranks_head.append(rank_head)
 		ranks_tail.append(rank_tail)
 
@@ -125,47 +125,46 @@ def link_deletion(model: Any,
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
 	ranks_tail_array = np.array(ranks_tail, dtype=int)
-	ranks = np.array(ranks, dtype=int)
 
 	# MR
 	mr_head = round(float(mr_calculator(ranks_head_array, test_size)), n_round)
 	mr_tail = round(float(mr_calculator(ranks_tail_array, test_size)), n_round)
-	mr = round(float(mr_calculator(ranks, test_size)), n_round)
+	mr = round(int((mr_head + mr_tail) / 2.0), n_round)
 
 	# ADJUSTED MR
 	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
 	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mr = round(float(adjusted_mr_calculator(ranks, test_size)), n_round)
+	adjusted_mr = round(float((adjusted_mr_head + adjusted_mr_tail) / 2.0), n_round)
 
 	# MRR
 	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
 	mrr_tail = round(float(mrr_calculator(ranks_tail_array, test_size)), n_round)
-	mrr = round(float(mrr_calculator(ranks, test_size)), n_round)
+	mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
 
 	# ADJUSTED MRR
 	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
 	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mrr = round(float(adjusted_mrr_calculator(ranks, test_size)), n_round)
+	adjusted_mrr = round(float((adjusted_mrr_head + adjusted_mrr_tail) / 2.0), n_round)
 
 	# HITS AT 1
 	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
 	hits_at_1_tail = round(float(hits_at_1_calculator(ranks_tail_array)), n_round)
-	hits_at_1 = round(float(hits_at_1_calculator(ranks)), n_round)
+	hits_at_1 = round(float((hits_at_1_head + hits_at_1_tail) / 2.0), n_round)
 
 	# HITS AT 3
 	hits_at_3_head = round(float(hits_at_3_calculator(ranks_head_array)), n_round)
 	hits_at_3_tail = round(float(hits_at_3_calculator(ranks_tail_array)), n_round)
-	hits_at_3 = round(float(hits_at_3_calculator(ranks)), n_round)
+	hits_at_3 = round(float((hits_at_3_head + hits_at_3_tail) / 2.0), n_round)
 
 	# HITS AT 5
 	hits_at_5_head = round(float(hits_at_5_calculator(ranks_head_array)), n_round)
 	hits_at_5_tail = round(float(hits_at_5_calculator(ranks_tail_array)), n_round)
-	hits_at_5 = round(float(hits_at_5_calculator(ranks)), n_round)
+	hits_at_5 = round(float((hits_at_5_head + hits_at_5_tail) / 2.0), n_round)
 
 	# HITS AT 10
 	hits_at_10_head = round(float(hits_at_10_calculator(ranks_head_array)), n_round)
 	hits_at_10_tail = round(float(hits_at_10_calculator(ranks_tail_array)), n_round)
-	hits_at_10 = round(float(hits_at_10_calculator(ranks)), n_round)
+	hits_at_10 = round(float((hits_at_10_head + hits_at_10_tail) / 2.0), n_round)
 
 	results_eval = {
 		'head': {

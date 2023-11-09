@@ -23,7 +23,7 @@ def get_scores(model: Any, factory: TriplesFactory):
 	factory.mapped_triples = factory.mapped_triples.to(device)
 	scores = predict_triples(model=model, triples=factory.mapped_triples, batch_size=None, mode=None).process()
 	scores = scores.df['score'].values
-	return sorted(scores)
+	return np.sort(scores)
 
 
 def get_scores_tensor(model: Any,
@@ -62,7 +62,7 @@ def get_scores_tensor(model: Any,
 	if sort:
 		return np.sort(scores.ravel())
 
-	return scores
+	return scores.ravel()
 
 
 def get_center(scores: []):
@@ -72,6 +72,7 @@ def get_center(scores: []):
 	:param scores: []: Specify the type of data that is expected to be passed into the function
 	:return: The mean of the scores array
 	"""
+	scores = np.array(scores)
 	assert scores.ndim == 1
 	return float(np.mean(a=scores))
 
