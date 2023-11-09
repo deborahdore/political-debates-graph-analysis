@@ -279,7 +279,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 												  n_ei_candidates=24, ),
 							   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 							   direction="maximize",
-							   n_trials=10, )
+							   n_trials=50, )
 
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())
 
