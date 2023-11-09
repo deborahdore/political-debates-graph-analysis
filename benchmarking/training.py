@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import torch
 from loguru import logger
-from optuna.pruners import PercentilePruner
-from optuna.samplers import TPESampler
 from pykeen.hpo import hpo_pipeline
 from pykeen.pipeline import pipeline
 from sklearn.metrics import classification_report
@@ -41,9 +39,9 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 																	 100,
 																	 drop_col_noise=False,
 																	 get_noisy_test=True)
-	train_noise = train_noise[train_noise['noise'] == str(1)].copy()
-	val_noise = val_noise[val_noise['noise'] == str(1)].copy()
-	test_noise = test_noise[test_noise['noise'] == str(1)].copy()
+	train_noise = train_noise[train_noise['noise'] == 1].copy()
+	val_noise = val_noise[val_noise['noise'] == 1].copy()
+	test_noise = test_noise[test_noise['noise'] == 1].copy()
 
 	train_noise = adjust_dataset_for_bert(train_noise, int(False))
 	val_noise = adjust_dataset_for_bert(val_noise, int(False))

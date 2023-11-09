@@ -23,7 +23,7 @@ def get_scores(model: Any, factory: TriplesFactory):
 	factory.mapped_triples = factory.mapped_triples.to(device)
 	scores = predict_triples(model=model, triples=factory.mapped_triples, batch_size=None, mode=None).process()
 	scores = scores.df['score'].values
-	return np.sort(scores)
+	return sorted(scores)
 
 
 def get_scores_tensor(model: Any,
@@ -55,14 +55,14 @@ def get_scores_tensor(model: Any,
 							 triples=mapped_triples_tensor,
 							 triples_factory=None,
 							 batch_size=None,
-							 mode=None, ).process().df["score"].values
+							 mode=None).process().df["score"].values
 
 	assert len(scores) == len(triples)
 
 	if sort:
 		return np.sort(scores.ravel())
 
-	return scores.ravel()
+	return scores
 
 
 def get_center(scores: []):

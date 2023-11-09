@@ -5,12 +5,10 @@ import sys
 import torch
 from loguru import logger
 
-from utils.results_utils import process_results
 from config import config
 from config.config import (metrics_file,
 						   model_dir,
 						   noisy_triples_file,
-						   original_dataset_file,
 						   plot_dir,
 						   triplets_file,
 						   triplets_file_utils,
@@ -23,7 +21,7 @@ from evaluation import link_deletion, \
 	triple_classification, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
-from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
+from utils.dataset_utils import generate_mappings, generate_noise
 from utils.utils import load_model
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

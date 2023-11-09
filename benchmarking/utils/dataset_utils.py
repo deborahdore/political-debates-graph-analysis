@@ -1,12 +1,11 @@
 import math
-import random
 
 import pandas as pd
 import torch
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sklearn.model_selection import train_test_split
-from utils.utils import load, read_json, read_tsv, save, save_json
+from utils.utils import load, read_json, read_tsv, save, save_json, save_tsv
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -79,32 +78,38 @@ def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [in
 	:return: A dataframe with the following columns: head, relation, tail, noise (1 if it's a synthetic noisy triple,
 	0 if not)
 	"""
+	edges_correct = pd.read_csv(triplets_file,
+								index_col=False,
+								header=0,
+								delimiter="\s+").dropna().drop_duplicates().reset_index(drop=True)
+
+	# split dataset in partitions [0.8, 0.1, 0.1]
+	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123)
+	train, val = train_test_split(train, test_size=0.1, random_state=123)
+
+	train = train.dropna().drop_duplicates().reset_index(drop=True)
+	val = val.dropna().drop_duplicates().reset_index(drop=True)
+	test = test.dropna().drop_duplicates().reset_index(drop=True)
+
 	for noise_ratio in valid_noise:
-		df = __generate_noise(triplets_file, noise_ratio=noise_ratio)
+		train = __generate_noise(train, noise_ratio=noise_ratio)
+		val = __generate_noise(val, noise_ratio=noise_ratio)
+		test = __generate_noise(test, noise_ratio=noise_ratio)
 
-		# split dataset in partitions [0.8, 0.1, 0.1]
-		train, test = train_test_split(df, test_size=0.1, random_state=42, stratify=df['noise'])
-		train, val = train_test_split(train, test_size=0.1, random_state=42, stratify=train['noise'])
-
-		columns = df.columns
-		save([columns] + train.values.tolist(), noisy_triples_file.format(noise=noise_ratio, use="train"))
-		save([columns] + test.values.tolist(), noisy_triples_file.format(noise=noise_ratio, use="test"))
-		save([columns] + val.values.tolist(), noisy_triples_file.format(noise=noise_ratio, use="val"))
+		save_tsv(df=train, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="train"))
+		save_tsv(df=val, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="val"))
+		save_tsv(df=test, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="test"))
 
 
-def __generate_noise(triplets_file: str, noise_ratio: float):
+def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
 	"""
 	Helper function that generates noise
 
-	:param triplets_file: str: Specify the path to the file that contains all of the triplets
+	:param edges_correct: str: dataframe containing all of the triplets
 	:param noise_ratio: float: Determine the amount of noise to be added to the dataset
 	:return: A dataframe with the original triplets and noise triplets
 	"""
 	logger.info(f"generating dataset with {noise_ratio}% noise")
-	logger.info(f"source file: {triplets_file}")
-
-	# loading real triples
-	edges_correct = pd.read_csv(triplets_file, index_col=False, header=0, delimiter="\s+")
 
 	# ------ special case : leave original dataset as it is ------ #
 	if noise_ratio == 0.0:
@@ -127,8 +132,21 @@ def __generate_noise(triplets_file: str, noise_ratio: float):
 	edges_noisy = pd.DataFrame({'head': heads, 'relation': rel, 'tail': tails})
 	edges_noisy = edges_noisy.dropna().drop_duplicates().reset_index(drop=True)
 
-	if not pd.merge(edges_correct, edges_noisy, how='inner').empty:
+	intersection = len(pd.merge(edges_correct, edges_noisy, how='inner'))
+	while not intersection == 0:
+		# remove duplicates
 		edges_noisy = edges_noisy[~edges_noisy.isin(edges_correct.to_dict(orient='list')).all(axis=1)]
+
+		# sample remaining
+		heads = nodes.sample(n=intersection, replace=True).sample(frac=1).reset_index(drop=True)
+		tails = nodes.sample(n=intersection, replace=True).sample(frac=1).reset_index(drop=True)
+		rel = relations.sample(n=intersection, replace=True).sample(frac=1).reset_index(drop=True)
+
+		# concat
+		edges_noisy = pd.concat([pd.DataFrame({'head': heads, 'relation': rel, 'tail': tails}),
+								 edges_noisy]).dropna().drop_duplicates().reset_index(drop=True)
+		# recompute intersection
+		intersection = len(pd.merge(edges_correct, edges_noisy, how='inner'))
 
 	edges_correct['noise'] = 0
 	edges_noisy['noise'] = 1  # identify noisy triples

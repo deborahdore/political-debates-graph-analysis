@@ -59,7 +59,7 @@ def read_tsv(tsv_file_path: str):
 	:return: A pandas dataframe
 	"""
 	logger.info(f"Loading {tsv_file_path}")
-	return pd.read_csv(tsv_file_path, index_col=False, header=0)
+	return pd.read_csv(tsv_file_path, delimiter="\t")
 
 
 def read_json(json_file_name: str):
