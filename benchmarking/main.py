@@ -22,7 +22,6 @@ from evaluation import link_deletion, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
 from utils.dataset_utils import generate_mappings, generate_noise
-from utils.utils import load_model
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -65,16 +64,9 @@ def bert_basic(model_name: str, noise: int):
 	:param model_name:str: Name the model
 	:param noise:int: Specify the noise ratio
 	"""
-	# check if model exists
 	model_file = os.path.join(model_dir.format(model="Bert"), f"{noise}/{model_name}_{noise}.pt")
-	if not os.path.exists(model_file):
-		# bert training
-		model = bert_training(model_file=model_file,
-							  model_name='Bert',
-							  noisy_triples_file=noisy_triples_file,
-							  ratio=noise)
-	else:
-		model = load_model(model_file, device)
+	# bert training
+	model = bert_training(model_file=model_file, model_name='Bert', noisy_triples_file=noisy_triples_file, ratio=noise)
 
 	# evaluation
 	link_prediction_bert(model=model,
@@ -104,20 +96,15 @@ def kge_basic(model_name: str, noise: int):
 	:param model_name: str: Name the model
 	:param noise: int: Specify the noise ratio of the dataset
 	"""
-	# check if model exists already
+	# NOTE: ALWAYS RETRAIN THE MODEL WHEN EVALUATING TO BE SURE THE PREVIOUS MODEL WAS NOT TRAINED ON ANOTHER DATASET
 	model_file = os.path.join(model_dir.format(model=model_name), f"{noise}/{model_name}_{noise}.pt")
-	if not os.path.exists(model_file):
-		result = training(model_dir=model_dir.format(model=model_name),
-						  model_name=model_name,
-						  model_file=model_file,
-						  noisy_triples_file=noisy_triples_file,
-						  triplets_file_utils=triplets_file_utils,
-						  plot_dir=plot_dir,
-						  ratio=noise)
-		model = result.model
-
-	else:
-		model = load_model(model_file, device)
+	model = training(model_dir=model_dir.format(model=model_name),
+					 model_name=model_name,
+					 model_file=model_file,
+					 noisy_triples_file=noisy_triples_file,
+					 triplets_file_utils=triplets_file_utils,
+					 plot_dir=plot_dir,
+					 ratio=noise).model
 
 	# evaluation
 	link_prediction(model=model,
