@@ -84,14 +84,14 @@ def link_deletion(model: Any,
 
 		# create fake head triple
 		while True:
-			new_h = random.choice(nodes)
+			new_h = random.sample(sorted(nodes), 1)[0]
 			fake_head_triple = [new_h, r, t]
 			if fake_head_triple not in original_df:
 				break
 
 		# create fake tail triple
 		while True:
-			new_t = random.choice(nodes)
+			new_t = random.sample(sorted(nodes), 1)[0]
 			fake_tail_triple = [h, r, new_t]
 			if fake_tail_triple not in original_df:
 				break
@@ -321,11 +321,6 @@ def triple_classification(model: Any,
 	train_fake = train_fake[train_fake['noise'] == 1].copy()
 	val_fake = val_fake[val_fake['noise'] == 1].copy()
 	test_fake = test_fake[test_fake['noise'] == 1].copy()
-
-	assert len(train_fake) > 0
-	assert len(val_fake) > 0
-	assert len(test_fake) > 0
-
 	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
 																						 val_fake,
 																						 test_fake,

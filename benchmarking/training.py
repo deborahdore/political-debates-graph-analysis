@@ -1,7 +1,6 @@
 import gc
 import os.path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
@@ -169,7 +168,6 @@ def training(model_dir: str,
 			 model_file: str,
 			 noisy_triples_file: str,
 			 triplets_file_utils: str,
-			 plot_dir: str,
 			 ratio: float):
 	"""
 	The training function is the main function of this module and trains the model with the optimal hyperparameter.
@@ -199,29 +197,68 @@ def training(model_dir: str,
 
 	# read best hyperparameters
 	pipeline_config = os.path.join(model_dir, "best_pipeline/pipeline_config.json")
-	pipeline_config = read_json(pipeline_config)['pipeline']
-	pipeline_config['training'] = train_factory
-	pipeline_config['validation'] = val_factory
-	pipeline_config['testing'] = test_factory
-	pipeline_config['evaluation_kwargs'] = {}
-	pipeline_config['evaluation_kwargs']['additional_filter_triples'] = [train_factory.mapped_triples,
-																		 val_factory.mapped_triples]
+	assert os.path.isfile(pipeline_config)
 
-	result = pipeline(**pipeline_config,
-					  device=device,
-					  use_testing_data=True,
-					  evaluation_fallback=True,
-					  use_tqdm=True, )
+	pipeline_config = read_json(pipeline_config)['pipeline']
+
+	# check negative_sampler_kwargs
+	if not 'negative_sampler_kwargs' in pipeline_config.keys():
+		pipeline_config['negative_sampler_kwargs'] = {}
+	pipeline_config['negative_sampler_kwargs']['filtered'] = True
+	pipeline_config['negative_sampler_kwargs']["filterer"] = 'python-set'
+
+	# check training_kwargs
+	if not 'training_kwargs' in pipeline_config.keys():
+		pipeline_config['training_kwargs'] = {"num_epochs": 100, "batch_size": 128, "use_tqdm_batch": False, }
+
+	# check regularizer_kwargs
+	if not 'regularizer_kwargs' in pipeline_config.keys():
+		pipeline_config['regularizer_kwargs'] = None
+
+	#  check loss_kwargs
+	if not 'loss_kwargs' in pipeline_config.keys():
+		pipeline_config['loss_kwargs'] = None
+
+	logger.info(f"Best params: {pipeline_config}")
+
+	result = pipeline(  # dataset args
+		training=train_factory,
+		validation=val_factory,
+		testing=test_factory,
+		# model args
+		model=model_name,
+		model_kwargs=pipeline_config['model_kwargs'],
+		# loss args
+		loss_kwargs=pipeline_config['loss_kwargs'],
+		# regularize args
+		regularizer_kwargs=pipeline_config['regularizer_kwargs'],
+		# optimizer args
+		optimizer='Adam',
+		optimizer_kwargs=pipeline_config['optimizer_kwargs'],
+		clear_optimizer=True,
+		# training Loop args
+		training_loop='slcwa',
+		negative_sampler='basic',
+		negative_sampler_kwargs=pipeline_config['negative_sampler_kwargs'],
+		# training args
+		training_kwargs=pipeline_config['training_kwargs'],
+		stopper=None,
+		# evaluation args
+		evaluator="RankBasedEvaluator",
+		evaluator_kwargs={"filtered": True, },
+		evaluation_kwargs={
+			"use_tqdm"                 : True,
+			"additional_filter_triples": [train_factory.mapped_triples, val_factory.mapped_triples, ], },
+		device='cuda:0',
+		use_testing_data=True,
+		evaluation_fallback=True,
+		filter_validation_when_testing=True,
+		use_tqdm=True, )
 
 	# save trained model
 	result.save_model(path=model_file)
 
-	# plot losses
-	result.plot_losses()
-	plot_file = os.path.join(plot_dir, f"{model_name}_{ratio}_loss.svg")
-	plt.savefig(plot_file)
 	gc.collect()
-
 	logger.info(f"## ===== BASIC TRAINING COMPLETE ===== ##".upper())
 
 	return result
@@ -253,37 +290,45 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 							   validation=val_factory,
 							   testing=test_factory,
 							   model=model_name,
+							   # optimizer args
 							   optimizer="Adam",
 							   optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),
+							   # # training loop args
 							   training_loop="slcwa",
 							   negative_sampler="basic",
 							   negative_sampler_kwargs={"filtered": True, "filterer": "python-set", },
+							   # training args
 							   training_kwargs={"use_tqdm_batch": False, },
 							   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
 														   batch_size=dict(type=int, low=64, high=256, q=64), ),
 							   stopper=None,
+							   # evaluation args
 							   evaluator="RankBasedEvaluator",
 							   evaluation_kwargs={
 								   "use_tqdm"                 : True,
 								   "additional_filter_triples": [train_factory.mapped_triples,
 																 val_factory.mapped_triples, ], },
-							   evaluator_kwargs={"filtered": True},
+							   evaluator_kwargs={"filtered": True, },
 							   metric="both.realistic.inverse_harmonic_mean_rank",
+							   # MRR
 							   filter_validation_when_testing=True,
+							   # misc args
 							   device=device,
+							   # Optuna study args
 							   sampler=TPESampler(consider_prior=True,
 												  prior_weight=1.0,
 												  consider_magic_clip=True,
 												  consider_endpoints=False,
-												  n_startup_trials=10,
-												  n_ei_candidates=24, ),
+												  n_startup_trials=18,
+												  n_ei_candidates=32, ),
 							   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 							   direction="maximize",
-							   n_trials=50, )
+							   n_trials=25, )
 
+	logger.info(f"Best hyper-parameters: {hpo_results.study.best_params}")
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())
 
 	logger.info(f"saving {model_name} to {model_dir}")
-	hpo_results.objective.evaluation_kwargs = None
+	hpo_results.objective.evaluation_kwargs['additional_filter_triples'] = None
 	hpo_results.save_to_directory(model_dir)
 	gc.collect()

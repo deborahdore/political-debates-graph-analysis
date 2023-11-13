@@ -58,8 +58,8 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	df.columns = ['head', 'relation', 'tail']
 
 	logger.info("preprocessing created dataset")
-	df = df.map(lambda x: x.lower() if isinstance(x, str) else x)
-	df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
+	df = df.applymap(lambda x: x.lower() if isinstance(x, str) else x)
+	df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 	df = df.dropna().drop_duplicates().reset_index(drop=True)
 
 	columns = df.columns
@@ -78,10 +78,7 @@ def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [in
 	:return: A dataframe with the following columns: head, relation, tail, noise (1 if it's a synthetic noisy triple,
 	0 if not)
 	"""
-	edges_correct = pd.read_csv(triplets_file,
-								index_col=False,
-								header=0,
-								delimiter="\s+").dropna().drop_duplicates().reset_index(drop=True)
+	edges_correct = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
 
 	# split dataset in partitions [0.8, 0.1, 0.1]
 	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123)
@@ -123,7 +120,7 @@ def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
 		noise_to_add = int(math.ceil((noise_ratio / 100) * len(edges_correct)))
 
 	nodes = get_nodes(edges_correct)
-	relations = edges_correct['relation'].value_counts().index.to_series()
+	relations = edges_correct['relation'].value_counts().index.to_series().reset_index(drop=True)
 
 	heads = nodes.sample(n=noise_to_add, replace=True).sample(frac=1).reset_index(drop=True)
 	tails = nodes.sample(n=noise_to_add, replace=True).sample(frac=1).reset_index(drop=True)

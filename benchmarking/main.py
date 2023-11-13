@@ -10,7 +10,6 @@ from config.config import (metrics_file,
 						   model_dir,
 						   noisy_triples_file,
 						   original_dataset_file,
-						   plot_dir,
 						   triplets_file,
 						   triplets_file_utils,
 						   valid_models,
@@ -98,22 +97,22 @@ def bert_basic(model_name: str, noise: int):
 							   noise_ratio=noise)
 
 
-def kge_basic(model_name: str, noise: int):
+def kge_basic(model_name: str, noise: int, force_retrain: bool = True):
 	"""
 	The kge_basic function is a wrapper function that trains and evaluates the KGE model.
 
+	:param force_retrain: bool : Force model's training
 	:param model_name: str: Name the model
 	:param noise: int: Specify the noise ratio of the dataset
 	"""
-	# check if model exists already
+	# NOTE: ALWAYS RETRAIN THE MODEL WHEN EVALUATING TO BE SURE THE PREVIOUS MODEL WAS NOT TRAINED ON ANOTHER DATASET
 	model_file = os.path.join(model_dir.format(model=model_name), f"{noise}/{model_name}_{noise}.pt")
-	if not os.path.exists(model_file):
+	if not os.path.exists(model_file) or force_retrain:
 		result = training(model_dir=model_dir.format(model=model_name),
 						  model_name=model_name,
 						  model_file=model_file,
 						  noisy_triples_file=noisy_triples_file,
 						  triplets_file_utils=triplets_file_utils,
-						  plot_dir=plot_dir,
 						  ratio=noise)
 		model = result.model
 
