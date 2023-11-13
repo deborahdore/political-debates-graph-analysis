@@ -105,7 +105,6 @@ def kge_basic(model_name: str, noise: int):
 					 triplets_file_utils=triplets_file_utils,
 					 plot_dir=plot_dir,
 					 ratio=noise).model
-
 	# evaluation
 	link_prediction(model=model,
 					noisy_triples_file=noisy_triples_file,

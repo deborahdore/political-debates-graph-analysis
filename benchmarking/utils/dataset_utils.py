@@ -78,10 +78,9 @@ def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [in
 	:return: A dataframe with the following columns: head, relation, tail, noise (1 if it's a synthetic noisy triple,
 	0 if not)
 	"""
-	edges_correct = pd.read_csv(triplets_file,
-								index_col=False,
-								header=0,
-								delimiter="\s+").dropna().drop_duplicates().reset_index(drop=True)
+	edges_correct = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
+	logger.info(f"dataset loaded:")
+	print(edges_correct.head(2))
 
 	# split dataset in partitions [0.8, 0.1, 0.1]
 	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123)
@@ -273,7 +272,7 @@ def generate_mappings(triplets_file: str, triplets_file_utils: str):
 	logger.info("creating entity-to-id and relation-to-id mappings")
 
 	# read original tsv file
-	triplets = pd.read_csv(triplets_file, index_col=False, header=0, delimiter="\s+")
+	triplets = read_tsv(triplets_file)
 	# generate mappings using pykeen function
 	factory = TriplesFactory.from_labeled_triples(triples=triplets[['head', 'relation', 'tail']].values,
 												  create_inverse_triples=False)

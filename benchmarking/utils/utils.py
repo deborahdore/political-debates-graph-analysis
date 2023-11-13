@@ -48,7 +48,7 @@ def save_tsv(df: pd.DataFrame, tsv_file_path: str):
 	:return: A dataframe that is saved as a tsv file
 	"""
 	logger.info(f"saving dataframe to tsv {tsv_file_path}")
-	df.to_csv(tsv_file_path, sep='\t', index=False, header=True)
+	df.to_csv(tsv_file_path, index=False, header=True)
 
 
 def read_tsv(tsv_file_path: str):
@@ -59,7 +59,7 @@ def read_tsv(tsv_file_path: str):
 	:return: A pandas dataframe
 	"""
 	logger.info(f"Loading {tsv_file_path}")
-	return pd.read_csv(tsv_file_path, delimiter="\t")
+	return pd.read_csv(tsv_file_path, index_col=False)
 
 
 def read_json(json_file_name: str):

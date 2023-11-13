@@ -84,14 +84,14 @@ def link_deletion(model: Any,
 
 		# create fake head triple
 		while True:
-			new_h = random.choice(nodes)
+			new_h = random.sample(sorted(nodes), 1)[0]
 			fake_head_triple = [new_h, r, t]
 			if fake_head_triple not in original_df:
 				break
 
 		# create fake tail triple
 		while True:
-			new_t = random.choice(nodes)
+			new_t = random.sample(sorted(nodes), 1)[0]
 			fake_tail_triple = [h, r, new_t]
 			if fake_tail_triple not in original_df:
 				break
