@@ -1,5 +1,4 @@
 # political-debates-graph-analysis
-
 The objective of this project is to implement knowledge embedding graph techniques on a dataset comprising 41
 presidential election debates in the United States spanning from 1960 to 2016. This dataset has been meticulously
 annotated, with a specific focus on dissecting argument components (referred to as _premises_ and _claims_) and
@@ -11,6 +10,12 @@ this [GitHub repo](https://github.com/ElecDeb60To16/Dataset/tree/master).
 Previously, the classification of argument relations, including support, attack, and equivalence, primarily relied on
 deep learning techniques. This project endeavors to explore an innovative approach by considering the structural
 attributes of constructed graphs to enhance the automated classification of argument relations.
+
+## BRANCH FB15K
+This branch contains the code for the benchmarking of the TransE model on the FB15k dataset to insure that the written code for
+the evaluation is correct. The TransE model was tested on different level of noise (original, 10, 20, 30, 50) and the results were
+compared to the one obtained by the authors of [A Benchmark Study on Knowledge Graphs Enrichment and Pruning Methods in the Presence of Noisy Relationships](https://www.jair.org/index.php/jair/article/view/14494/26966). 
+The results, available [here](benchmarking/results), showed that the evaluation is coherent with the results of the Authors in the paper previously cited, assuring the goodness of the evaluation code. 
 
 ## EXPLORATION DATA ANALYSIS
 
@@ -35,32 +40,6 @@ All the code for the exploration data analysis of the dataset can be found in th
 
 _Example graph of debate between Gore and Kemp_:
 <img src="visualization/imgs/09-10-1996_debate_graph.svg">
-
-## BENCHMARKING
-
-The dataset was tested against 10 state of the art KGE models using the [PyKEEN](https://github.com/pykeen/pykeen)
-library with increasing level of noise (0, 10%, 20%, 30%, 50% - random) to test the robustness of these models. A bert
-model
-was also tested on these datasets to compare its performances against the kge models.
-
-* _TransE_
-* _DistMult_
-* _ComplEx_
-* _HolE_
-* _ConvE_
-* _RotatE_
-* _PairRE_
-* _AutoSF_
-* _BoxE_
-* _TransH_
-
-Result of the model's optimization are
-available [in this folder](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Eob1CqlF5Z5EiOWaL_1u9CsBz-cAxDULqe2lSHQ4d1hr5Q?e=IcFfUy).
-
-### DATASET
-
-Original dataset and datasets without noise are available
-on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Ek_00pPwRgNBrR6HuKIrEyoBJ5wMVDkt3epQTjwbTl5NVg?e=iV9ifl)
 
 ### REPRODUCIBILITY
 
