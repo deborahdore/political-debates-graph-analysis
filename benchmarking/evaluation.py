@@ -196,6 +196,7 @@ def link_deletion(model: Any,
 			'adjusted_mrr': adjusted_mrr_tail},
 
 	}
+	logger.info(results_eval)
 
 	# Check if the JSON file exists
 	if os.path.isfile(metrics_file):
@@ -275,6 +276,8 @@ def link_prediction(model: Any,
 			'mrr'         : round(sub_dict['inverse_harmonic_mean_rank'], n_round),
 			'adjusted_mr' : round(sub_dict['adjusted_arithmetic_mean_rank'], n_round),
 			'adjusted_mrr': round(sub_dict['adjusted_inverse_harmonic_mean_rank'], n_round)}
+
+	logger.info(results_eval)
 
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):

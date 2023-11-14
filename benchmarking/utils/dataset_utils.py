@@ -9,6 +9,8 @@ from utils.utils import load, read_json, read_tsv, save, save_json, save_tsv
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+modalities = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
+
 
 def get_nodes(dataset: pd.DataFrame):
 	"""
@@ -25,7 +27,7 @@ def get_nodes(dataset: pd.DataFrame):
 	return nodes
 
 
-def generate_triplets(original_dataset_file: str, triples_file: str):
+def generate_triplets(original_dataset_file: str, triples_file: str, mode: str = 'text'):
 	"""
 	The generate_triplets function takes in a file path to an original dataset and a file path to the destination
 	file where the generated triples will be saved. The function then loads the original dataset, creates nodes for
@@ -47,11 +49,11 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 
 	# keep only useful columns
 	df = pd.DataFrame(original_dataset[1:], columns=original_dataset[0])[
-		['Dependent', 'D_type', 'Governor', 'G_type', 'RelationType']]
+		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType']]
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
-	df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
+	assert mode in modalities
+	df['head'], df['tail'] = configure_nodes(df, mode)
 
 	df.drop(columns=['Dependent', 'D_type', 'Governor', 'G_type'], inplace=True)
 	df = df[['head', 'RelationType', 'tail']]
@@ -64,6 +66,26 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 
 	columns = df.columns
 	save([columns] + df.values.tolist(), triples_file)
+
+
+def configure_nodes(df: pd.DataFrame, mode: str):
+	logger.info(f"chosen mode: {mode}")
+	if mode == 'text':
+		# trial text
+		return df.apply(lambda row: str(row['Governor']), axis=1), df.apply(lambda row: str(row['Dependent']), axis=1)
+	elif mode == 'text+speaker':
+		# trial text + speaker
+		return df.apply(lambda row: str(row['Governor']) + " " + str(row['Speaker2']),
+						axis=1), df.apply(lambda row: str(row['Dependent']) + " " + str(row['Speaker1']), axis=1)
+	elif mode == 'text+claim':
+		# trial text + claim/premise
+		return df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1), df.apply(lambda row: str(
+			row['Dependent']) + " " + str(row['D_type']), axis=1)
+	elif mode == 'text+claim+speaker':
+		# trial text + claim/premise + speaker
+		return df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']) + " " + str(row['Speaker2']),
+						axis=1), df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']) + " " + str(
+			row['Speaker1']), axis=1)
 
 
 def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [int]):
@@ -193,15 +215,16 @@ def get_train_val_test_factory(train: pd.DataFrame,
 														relation_to_id=relation_to_id,
 														create_inverse_triples=create_inverse_triples)
 
+	# https://github.com/pykeen/pykeen/pull/270
 	val_factory = TriplesFactory.from_labeled_triples(triples=val[['head', 'relation', 'tail']].values,
 													  entity_to_id=entity_to_id,
 													  relation_to_id=relation_to_id,
-													  create_inverse_triples=create_inverse_triples)
+													  create_inverse_triples=False)
 
 	test_factory = TriplesFactory.from_labeled_triples(triples=test[['head', 'relation', 'tail']].values,
 													   entity_to_id=entity_to_id,
 													   relation_to_id=relation_to_id,
-													   create_inverse_triples=create_inverse_triples)
+													   create_inverse_triples=False)
 
 	return train_factory, val_factory, test_factory
 
