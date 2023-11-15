@@ -149,7 +149,10 @@ if __name__ == '__main__':
 
 	if generate_dataset:
 		# generates triples from original file
-		generate_triplets(original_dataset_file=original_dataset_file, triples_file=triplets_file, mode='text')
+		generate_triplets(original_dataset_file=original_dataset_file,
+						  triples_file=triplets_file,
+						  mode_text='text',
+						  mode_nodes="claim+premise")
 		# generate node to label mappings
 		generate_mappings(triplets_file=triplets_file, triplets_file_utils=triplets_file_utils)
 		# for every level of noise, create a dataset

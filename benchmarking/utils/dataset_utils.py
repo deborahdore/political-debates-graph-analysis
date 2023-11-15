@@ -5,11 +5,41 @@ import torch
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sklearn.model_selection import train_test_split
-from utils.utils import load, read_json, read_tsv, save, save_json, save_tsv
+from utils.utils import load, read_json, read_tsv, save_json, save_tsv
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-modalities = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
+modalities_text = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
+modalities_nodes = ['claim+premise', 'speaker', 'year']
+
+political_positions = {
+	'NIXON'    : 'President',
+	'KENNEDY'  : 'President',
+	'CARTER'   : 'President',
+	'FORD'     : 'President',
+	'MONDALE'  : 'Vice-President',
+	'BUSH'     : 'President',
+	'FERRARO'  : 'Vice-Presidential candidate',
+	'DUKAKIS'  : 'Presidential candidate',
+	'PEROT'    : 'Presidential candidate',
+	'CLINTON'  : 'President',
+	'GORE'     : 'Vice-President',
+	'QUAYLE'   : 'Vice-President',
+	'STOCKDALE': 'Vice-Presidential candidate',
+	'DOLE'     : 'Vice-Presidential candidate',
+	'KEMP'     : 'Vice-Presidential candidate',
+	'LIEBERMAN': 'Vice-Presidential candidate',
+	'CHENEY'   : 'Vice-President',
+	'EDWARDS'  : 'Vice-Presidential candidate',
+	'KERRY'    : 'Presidential candidate',
+	'BIDEN'    : 'Vice-President',
+	'PALIN'    : 'Vice-Presidential candidate',
+	'MCCAIN'   : 'Presidential candidate',
+	'OBAMA'    : 'President',
+	'ROMNEY'   : 'Presidential candidate',
+	'RYAN'     : 'Vice-Presidential candidate',
+	'TRUMP'    : 'President',
+	'PENCE'    : 'Vice-President'}
 
 
 def get_nodes(dataset: pd.DataFrame):
@@ -27,7 +57,10 @@ def get_nodes(dataset: pd.DataFrame):
 	return nodes
 
 
-def generate_triplets(original_dataset_file: str, triples_file: str, mode: str = 'text'):
+def generate_triplets(original_dataset_file: str,
+					  triples_file: str,
+					  mode_text: str = 'text',
+					  mode_nodes: str = 'claim+premise'):
 	"""
 	The generate_triplets function takes in a file path to an original dataset and a file path to the destination
 	file where the generated triples will be saved. The function then loads the original dataset, creates nodes for
@@ -36,6 +69,8 @@ def generate_triplets(original_dataset_file: str, triples_file: str, mode: str =
 	strings to lowercase and removing duplicates/null values. Finally it saves this new dataframe as a list of lists in
 	the destination file.
 
+	:param mode_nodes: how to create the nodes
+	:param mode_text: how to create the nodes' text
 	:param original_dataset_file: str: Specify the file path of the original dataset
 	:param triples_file: str: Specify the file that contains the triples
 	:return: A list of triples
@@ -48,44 +83,83 @@ def generate_triplets(original_dataset_file: str, triples_file: str, mode: str =
 	original_dataset = load(original_dataset_file)
 
 	# keep only useful columns
-	df = pd.DataFrame(original_dataset[1:], columns=original_dataset[0])[
-		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType']]
+	df_original = pd.DataFrame(original_dataset[1:], columns=original_dataset[0])[
+		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType', 'long_date']]
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	assert mode in modalities
-	df['head'], df['tail'] = configure_nodes(df, mode)
+	assert mode_text in modalities_text
+	assert mode_nodes in modalities_nodes
+	df = configure_nodes(df_original, mode_text)
 
-	df.drop(columns=['Dependent', 'D_type', 'Governor', 'G_type'], inplace=True)
-	df = df[['head', 'RelationType', 'tail']]
-	df.columns = ['head', 'relation', 'tail']
+	nodes_to_add_df = add_nodes(df_original, mode_nodes)
+	df = pd.concat([df, nodes_to_add_df], axis=0)
 
 	logger.info("preprocessing created dataset")
-	df = df.applymap(lambda x: x.lower() if isinstance(x, str) else x)
-	df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+	df = df.applymap(lambda x: str(x))
+	df = df.applymap(lambda x: x.lower())
+	df = df.applymap(lambda x: x.strip())
 	df = df.dropna().drop_duplicates().reset_index(drop=True)
-
-	columns = df.columns
-	save([columns] + df.values.tolist(), triples_file)
+	save_tsv(df, triples_file)
 
 
 def configure_nodes(df: pd.DataFrame, mode: str):
-	logger.info(f"chosen mode: {mode}")
+	logger.info(f"Creating nodes content with mode: {mode.upper()}")
+	new_df = pd.DataFrame()
 	if mode == 'text':
-		# trial text
-		return df.apply(lambda row: str(row['Governor']), axis=1), df.apply(lambda row: str(row['Dependent']), axis=1)
+		# text
+		new_df['head'] = df['Governor'].copy()
+		new_df['relation'] = df['RelationType'].copy()
+		new_df['tail'] = df['Dependent'].copy()
 	elif mode == 'text+speaker':
-		# trial text + speaker
-		return df.apply(lambda row: str(row['Governor']) + " " + str(row['Speaker2']),
-						axis=1), df.apply(lambda row: str(row['Dependent']) + " " + str(row['Speaker1']), axis=1)
+		# text + speaker
+		new_df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['Speaker2']), axis=1)
+		new_df['relation'] = df['RelationType'].copy()
+		new_df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['Speaker1']), axis=1)
 	elif mode == 'text+claim':
-		# trial text + claim/premise
-		return df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1), df.apply(lambda row: str(
-			row['Dependent']) + " " + str(row['D_type']), axis=1)
+		# text + claim/premise
+		new_df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
+		new_df['relation'] = df['RelationType'].copy()
+		new_df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
 	elif mode == 'text+claim+speaker':
-		# trial text + claim/premise + speaker
-		return df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']) + " " + str(row['Speaker2']),
-						axis=1), df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']) + " " + str(
+		# text + claim/premise + speaker
+		new_df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']) + " " + str(
+			row['Speaker2']), axis=1)
+		new_df['relation'] = df['RelationType'].copy()
+		new_df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']) + " " + str(
 			row['Speaker1']), axis=1)
+	new_df = new_df.dropna().drop_duplicates().reset_index(drop=True)
+	return new_df
+
+
+def add_nodes(df: pd.DataFrame, mode: str):
+	logger.info(f"Creating nodes with mode: {mode.upper()}")
+	if mode == 'claim+premise':
+		claim_df = pd.DataFrame()
+		claim_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
+		claim_df['relation'] = "is a"
+		claim_df['tail'] = pd.concat([df['D_type'].copy(), df['G_type'].copy()], axis=0)
+		claim_df = claim_df.dropna().drop_duplicates().reset_index(drop=True)
+		return claim_df
+	elif mode == 'speaker':
+		speaker_df = pd.DataFrame()
+		speaker_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
+		speaker_df['relation'] = "spoken by"
+		speaker_df['tail'] = pd.concat([df['Speaker1'].copy(), df['Speaker2'].copy()], axis=0)
+
+		role_df = pd.DataFrame(list(political_positions.items()), columns=['head', 'tail'])
+		role_df['relation'] = "role"
+		role_df = role_df[['head', 'relation', 'tail']]
+
+		final_df = pd.concat([speaker_df, role_df], axis=0)
+		final_df = final_df.dropna().drop_duplicates().reset_index(drop=True)
+		return final_df
+	elif mode == 'year':
+		year_df = pd.DataFrame()
+		year_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
+		year_df['relation'] = "debate's year"
+		year_df['tail'] = pd.concat([df['long_date'].copy(), df['long_date'].copy()], axis=0)
+		year_df = year_df.dropna().drop_duplicates().reset_index(drop=True)
+		return year_df
 
 
 def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [int]):
@@ -293,7 +367,7 @@ def generate_mappings(triplets_file: str, triplets_file_utils: str):
 	logger.info("creating entity-to-id and relation-to-id mappings")
 
 	# read original tsv file
-	triplets = read_tsv(triplets_file)
+	triplets = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
 	# generate mappings using pykeen function
 	factory = TriplesFactory.from_labeled_triples(triples=triplets[['head', 'relation', 'tail']].values,
 												  create_inverse_triples=False)
