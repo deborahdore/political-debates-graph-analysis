@@ -70,7 +70,7 @@ def get_center(scores: np.array):
 	:return: The mean of the scores array
 	"""
 	assert scores.ndim == 1
-	return float(np.mean(a=scores))
+	return float(np.median(a=sorted(scores)))
 
 
 def get_probabilities_bert(model: BertForSequenceClassification,

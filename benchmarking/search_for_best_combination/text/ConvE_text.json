@@ -1,76 +1,76 @@
 {
-    "link prediction": {
-        "head": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0003831418,
-            "mr": 17744.931640625,
-            "mrr": 0.0002398323,
-            "adjusted_mr": 1.1942732872,
-            "adjusted_mrr": -0.000126238
-        },
-        "both": {
-            "hits_at_1": 0.0001915709,
-            "hits_at_3": 0.0003831418,
-            "hits_at_5": 0.0003831418,
-            "hits_at_10": 0.0007662835,
-            "mr": 16589.884765625,
-            "mrr": 0.0005736482,
-            "adjusted_mr": 1.1165151162,
-            "adjusted_mrr": 0.0002077064
-        },
-        "tail": {
-            "hits_at_1": 0.0003831418,
-            "hits_at_3": 0.0007662835,
-            "hits_at_5": 0.0007662835,
-            "hits_at_10": 0.0011494253,
-            "mr": 15434.837890625,
-            "mrr": 0.0009074641,
-            "adjusted_mr": 1.0387598635,
-            "adjusted_mrr": 0.0005416507
-        }
+  "link prediction"      : {
+    "head": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0003831418,
+      "mr"          : 17744.931640625,
+      "mrr"         : 0.0002398323,
+      "adjusted_mr" : 1.1942732872,
+      "adjusted_mrr": -0.000126238
     },
-    "link deletion": {
-        "head": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0,
-            "mr": 2003.9352490421,
-            "adjusted_mr": 1.5349944458,
-            "mrr": 0.0005111297,
-            "adjusted_mrr": -0.0027331587
-        },
-        "both": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0,
-            "mr": 1703,
-            "adjusted_mr": 1.3049652883,
-            "mrr": 0.0007409102,
-            "adjusted_mrr": -0.0025026325
-        },
-        "tail": {
-            "hits_at_1": 0.0,
-            "hits_at_3": 0.0,
-            "hits_at_5": 0.0,
-            "hits_at_10": 0.0,
-            "mr": 1403.3291187739,
-            "adjusted_mr": 1.0749361308,
-            "mrr": 0.0009706906,
-            "adjusted_mrr": -0.0022721062
-        }
+    "both": {
+      "hits_at_1"   : 0.0001915709,
+      "hits_at_3"   : 0.0003831418,
+      "hits_at_5"   : 0.0003831418,
+      "hits_at_10"  : 0.0007662835,
+      "mr"          : 16589.884765625,
+      "mrr"         : 0.0005736482,
+      "adjusted_mr" : 1.1165151162,
+      "adjusted_mrr": 0.0002077064
     },
-    "triple classification": {
-        "accuracy": 0.4156558533,
-        "f1_macro": 0.4154562962,
-        "f1_pos": 0.4262567511,
-        "f1_neg": 0.4046558414,
-        "precision": 0.4508690174,
-        "recall": 0.4519704433,
-        "Z_statistic": -0.95,
-        "norm_distance": Infinity
+    "tail": {
+      "hits_at_1"   : 0.0003831418,
+      "hits_at_3"   : 0.0007662835,
+      "hits_at_5"   : 0.0007662835,
+      "hits_at_10"  : 0.0011494253,
+      "mr"          : 15434.837890625,
+      "mrr"         : 0.0009074641,
+      "adjusted_mr" : 1.0387598635,
+      "adjusted_mrr": 0.0005416507
     }
+  },
+  "link deletion"        : {
+    "head": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0,
+      "mr"          : 2003.9352490421,
+      "adjusted_mr" : 1.5349944458,
+      "mrr"         : 0.0005111297,
+      "adjusted_mrr": -0.0027331587
+    },
+    "both": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0,
+      "mr"          : 1703,
+      "adjusted_mr" : 1.3049652883,
+      "mrr"         : 0.0007409102,
+      "adjusted_mrr": -0.0025026325
+    },
+    "tail": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0,
+      "hits_at_5"   : 0.0,
+      "hits_at_10"  : 0.0,
+      "mr"          : 1403.3291187739,
+      "adjusted_mr" : 1.0749361308,
+      "mrr"         : 0.0009706906,
+      "adjusted_mrr": -0.0022721062
+    }
+  },
+  "triple classification": {
+    "accuracy"     : 0.4156558533,
+    "f1_macro"     : 0.4154562962,
+    "f1_pos"       : 0.4262567511,
+    "f1_neg"       : 0.4046558414,
+    "precision"    : 0.4508690174,
+    "recall"       : 0.4519704433,
+    "Z_statistic"  : -0.95,
+    "norm_distance": Infinity
+  }
 }
