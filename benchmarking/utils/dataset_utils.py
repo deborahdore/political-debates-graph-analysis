@@ -57,7 +57,7 @@ def get_nodes(dataset: pd.DataFrame):
 	return nodes
 
 
-def generate_triplets(original_dataset_file: str, triples_file: str, mode_text: str, mode_nodes: str):
+def generate_triplets(original_dataset_file: str, triples_file: str):
 	"""
 	The generate_triplets function takes in a file path to an original dataset and a file path to the destination
 	file where the generated triples will be saved. The function then loads the original dataset, creates nodes for
@@ -84,12 +84,10 @@ def generate_triplets(original_dataset_file: str, triples_file: str, mode_text: 
 		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType', 'long_date']]
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	assert mode_text in modalities_text
-	assert mode_nodes in modalities_nodes
-	df = configure_nodes(df_original, mode_text)
+	df = configure_nodes(df_original, "text")
 
-	nodes_to_add_df = add_nodes(df_original, mode_nodes)
-	df = pd.concat([df, nodes_to_add_df], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "claim+premise")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "speaker")], axis=0)
 
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
