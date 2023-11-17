@@ -57,10 +57,7 @@ def get_nodes(dataset: pd.DataFrame):
 	return nodes
 
 
-def generate_triplets(original_dataset_file: str,
-					  triples_file: str,
-					  mode_text: str = 'text',
-					  mode_nodes: str = 'claim+premise'):
+def generate_triplets(original_dataset_file: str, triples_file: str, mode_text: str, mode_nodes: str):
 	"""
 	The generate_triplets function takes in a file path to an original dataset and a file path to the destination
 	file where the generated triples will be saved. The function then loads the original dataset, creates nodes for
@@ -132,7 +129,7 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 
 
 def add_nodes(df: pd.DataFrame, mode: str):
-	logger.info(f"Creating nodes with mode: {mode.upper()}")
+	logger.info(f"Creating nodes with mode: {mode.upper()}")  # based on mode nodes "text"
 	if mode == 'claim+premise':
 		claim_df = pd.DataFrame()
 		claim_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)

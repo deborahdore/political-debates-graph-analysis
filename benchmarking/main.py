@@ -97,7 +97,7 @@ def bert_basic(model_name: str, noise: int):
 							   noise_ratio=noise)
 
 
-def kge_basic(model_name: str, noise: int, force_retrain: bool = True):
+def kge_basic(model_name: str, noise: int, force_retrain: bool = False):
 	"""
 	The kge_basic function is a wrapper function that trains and evaluates the KGE model.
 
@@ -152,7 +152,7 @@ if __name__ == '__main__':
 		generate_triplets(original_dataset_file=original_dataset_file,
 						  triples_file=triplets_file,
 						  mode_text='text',
-						  mode_nodes='speaker')
+						  mode_nodes='year')
 		# generate node to label mappings
 		generate_mappings(triplets_file=triplets_file, triplets_file_utils=triplets_file_utils)
 		# for every level of noise, create a dataset
