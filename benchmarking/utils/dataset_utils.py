@@ -87,7 +87,7 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	df = configure_nodes(df_original, "text")
 
 	df = pd.concat([df, add_nodes(df_original, "claim+premise")], axis=0)
-	df = pd.concat([df, add_nodes(df_original, "speaker")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "year")], axis=0)
 
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
