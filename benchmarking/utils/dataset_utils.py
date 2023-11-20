@@ -86,14 +86,14 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
 	df = configure_nodes(df_original, "text")
 
-	df = pd.concat([df, add_nodes(df_original, "claim+premise")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "speaker")], axis=0)
 	df = pd.concat([df, add_nodes(df_original, "year")], axis=0)
 
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
 	df = df.applymap(lambda x: x.lower())
 	df = df.applymap(lambda x: x.strip())
-	df = df.dropna().drop_duplicates().reset_index(drop=True)
+	df = df.dropna().drop_duplicates().sample(frac=1).reset_index(drop=True)
 	save_tsv(df, triples_file)
 
 
