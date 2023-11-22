@@ -85,10 +85,8 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
 	df = configure_nodes(df_original, "text+claim")
-
-	df = pd.concat([df, add_nodes(df_original, "claim+premise", mode_text="text")], axis=0)
-	df = pd.concat([df, add_nodes(df_original, "year", mode_text="text")], axis=0)
-	df = pd.concat([df, add_nodes(df_original, "speaker", mode_text="text")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "year", mode_text="text+claim")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "speaker", mode_text="text+claim")], axis=0)
 
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
@@ -100,6 +98,8 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 
 def configure_nodes(df: pd.DataFrame, mode: str):
 	logger.info(f"Creating nodes content with mode: {mode.upper()}")
+	assert mode in modalities_text
+
 	if mode == 'text':
 		# text
 		head = df['Governor'].copy()
@@ -130,6 +130,9 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 
 
 def add_nodes(df: pd.DataFrame, mode: str, mode_text: str):
+	assert mode in modalities_nodes
+	assert mode_text in modalities_text
+
 	if mode_text == "text":
 		df = __add_nodes_mode_text(df, mode)
 	elif mode_text == "text+claim":
