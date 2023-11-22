@@ -84,10 +84,11 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType', 'long_date']]
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	df = configure_nodes(df_original, "text")
+	df = configure_nodes(df_original, "text+claim")
 
-	df = pd.concat([df, add_nodes(df_original, "speaker")], axis=0)
-	df = pd.concat([df, add_nodes(df_original, "year")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "claim+premise", mode_text="text")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "year", mode_text="text")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "speaker", mode_text="text")], axis=0)
 
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
@@ -99,62 +100,103 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 
 def configure_nodes(df: pd.DataFrame, mode: str):
 	logger.info(f"Creating nodes content with mode: {mode.upper()}")
-	new_df = pd.DataFrame()
 	if mode == 'text':
 		# text
-		new_df['head'] = df['Governor'].copy()
-		new_df['relation'] = df['RelationType'].copy()
-		new_df['tail'] = df['Dependent'].copy()
+		head = df['Governor'].copy()
+		relation = df['RelationType'].copy()
+		tail = df['Dependent'].copy()
 	elif mode == 'text+speaker':
 		# text + speaker
-		new_df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['Speaker2']), axis=1)
-		new_df['relation'] = df['RelationType'].copy()
-		new_df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['Speaker1']), axis=1)
+		head = df.apply(lambda row: str(row['Governor']) + " " + str(row['Speaker2']), axis=1)
+		relation = df['RelationType'].copy()
+		tail = df.apply(lambda row: str(row['Dependent']) + " " + str(row['Speaker1']), axis=1)
 	elif mode == 'text+claim':
 		# text + claim/premise
-		new_df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
-		new_df['relation'] = df['RelationType'].copy()
-		new_df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
+		head = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
+		relation = df['RelationType'].copy()
+		tail = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
 	elif mode == 'text+claim+speaker':
 		# text + claim/premise + speaker
-		new_df['head'] = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']) + " " + str(
-			row['Speaker2']), axis=1)
-		new_df['relation'] = df['RelationType'].copy()
-		new_df['tail'] = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']) + " " + str(
-			row['Speaker1']), axis=1)
+		head = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']) + " " + str(row['Speaker2']),
+						axis=1)
+		relation = df['RelationType'].copy()
+		tail = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']) + " " + str(row['Speaker1']),
+						axis=1)
+
+	assert head.size == relation.size == tail.size
+	new_df = pd.DataFrame({'head': head, 'relation': relation, 'tail': tail})
 	new_df = new_df.dropna().drop_duplicates().reset_index(drop=True)
 	return new_df
 
 
-def add_nodes(df: pd.DataFrame, mode: str):
+def add_nodes(df: pd.DataFrame, mode: str, mode_text: str):
+	if mode_text == "text":
+		df = __add_nodes_mode_text(df, mode)
+	elif mode_text == "text+claim":
+		df = __add_nodes_mode_claim(df, mode)
+
+	return df.dropna().drop_duplicates().reset_index(drop=True)
+
+
+def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
 	logger.info(f"Creating nodes with mode: {mode.upper()}")  # based on mode nodes "text"
 	if mode == 'claim+premise':
-		claim_df = pd.DataFrame()
-		claim_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
-		claim_df['relation'] = "is a"
-		claim_df['tail'] = pd.concat([df['D_type'].copy(), df['G_type'].copy()], axis=0)
-		claim_df = claim_df.dropna().drop_duplicates().reset_index(drop=True)
-		return claim_df
-	elif mode == 'speaker':
-		speaker_df = pd.DataFrame()
-		speaker_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
-		speaker_df['relation'] = "spoken by"
-		speaker_df['tail'] = pd.concat([df['Speaker1'].copy(), df['Speaker2'].copy()], axis=0)
+		head = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
+		tail = pd.concat([df['D_type'].copy(), df['G_type'].copy()], axis=0)
+		assert head.size == tail.size
+		return pd.DataFrame({'head': head, 'relation': "is a", 'tail': tail})
 
-		role_df = pd.DataFrame(list(political_positions.items()), columns=['head', 'tail'])
-		role_df['relation'] = "role"
-		role_df = role_df[['head', 'relation', 'tail']]
+	elif mode == 'speaker':
+		speaker_head = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
+		speaker_tail = pd.concat([df['Speaker1'].copy(), df['Speaker2'].copy()], axis=0)
+
+		assert speaker_head.size == speaker_tail.size
+		speaker_df = pd.DataFrame({'head': speaker_head, 'relation': "spoken by", 'tail': speaker_tail})
+
+		role_head = pd.Series(list(political_positions.keys()))
+		role_tail = pd.Series(list(political_positions.values()))
+
+		assert role_head.size == role_tail.size
+		role_df = pd.DataFrame({'head': role_head, 'relation': "role", 'tail': role_tail})
+
+		return pd.concat([speaker_df, role_df], axis=0)
+
+	elif mode == 'year':
+		head = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
+		tail = pd.concat([df['long_date'].copy(), df['long_date'].copy()], axis=0)
+
+		assert head.size == tail.size
+		return pd.DataFrame({'head': head, 'relation': "debate's year", 'tail': tail})
+
+
+def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
+	logger.info(f"Creating nodes with mode: {mode.upper()}")  # based on mode nodes "text + claim/premise"
+	if mode == 'speaker':
+		governor = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
+		dependent = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
+		head = pd.concat([governor, dependent], axis=0)
+		tail = pd.concat([df['Speaker1'].copy(), df['Speaker2'].copy()], axis=0)
+		assert head.size == tail.size
+		speaker_df = pd.DataFrame({'head': head, 'relation': "spoken by", 'tail': tail})
+
+		role_head = pd.Series(list(political_positions.keys()))
+		role_tail = pd.Series(list(political_positions.values()))
+
+		assert role_head.size == role_tail.size
+		role_df = pd.DataFrame({'head': role_head, 'relation': "role", 'tail': role_tail})
 
 		final_df = pd.concat([speaker_df, role_df], axis=0)
 		final_df = final_df.dropna().drop_duplicates().reset_index(drop=True)
 		return final_df
+
 	elif mode == 'year':
-		year_df = pd.DataFrame()
-		year_df['head'] = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
-		year_df['relation'] = "debate's year"
-		year_df['tail'] = pd.concat([df['long_date'].copy(), df['long_date'].copy()], axis=0)
-		year_df = year_df.dropna().drop_duplicates().reset_index(drop=True)
-		return year_df
+		governor = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
+		dependent = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
+		head = pd.concat([governor, dependent], axis=0)
+		tail = pd.concat([df['long_date'].copy(), df['long_date'].copy()], axis=0)
+
+		assert head.size == tail.size
+		return pd.DataFrame({'head': head, 'relation': "debate's year", 'tail': tail})
 
 
 def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [int]):
