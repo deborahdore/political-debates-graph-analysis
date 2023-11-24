@@ -5,8 +5,6 @@ benchmarking/dataset/
 *.slurm
 .DS_Store
 *.DS_Store
-benchmarking/script/data
-
 *.py[cod]
 *$py.class
 

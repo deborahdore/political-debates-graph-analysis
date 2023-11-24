@@ -280,10 +280,6 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 
 	# get train, val, test
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, get_noisy_test=False)
-	# if model_name == 'ConvE':
-	# 	create_inverse_triples = True
-	# else:
-	# 	create_inverse_triples = False
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
 																		  val,
