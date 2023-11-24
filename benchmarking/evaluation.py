@@ -443,11 +443,17 @@ def link_deletion_bert(model: BertForSequenceClassification,
 																			  0,
 																			  drop_col_noise=True,
 																			  get_noisy_test=False)
-	dataset_original = pd.concat([train_original, val_original, test_original], axis=0).reset_index(drop=True)
-	test_original = pd.concat([val_original, test_original], axis=0).reset_index(drop=True)
+	# get complete dataset
+	dataset_original = pd.concat([train_original, val_original, test_original],
+								 axis=0).dropna().drop_duplicates().reset_index(drop=True).values.tolist()
 
-	nodes = get_nodes(dataset_original)
+	# only test nodes that the model has seen during training
+	nodes = get_nodes(train_original)
+	relations = train_original['relation'].drop_duplicates().values.tolist()
 
+	test_size = len(test_original)
+
+	# get scores of testing triples
 	dataset_test = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_original, label=int(True)))
 	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=1)
 	score_test_sorted = get_probabilities_bert(model, dataloader_test, device, sort=True)
@@ -458,18 +464,23 @@ def link_deletion_bert(model: BertForSequenceClassification,
 
 	# generate false connections
 	for head, rel, tail in test_original.values.tolist():
+		if rel not in relations:
+			test_size = test_size - 1
+			continue
 
-		new_h = random.choice(nodes)
-		# make sure node is not a real connection
-		while [new_h, rel, tail] in dataset_original.values.tolist():
-			new_h = random.choice(nodes)
-		fake_head_triple = [new_h, rel, tail]
+		# create fake head triple
+		while True:
+			new_h = random.sample(sorted(nodes), 1)[0]
+			fake_head_triple = [new_h, rel, tail]
+			if fake_head_triple not in dataset_original:
+				break
 
-		new_t = random.choice(nodes)
-		# make sure node is not a real connection
-		while [head, rel, new_t] in dataset_original.values.tolist():
-			new_t = random.choice(nodes)
-		fake_tail_triple = [head, rel, new_t]
+		# create fake tail triple
+		while True:
+			new_t = random.sample(sorted(nodes), 1)[0]
+			fake_tail_triple = [head, rel, new_t]
+			if fake_tail_triple not in dataset_original:
+				break
 
 		fake_head_triples = pd.DataFrame([fake_head_triple], columns=['head', 'relation', 'tail'])
 		fake_tail_triples = pd.DataFrame([fake_tail_triple], columns=['head', 'relation', 'tail'])
@@ -491,11 +502,9 @@ def link_deletion_bert(model: BertForSequenceClassification,
 		# therefore close to the top of the list
 		rank_head = np.searchsorted(a=score_test_sorted, v=score_fake_head, side='left') + 1
 		rank_tail = np.searchsorted(a=score_test_sorted, v=score_fake_tail, side='left') + 1
-		rank = int((rank_head + rank_tail) / 2.0)
 
 		ranks_head.append(rank_head)
 		ranks_tail.append(rank_tail)
-		ranks.append(rank)
 
 	# Metrics
 	mr_calculator = ArithmeticMeanRank()
@@ -507,7 +516,6 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	hits_at_5_calculator = HitsAtK(k=5)
 	hits_at_10_calculator = HitsAtK(k=10)
 
-	test_size = len(test_original.values.tolist())
 	n_round = 10
 
 	ranks_head_array = np.array(ranks_head, dtype=int)
@@ -521,7 +529,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	# ADJUSTED MR
 	adjusted_mr_head = round(float(adjusted_mr_calculator(ranks_head_array, test_size)), n_round)
 	adjusted_mr_tail = round(float(adjusted_mr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mr = round(int((mr_head + mr_tail) / 2.0), n_round)
+	adjusted_mr = round(float((adjusted_mr_head + adjusted_mr_tail) / 2.0), n_round)
 
 	# MRR
 	mrr_head = round(float(mrr_calculator(ranks_head_array, test_size)), n_round)
@@ -531,7 +539,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	# ADJUSTED MRR
 	adjusted_mrr_head = round(float(adjusted_mrr_calculator(ranks_head_array, test_size)), n_round)
 	adjusted_mrr_tail = round(float(adjusted_mrr_calculator(ranks_tail_array, test_size)), n_round)
-	adjusted_mrr = round(float((mrr_head + mrr_tail) / 2.0), n_round)
+	adjusted_mrr = round(float((adjusted_mrr_head + adjusted_mrr_tail) / 2.0), n_round)
 
 	# HITS AT 1
 	hits_at_1_head = round(float(hits_at_1_calculator(ranks_head_array)), n_round)
@@ -583,6 +591,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 			'adjusted_mrr': adjusted_mrr_tail},
 
 	}
+	logger.info(results_eval)
 
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
@@ -745,6 +754,8 @@ def link_prediction_bert(model: BertForSequenceClassification,
 			'adjusted_mrr': adjusted_mrr_tail},
 
 	}
+
+	logger.info(results_eval)
 
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):

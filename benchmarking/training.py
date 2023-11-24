@@ -23,26 +23,35 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 
 def bert_training(model_file: str, model_name: str, noisy_triples_file: str, ratio: float):
-	batch_size = 32
+	batch_size = 16
+	learning_rate = 2e-5
 	epochs = 3
 
 	logger.info(f"## ===== BASIC TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
 	# load dataset
-	train, val, test = get_train_val_test_from_dir(noisy_triples_file, ratio, drop_col_noise=True,
-												   get_noisy_test=False)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  100,
+																			  drop_col_noise=False,
+																			  get_noisy_test=True)
 
-	train = adjust_dataset_for_bert(train, int(True))  # benchmarking dataset where we suppose all triples are correct
+	# PREPARE REAL TRIPLES
+	train = train_original[train_original['noise'] == 0].copy()
+	val = val_original[val_original['noise'] == 0].copy()
+	test = test_original[test_original['noise'] == 0].copy()
+
+	assert len(train) > 0
+	assert len(val) > 0
+	assert len(test) > 0
+
+	train = adjust_dataset_for_bert(train, int(True))
 	val = adjust_dataset_for_bert(val, int(True))
 	test = adjust_dataset_for_bert(test, int(True))
 
-	# creation of counter examples where we have all fake triples
-	train_noise, val_noise, test_noise = get_train_val_test_from_dir(noisy_triples_file,
-																	 100,
-																	 drop_col_noise=False,
-																	 get_noisy_test=True)
-	train_noise = train_noise[train_noise['noise'] == 1].copy()
-	val_noise = val_noise[val_noise['noise'] == 1].copy()
-	test_noise = test_noise[test_noise['noise'] == 1].copy()
+	# PREPARE FAKE TRIPLES
+
+	train_noise = train_original[train_original['noise'] == 1].copy()
+	val_noise = val_original[val_original['noise'] == 1].copy()
+	test_noise = test_original[test_original['noise'] == 1].copy()
 
 	assert len(train_noise) > 0
 	assert len(val_noise) > 0
@@ -52,9 +61,11 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	val_noise = adjust_dataset_for_bert(val_noise, int(False))
 	test_noise = adjust_dataset_for_bert(test_noise, int(False))
 
-	train = pd.concat([train, train_noise], axis=0)
-	val = pd.concat([val, val_noise], axis=0)
-	test = pd.concat([test, test_noise], axis=0)
+	# RE-MIX
+
+	train = pd.concat([train, train_noise], axis=0).drop_duplicates().reset_index(drop=True)
+	val = pd.concat([val, val_noise], axis=0).drop_duplicates().reset_index(drop=True)
+	test = pd.concat([test, test_noise], axis=0).drop_duplicates().reset_index(drop=True)
 
 	dataset_train = tokenize_and_generate_dataset(train)
 	dataset_val = tokenize_and_generate_dataset(val)
@@ -73,13 +84,12 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	model.to(device)
 
 	# define optimizer
-	optimizer = AdamW(model.parameters(), lr=1e-5, eps=1e-8)
+	optimizer = AdamW(model.parameters(), lr=learning_rate)
 
 	scheduler = get_linear_schedule_with_warmup(optimizer,
 												num_warmup_steps=0,
 												num_training_steps=len(dataloader_train) * epochs)
 
-	# train
 	for epoch in range(epochs):
 
 		loss_train_total = 0.0
@@ -107,7 +117,6 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 		loss_train_avg = loss_train_total / len(dataloader_train)
 		logger.info(f'Training loss: {loss_train_avg}')
 
-		# eval
 		model.eval()
 
 		loss_val_total = 0

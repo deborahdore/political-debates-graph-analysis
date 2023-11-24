@@ -57,7 +57,7 @@ def parse_command_line():
 	return gen_arg, opt_arg, noise_arg, model_arg
 
 
-def bert_basic(model_name: str, noise: int):
+def bert_basic(model_name: str, noise: int, force_retrain: bool = True):
 	"""
 	The bert_basic function is used to train a BERT model on the noisy triples file, and then evaluate it using link
 	prediction, link deletion, and triple classification.
@@ -67,7 +67,7 @@ def bert_basic(model_name: str, noise: int):
 	"""
 	# check if model exists
 	model_file = os.path.join(model_dir.format(model="Bert"), f"{noise}/{model_name}_{noise}.pt")
-	if not os.path.exists(model_file):
+	if not os.path.exists(model_file) or force_retrain:
 		# bert training
 		model = bert_training(model_file=model_file,
 							  model_name='Bert',
@@ -157,15 +157,14 @@ if __name__ == '__main__':
 					   noisy_triples_file=noisy_triples_file,
 					   valid_noise=config.valid_noise_ratio)
 	if optimization:
-		if model_name in ['Bert', 'TransH']: exit(1)
-
+		if model_name == 'Bert': exit(1)
 		hyperparameter_optimization(model_name=model_name,
 									model_dir=model_dir.format(model=model_name),
 									noisy_triples_file=noisy_triples_file,
 									triplets_file_utils=triplets_file_utils)
 
 	else:
-		if model_name == "Bert":
+		if model_name == 'Bert':
 			bert_basic(model_name, noise)
 		else:
 			kge_basic(model_name, noise)

@@ -84,9 +84,10 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType', 'long_date']]
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	df = configure_nodes(df_original, "text+claim")
-	df = pd.concat([df, add_nodes(df_original, "year", mode_text="text+claim")], axis=0)
-	df = pd.concat([df, add_nodes(df_original, "speaker", mode_text="text+claim")], axis=0)
+	# best combination TEXT + NODE SPEAKER + NODE YEAR
+	df = configure_nodes(df_original, "text")
+	df = pd.concat([df, add_nodes(df_original, "year", mode_text="text")], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "speaker", mode_text="text")], axis=0)
 
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
