@@ -8,6 +8,7 @@ from loguru import logger
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pykeen.hpo import hpo_pipeline
+from pykeen.nn.init import PretrainedInitializer
 from pykeen.pipeline import pipeline
 from sklearn.metrics import classification_report
 from torch.optim import AdamW
@@ -177,7 +178,8 @@ def training(model_dir: str,
 			 model_file: str,
 			 noisy_triples_file: str,
 			 triplets_file_utils: str,
-			 ratio: float):
+			 ratio: float,
+			 pretrained_embedding_file: str = None):
 	"""
 	The training function is the main function of this module and trains the model with the optimal hyperparameter.
 
@@ -186,6 +188,7 @@ def training(model_dir: str,
 	:param model_name: str: Name of the model to train
 	:param noisy_triples_file: str: Specify the location of the noisy triples file
 	:param triplets_file_utils: str: Contains entity-to-id and relation-to-id mappings
+	:param pretrained_embedding_file: Contains pretrained Embeddings
 	:param plot_dir: str: Save the plot of the loss function
 	:param ratio: float: Determine the amount of noise in the training data
 	:return: A result object, which contains the trained model
@@ -227,6 +230,12 @@ def training(model_dir: str,
 	#  check loss_kwargs
 	if not 'loss_kwargs' in pipeline_config.keys():
 		pipeline_config['loss_kwargs'] = None
+
+	if pretrained_embedding_file is not None:
+		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
+		pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
+											   entity_initializer=PretrainedInitializer(
+												   tensor=pretrained_embedding_tensor), )
 
 	logger.info(f"Best params: {pipeline_config}")
 
@@ -274,7 +283,11 @@ def training(model_dir: str,
 	return result
 
 
-def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_file: str, triplets_file_utils: str):
+def hyperparameter_optimization(model_name: str,
+								model_dir: str,
+								noisy_triples_file: str,
+								triplets_file_utils: str,
+								pretrained_embedding_file: str = None):
 	"""
 	The hyperparameter_optimization function is used to optimize the hyperparameters of a model.
 
@@ -296,11 +309,19 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 																		  test,
 																		  triplets_file_utils,
 																		  create_inverse_triples=False)
+
+	model_kwargs = None
+	if pretrained_embedding_file is not None:
+		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
+		model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
+							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor), )
+
 	# Hyper-training pipeline
 	hpo_results = hpo_pipeline(training=train_factory,
 							   validation=val_factory,
 							   testing=test_factory,
 							   model=model_name,
+							   model_kwargs=model_kwargs,
 							   # optimizer args
 							   optimizer="Adam",
 							   optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),

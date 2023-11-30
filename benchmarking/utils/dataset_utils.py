@@ -4,9 +4,10 @@ import pandas as pd
 import torch
 from loguru import logger
 from pykeen.triples import TriplesFactory
+from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
-from utils.utils import load, read_json, read_tsv, save_json, save_tsv
-
+from utils.utils import load, read_json, read_tsv, save_json, save_tsv, save
+import numpy
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 modalities_text = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
@@ -88,8 +89,7 @@ def generate_triplets(original_dataset_file: str, triples_file: str, original_tr
 	MODE_TEXT = "text"
 	df = configure_nodes(df_original, MODE_TEXT)
 	save_tsv(preprocess_dataset(df), original_triplets_file)
-
-	df = pd.concat([df, add_nodes(df_original, "claim+premise", mode_text=MODE_TEXT)], axis=0)
+	df = pd.concat([df, add_nodes(df_original, "year", mode_text=MODE_TEXT)], axis=0)
 
 	save_tsv(preprocess_dataset(df), triples_file)
 
@@ -99,6 +99,7 @@ def preprocess_dataset(df):
 	df = df.applymap(lambda x: str(x))
 	df = df.applymap(lambda x: x.lower())
 	df = df.applymap(lambda x: x.strip())
+	df = df.applymap(lambda x: x.strip("."))
 	df = df.dropna().drop_duplicates().sample(frac=1).reset_index(drop=True)
 	return df
 
@@ -413,7 +414,10 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
 
 
-def generate_mappings(triplets_file: str, triplets_file_utils: str):
+def generate_mappings(triplets_file: str,
+					  triplets_file_utils: str,
+					  pretrained_embedding_file: str = None,
+					  pretrained: bool = False):
 	"""
 	The generate_mappings function takes in a triplets file and a triplets_file_utils string.
 	The function reads the triplet file, creates an entity to id mapping and relation to id mapping,
@@ -422,9 +426,11 @@ def generate_mappings(triplets_file: str, triplets_file_utils: str):
 	:param triplets_file: str: Specify the file path of the triplets
 	:param triplets_file_utils: str: Specify the path to the directory where you want to save your entity_to_id and
 	relation_to_id mapping
+	:param pretrained: whether to use bert for the embeddings
+	:param pretrained_embedding_file: where to save pretrained embeddings
 	"""
-	logger.info("creating entity-to-id and relation-to-id mappings")
 
+	logger.info("creating entity-to-id and relation-to-id mappings")
 	# read original tsv file
 	triplets = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
 	# generate mappings using pykeen function
@@ -440,3 +446,11 @@ def generate_mappings(triplets_file: str, triplets_file_utils: str):
 
 	relation_to_id_file = triplets_file_utils.format(file_name="relation_to_id")
 	save_json(relation_to_id, relation_to_id_file)
+
+	if pretrained:
+		assert pretrained_embedding_file is not None
+		logger.info("creating pretrained entity embeddings")
+		# Load BERT tokenizer and model
+		model = SentenceTransformer('all-MiniLM-L6-v2')
+		embeddings = model.encode(list(entity_to_id.keys()), show_progress_bar=True, device=device)
+		numpy.save(pretrained_embedding_file, embeddings)

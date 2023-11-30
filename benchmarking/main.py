@@ -11,10 +11,12 @@ from config.config import (metrics_file,
 						   noisy_triples_file,
 						   original_dataset_file,
 						   original_triplets_file,
+						   pretrained_embedding_file,
 						   triplets_file,
 						   triplets_file_utils,
 						   valid_models,
-						   valid_noise_ratio, )
+						   valid_noise_ratio,
+						   pretrained_embedding_file, )
 from evaluation import link_deletion, \
 	link_deletion_bert, \
 	link_prediction, \
@@ -110,7 +112,8 @@ def kge_basic(model_name: str, noise: int, force_retrain: bool = True):
 						  model_file=model_file,
 						  noisy_triples_file=noisy_triples_file,
 						  triplets_file_utils=triplets_file_utils,
-						  ratio=noise)
+						  ratio=noise,
+						  pretrained_embedding_file=pretrained_embedding_file)
 		model = result.model
 
 	else:
@@ -148,26 +151,30 @@ def main():
 						  triples_file=triplets_file,
 						  original_triplets_file=original_triplets_file)
 		# generate node to label mappings
-		generate_mappings(triplets_file=triplets_file, triplets_file_utils=triplets_file_utils)
+		generate_mappings(triplets_file=triplets_file,
+						  triplets_file_utils=triplets_file_utils,
+						  pretrained_embedding_file=pretrained_embedding_file,
+						  pretrained=True)
 		# for every level of noise, create a dataset
 		generate_noise(triplets_file=triplets_file,
 					   original_triplets_file=original_triplets_file,
 					   noisy_triples_file=noisy_triples_file,
 					   valid_noise=config.valid_noise_ratio,
-					   special_benchmarking_flag=False)
+					   special_benchmarking_flag=True)
 
-		if optimization:
-			if model_name == 'Bert': exit(1)
-			hyperparameter_optimization(model_name=model_name,
-										model_dir=model_dir.format(model=model_name),
-										noisy_triples_file=noisy_triples_file,
-										triplets_file_utils=triplets_file_utils)
+	if optimization:
+		if model_name == 'Bert': exit(1)
+		hyperparameter_optimization(model_name=model_name,
+									model_dir=model_dir.format(model=model_name),
+									noisy_triples_file=noisy_triples_file,
+									triplets_file_utils=triplets_file_utils,
+									pretrained_embedding_file=pretrained_embedding_file)
 
+	else:
+		if model_name == 'Bert':
+			bert_basic(model_name, noise)
 		else:
-			if model_name == 'Bert':
-				bert_basic(model_name, noise)
-			else:
-				kge_basic(model_name, noise)
+			kge_basic(model_name, noise)
 
 
 if __name__ == '__main__':
