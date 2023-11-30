@@ -10,6 +10,7 @@ from config.config import (metrics_file,
 						   model_dir,
 						   noisy_triples_file,
 						   original_dataset_file,
+						   original_triplets_file,
 						   triplets_file,
 						   triplets_file_utils,
 						   valid_models,
@@ -41,10 +42,6 @@ def parse_command_line():
 	- noise argument containing the noise ratio to optimize/train the model on
 
 	"""
-	if len(sys.argv) < 8:
-		logger.error("missing arguments from command line")
-		raise Exception("missing arguments from command line")
-
 	assert "--generate" in sys.argv
 	assert "--optimize" in sys.argv
 	assert "--model" in sys.argv
@@ -140,33 +137,38 @@ def kge_basic(model_name: str, noise: int, force_retrain: bool = True):
 						  noise_ratio=noise)
 
 
-if __name__ == '__main__':
+def main():
 	# Command line must contain 4 arguments: generate, optimize, model_name, noise
 	generate_dataset, optimization, noise, model_name = parse_command_line()
-
 	assert noise in valid_noise_ratio
 	assert model_name in valid_models
-
 	if generate_dataset:
 		# generates triples from original file
-		generate_triplets(original_dataset_file=original_dataset_file, triples_file=triplets_file)
+		generate_triplets(original_dataset_file=original_dataset_file,
+						  triples_file=triplets_file,
+						  original_triplets_file=original_triplets_file)
 		# generate node to label mappings
 		generate_mappings(triplets_file=triplets_file, triplets_file_utils=triplets_file_utils)
 		# for every level of noise, create a dataset
 		generate_noise(triplets_file=triplets_file,
+					   original_triplets_file=original_triplets_file,
 					   noisy_triples_file=noisy_triples_file,
-					   valid_noise=config.valid_noise_ratio)
-	if optimization:
-		if model_name == 'Bert': exit(1)
-		hyperparameter_optimization(model_name=model_name,
-									model_dir=model_dir.format(model=model_name),
-									noisy_triples_file=noisy_triples_file,
-									triplets_file_utils=triplets_file_utils)
+					   valid_noise=config.valid_noise_ratio,
+					   special_benchmarking_flag=False)
 
-	else:
-		if model_name == 'Bert':
-			bert_basic(model_name, noise)
+		if optimization:
+			if model_name == 'Bert': exit(1)
+			hyperparameter_optimization(model_name=model_name,
+										model_dir=model_dir.format(model=model_name),
+										noisy_triples_file=noisy_triples_file,
+										triplets_file_utils=triplets_file_utils)
+
 		else:
-			kge_basic(model_name, noise)
+			if model_name == 'Bert':
+				bert_basic(model_name, noise)
+			else:
+				kge_basic(model_name, noise)
 
-# process_results()
+
+if __name__ == '__main__':
+	main()

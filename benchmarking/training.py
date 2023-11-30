@@ -258,11 +258,12 @@ def training(model_dir: str,
 		evaluation_kwargs={
 			"use_tqdm"                 : True,
 			"additional_filter_triples": [train_factory.mapped_triples, val_factory.mapped_triples, ], },
-		device='cuda:0',
 		use_testing_data=True,
 		evaluation_fallback=True,
 		filter_validation_when_testing=True,
-		use_tqdm=True, )
+		use_tqdm=True,
+		device='cuda',
+		random_seed=42)
 
 	# save trained model
 	result.save_model(path=model_file)
@@ -333,7 +334,7 @@ def hyperparameter_optimization(model_name: str, model_dir: str, noisy_triples_f
 												  n_ei_candidates=32, ),
 							   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 							   direction="maximize",
-							   n_trials=30, )
+							   n_trials=30)
 
 	logger.info(f"Best hyper-parameters: {hpo_results.study.best_params}")
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())

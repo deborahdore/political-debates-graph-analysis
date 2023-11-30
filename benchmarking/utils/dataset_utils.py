@@ -57,7 +57,7 @@ def get_nodes(dataset: pd.DataFrame):
 	return nodes
 
 
-def generate_triplets(original_dataset_file: str, triples_file: str):
+def generate_triplets(original_dataset_file: str, triples_file: str, original_triplets_file: str):
 	"""
 	The generate_triplets function takes in a file path to an original dataset and a file path to the destination
 	file where the generated triples will be saved. The function then loads the original dataset, creates nodes for
@@ -70,6 +70,7 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 	:param mode_text: how to create the nodes' text
 	:param original_dataset_file: str: Specify the file path of the original dataset
 	:param triples_file: str: Specify the file that contains the triples
+	:param original_triplets_file: Specify the file that contains the triples without any addition of nodes
 	:return: A list of triples
 	"""
 	logger.info("generating triplets")
@@ -84,17 +85,22 @@ def generate_triplets(original_dataset_file: str, triples_file: str):
 		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType', 'long_date']]
 
 	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	# best combination TEXT + NODE SPEAKER + NODE YEAR
-	df = configure_nodes(df_original, "text")
-	df = pd.concat([df, add_nodes(df_original, "year", mode_text="text")], axis=0)
-	df = pd.concat([df, add_nodes(df_original, "speaker", mode_text="text")], axis=0)
+	MODE_TEXT = "text"
+	df = configure_nodes(df_original, MODE_TEXT)
+	save_tsv(preprocess_dataset(df), original_triplets_file)
 
+	df = pd.concat([df, add_nodes(df_original, "claim+premise", mode_text=MODE_TEXT)], axis=0)
+
+	save_tsv(preprocess_dataset(df), triples_file)
+
+
+def preprocess_dataset(df):
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
 	df = df.applymap(lambda x: x.lower())
 	df = df.applymap(lambda x: x.strip())
 	df = df.dropna().drop_duplicates().sample(frac=1).reset_index(drop=True)
-	save_tsv(df, triples_file)
+	return df
 
 
 def configure_nodes(df: pd.DataFrame, mode: str):
@@ -155,7 +161,7 @@ def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
 		speaker_tail = pd.concat([df['Speaker1'].copy(), df['Speaker2'].copy()], axis=0)
 
 		assert speaker_head.size == speaker_tail.size
-		speaker_df = pd.DataFrame({'head': speaker_head, 'relation': "spoken by", 'tail': speaker_tail})
+		speaker_df = pd.DataFrame({'head': speaker_head, 'relation': "said by", 'tail': speaker_tail})
 
 		role_head = pd.Series(list(political_positions.keys()))
 		role_tail = pd.Series(list(political_positions.values()))
@@ -170,7 +176,7 @@ def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
 		tail = pd.concat([df['long_date'].copy(), df['long_date'].copy()], axis=0)
 
 		assert head.size == tail.size
-		return pd.DataFrame({'head': head, 'relation': "debate's year", 'tail': tail})
+		return pd.DataFrame({'head': head, 'relation': "said in", 'tail': tail})
 
 
 def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
@@ -181,7 +187,7 @@ def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
 		head = pd.concat([governor, dependent], axis=0)
 		tail = pd.concat([df['Speaker1'].copy(), df['Speaker2'].copy()], axis=0)
 		assert head.size == tail.size
-		speaker_df = pd.DataFrame({'head': head, 'relation': "spoken by", 'tail': tail})
+		speaker_df = pd.DataFrame({'head': head, 'relation': "said by", 'tail': tail})
 
 		role_head = pd.Series(list(political_positions.keys()))
 		role_tail = pd.Series(list(political_positions.values()))
@@ -200,18 +206,24 @@ def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
 		tail = pd.concat([df['long_date'].copy(), df['long_date'].copy()], axis=0)
 
 		assert head.size == tail.size
-		return pd.DataFrame({'head': head, 'relation': "debate's year", 'tail': tail})
+		return pd.DataFrame({'head': head, 'relation': "said in", 'tail': tail})
 
 
-def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [int]):
+def generate_noise(triplets_file: str,
+				   original_triplets_file: str,
+				   noisy_triples_file: str,
+				   valid_noise: [int],
+				   special_benchmarking_flag: bool = False):
 	"""
 	The generate_noise function takes in a triplets file and generates noisy triples.
 	The function will generate the following files:
 		- train_noisy_{noise}.csv, test_noisy_{noise}.csv, val_noisy_{noise}.csv for each noise ratio in valid_ratio.
 
 	:param triplets_file: str: Specify the path to the file containing all triplets
+	:param original_triplets_file: str: Specify the path to the file containing triplets without additional nodes
 	:param noisy_triples_file: str: Specify the file path of the noisy triples
 	:param valid_noise: [float]: list of the noise ratio
+	:param special_benchmarking_flag: bool: Whenever to drop the additional nodes from validation and testing or not
 	:return: A dataframe with the following columns: head, relation, tail, noise (1 if it's a synthetic noisy triple,
 	0 if not)
 	"""
@@ -220,6 +232,12 @@ def generate_noise(triplets_file: str, noisy_triples_file: str, valid_noise: [in
 	# split dataset in partitions [0.8, 0.1, 0.1]
 	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123)
 	train, val = train_test_split(train, test_size=0.1, random_state=123)
+
+	if special_benchmarking_flag:
+		# 	in this case drop from val and test the additional nodes
+		original_triples = read_tsv(original_triplets_file).dropna().drop_duplicates().reset_index(drop=True)
+		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
+		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
 	train = train.dropna().drop_duplicates().reset_index(drop=True)
 	val = val.dropna().drop_duplicates().reset_index(drop=True)
