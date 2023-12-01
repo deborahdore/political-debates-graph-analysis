@@ -16,11 +16,10 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from tqdm import tqdm
 from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
 
+from config import config
 from utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
 from utils.evaluation_utils import adjust_dataset_for_bert, tokenize_and_generate_dataset
 from utils.utils import read_json
-
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
 def bert_training(model_file: str, model_name: str, noisy_triples_file: str, ratio: float):
@@ -82,7 +81,7 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 														  num_labels=2,
 														  output_attentions=False,
 														  output_hidden_states=False)
-	model.to(device)
+	model.to(config.DEVICE)
 
 	# define optimizer
 	optimizer = AdamW(model.parameters(), lr=learning_rate)
@@ -100,7 +99,7 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 			for batch in dataloader_train:
 				optimizer.zero_grad()
 
-				batch = tuple(b.to(device) for b in batch)
+				batch = tuple(b.to(config.DEVICE) for b in batch)
 				inputs = {'input_ids': batch[0].long(), 'attention_mask': batch[1], 'labels': batch[2]}
 				outputs = model(**inputs)
 
@@ -123,7 +122,7 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 		loss_val_total = 0
 		with torch.no_grad():
 			for batch in dataloader_val:
-				batch = tuple(b.to(device) for b in batch)
+				batch = tuple(b.to(config.DEVICE) for b in batch)
 				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
 				outputs = model(**inputs)
 
@@ -144,7 +143,7 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	with tqdm(total=len(dataloader_test), desc="Testing", unit="batch") as pbar:
 		for batch in dataloader_test:
 			with torch.no_grad():
-				batch = tuple(b.to(device) for b in batch)
+				batch = tuple(b.to(config.DEVICE) for b in batch)
 				inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
 				outputs = model(**inputs)
 				loss = outputs.loss.float()
@@ -271,7 +270,7 @@ def training(model_dir: str,
 		evaluation_fallback=True,
 		filter_validation_when_testing=True,
 		use_tqdm=True,
-		device='cuda',
+		device=config.DEVICE,
 		random_seed=42)
 
 	# save trained model
@@ -345,7 +344,7 @@ def hyperparameter_optimization(model_name: str,
 							   # MRR
 							   filter_validation_when_testing=True,
 							   # misc args
-							   device=device,
+							   device=config.DEVICE,
 							   # Optuna study args
 							   sampler=TPESampler(consider_prior=True,
 												  prior_weight=1.0,

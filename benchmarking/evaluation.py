@@ -4,7 +4,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import torch
 from loguru import logger
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
@@ -16,6 +15,7 @@ from sklearn import metrics
 from torch.utils.data import DataLoader, SequentialSampler
 from transformers import BertForSequenceClassification
 
+from config import config
 from utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
 from utils.evaluation_utils import adjust_dataset_for_bert, \
 	get_center, \
@@ -25,8 +25,6 @@ from utils.evaluation_utils import adjust_dataset_for_bert, \
 	get_scores_tensor, \
 	tokenize_and_generate_dataset
 from utils.utils import read_json, save_json
-
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
 # ======================== KGE MODELS EVALUATION  ======================== #
@@ -260,7 +258,7 @@ def link_prediction(model: Any,
 																],
 									 batch_size=None,
 									 slice_size=None,
-									 device=device,
+									 device=config.DEVICE,
 									 use_tqdm=True).to_dict()
 
 	results_eval = {}
@@ -456,7 +454,7 @@ def link_deletion_bert(model: BertForSequenceClassification,
 	# get scores of testing triples
 	dataset_test = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_original, label=int(True)))
 	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=1)
-	score_test_sorted = get_probabilities_bert(model, dataloader_test, device, sort=True)
+	score_test_sorted = get_probabilities_bert(model, dataloader_test, sort=True)
 
 	ranks_head = []
 	ranks_tail = []
@@ -494,8 +492,8 @@ def link_deletion_bert(model: BertForSequenceClassification,
 		dataloader_fake_tail = DataLoader(dataset_fake_tail, sampler=SequentialSampler(dataset_fake_tail),
 										  batch_size=1)
 
-		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, device, sort=False)
-		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, device, sort=False)
+		score_fake_head = get_probabilities_bert(model, dataloader_fake_head, sort=False)
+		score_fake_tail = get_probabilities_bert(model, dataloader_fake_tail, sort=False)
 
 		# scores are sorted in ascending order, meaning from the lowest to the highest
 		# in link deletion we expect the score of the fake to be as low as possible (close to 0)
@@ -642,19 +640,19 @@ def link_prediction_bert(model: BertForSequenceClassification,
 		dataloader_fake_heads = DataLoader(dataset_fake_heads,
 										   sampler=SequentialSampler(dataset_fake_heads),
 										   batch_size=1)
-		score_fake_head_triples_sorted = get_probabilities_bert(model, dataloader_fake_heads, device, sort=True)
+		score_fake_head_triples_sorted = get_probabilities_bert(model, dataloader_fake_heads, sort=True)
 
 		dataset_fake_tails = tokenize_and_generate_dataset(adjust_dataset_for_bert(fake_tails, label=int(False)))
 		dataloader_fake_tails = DataLoader(dataset_fake_tails,
 										   sampler=SequentialSampler(dataset_fake_tails),
 										   batch_size=1)
-		score_fake_tail_triples_sorted = get_probabilities_bert(model, dataloader_fake_tails, device, sort=True)
+		score_fake_tail_triples_sorted = get_probabilities_bert(model, dataloader_fake_tails, sort=True)
 
 		dataset_real_triple = tokenize_and_generate_dataset(adjust_dataset_for_bert(real_triple, label=int(True)))
 		dataloader_real_triple = DataLoader(dataset_real_triple,
 											sampler=SequentialSampler(dataset_real_triple),
 											batch_size=1)
-		score_real_triple = get_probabilities_bert(model, dataloader_real_triple, device, sort=False)
+		score_real_triple = get_probabilities_bert(model, dataloader_real_triple, sort=False)
 
 		# scores are sorted in ascending order, meaning from the lowest to the highest
 		# in link prediction we expect the score of the real to be as high as possible
@@ -785,13 +783,13 @@ def triple_classification_bert(model: BertForSequenceClassification,
 	# get prediction for train gold
 	dataset_train = tokenize_and_generate_dataset(adjust_dataset_for_bert(train_original, label=int(True)))
 	dataloader_train = DataLoader(dataset_train, sampler=SequentialSampler(dataset_train), batch_size=1)
-	score_train = np.array(get_probabilities_bert(model, dataloader_train, device, sort=False))
+	score_train = np.array(get_probabilities_bert(model, dataloader_train, sort=False))
 
 	# get prediction for test gold
 	test = pd.concat([val_original, test_original], axis=0).reset_index(drop=True)
 	dataset_test = tokenize_and_generate_dataset(adjust_dataset_for_bert(test, label=int(True)))
 	dataloader_test = DataLoader(dataset_test, sampler=SequentialSampler(dataset_test), batch_size=1)
-	score_test = np.array(get_probabilities_bert(model, dataloader_test, device, sort=False))
+	score_test = np.array(get_probabilities_bert(model, dataloader_test, sort=False))
 
 	# load dataset random
 	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file,
@@ -804,17 +802,15 @@ def triple_classification_bert(model: BertForSequenceClassification,
 	# get prediction for test noisy
 	dataset_test_noisy = tokenize_and_generate_dataset(adjust_dataset_for_bert(test_noisy, label=int(False)))
 	dataloader_test_noisy = DataLoader(dataset_test_noisy, sampler=SequentialSampler(dataset_test_noisy), batch_size=1)
-	score_test_noisy = np.array(get_probabilities_bert(model, dataloader_test_noisy, device, sort=False))
+	score_test_noisy = np.array(get_probabilities_bert(model, dataloader_test_noisy, sort=False))
 
 	score_test_mean = get_center(score_test)
 	score_test_noisy_mean = get_center(score_test_noisy)
 
 	y_true = [1 for _ in score_test] + [0 for _ in score_test_noisy]
-	y_pred = get_probabilities_bert_index(model, dataloader_test, device, sort=False) + get_probabilities_bert_index(
-		model,
-		dataloader_test_noisy,
-		device,
-		sort=False)
+	y_pred = get_probabilities_bert_index(model, dataloader_test, sort=False) + get_probabilities_bert_index(model,
+																											 dataloader_test_noisy,
+																											 sort=False)
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)

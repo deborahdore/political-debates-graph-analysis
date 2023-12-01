@@ -9,8 +9,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
+from config import config
 
 def get_scores(model: Any, factory: TriplesFactory):
 	"""
@@ -20,7 +19,7 @@ def get_scores(model: Any, factory: TriplesFactory):
 	:param factory: The triples for which we want to compute scores
 	:return: A numpy array of scores
 	"""
-	factory.mapped_triples = factory.mapped_triples.to(device)
+	factory.mapped_triples = factory.mapped_triples.to(config.DEVICE)
 	scores = predict_triples_df(model=model, triples=factory.mapped_triples, batch_size=None, mode=None)
 	return np.sort(scores["score"].values)
 
@@ -48,7 +47,7 @@ def get_scores_tensor(model: Any,
 		r_id = relation_label_id_map[r]
 		t_id = entities_label_id_map[t]
 		mapped_triples.append([h_id, r_id, t_id])
-	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=device, requires_grad=False)
+	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=config.DEVICE, requires_grad=False)
 
 	scores = predict_triples_df(model=model,
 								triples=mapped_triples_tensor,
@@ -77,29 +76,26 @@ def get_center(scores: np.array):
 
 def get_probabilities_bert(model: BertForSequenceClassification,
 						   dataloader: DataLoader,
-						   device: torch.device,
 						   sort: bool = False):
-	prob, index = __get_probabilities_bert(model, dataloader, device, sort)
+	prob, index = __get_probabilities_bert(model, dataloader, sort)
 	return prob
 
 
 def get_probabilities_bert_index(model: BertForSequenceClassification,
 								 dataloader: DataLoader,
-								 device: torch.device,
 								 sort: bool = False):
-	prob, index = __get_probabilities_bert(model, dataloader, device, sort)
+	prob, index = __get_probabilities_bert(model, dataloader, sort)
 	return index
 
 
 def __get_probabilities_bert(model: BertForSequenceClassification,
 							 dataloader: DataLoader,
-							 device: torch.device,
 							 sort: bool = False):
 	score_test = []
 	score_test_index = []
 	with torch.no_grad():
 		for batch in dataloader:
-			batch = tuple(b.to(device) for b in batch)
+			batch = tuple(b.to(config.DEVICE) for b in batch)
 			inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
 			outputs = model(**inputs)
 			probs = F.softmax(outputs.logits, dim=-1).detach().cpu()

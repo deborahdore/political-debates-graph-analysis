@@ -5,6 +5,8 @@ import pandas as pd
 import torch
 from loguru import logger
 
+from config import config
+
 
 def load(file: str):
 	"""
@@ -91,7 +93,7 @@ def save_json(json_obj: json, json_file_name: str):
 	file.close()
 
 
-def load_model(model_file: str, device: torch.device):
+def load_model(model_file: str):
 	"""
 	The load_model function loads a model from the specified file and returns it.
 
@@ -99,4 +101,4 @@ def load_model(model_file: str, device: torch.device):
 	:param device:torch.device: Specify the device on which to load the model
 	:return: A dictionary of the model's state_dict
 	"""
-	return torch.load(model_file, map_location=device)
+	return torch.load(model_file, map_location=config.DEVICE)

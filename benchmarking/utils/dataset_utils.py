@@ -1,14 +1,13 @@
 import math
 
+import numpy
 import pandas as pd
-import torch
+from config import config
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
-from utils.utils import load, read_json, read_tsv, save_json, save_tsv, save
-import numpy
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+from utils.utils import load, read_json, read_tsv, save_json, save_tsv
 
 modalities_text = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
 modalities_nodes = ['claim+premise', 'speaker', 'year']
@@ -85,16 +84,21 @@ def generate_triplets(original_dataset_file: str, triples_file: str, original_tr
 	df_original = pd.DataFrame(original_dataset[1:], columns=original_dataset[0])[
 		['Dependent', 'D_type', 'Speaker1', 'Governor', 'G_type', 'Speaker2', 'RelationType', 'long_date']]
 
-	# create nodes -> Governor = head, Dependent = tail, RelationType = relation
-	MODE_TEXT = "text"
-	df = configure_nodes(df_original, MODE_TEXT)
+	df = configure_nodes(df_original, config.MODE_TEXT)
 	save_tsv(preprocess_dataset(df), original_triplets_file)
-	df = pd.concat([df, add_nodes(df_original, "year", mode_text=MODE_TEXT)], axis=0)
 
+	for mode_node in config.MODE_NODE:
+		df = pd.concat([df, add_nodes(df_original, mode_node, mode_text=config.MODE_TEXT)], axis=0)
 	save_tsv(preprocess_dataset(df), triples_file)
 
 
 def preprocess_dataset(df):
+	"""
+	Processes a dataframe
+
+	:param df: Pass in the dataframe that is created from the csv file
+	:return: A dataframe that is lowercased, stripped of punctuation and whitespace,
+	"""
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
 	df = df.applymap(lambda x: x.lower())
@@ -105,26 +109,31 @@ def preprocess_dataset(df):
 
 
 def configure_nodes(df: pd.DataFrame, mode: str):
+	"""
+	The configure_nodes function takes a dataframe and a mode as input.
+	The function then creates nodes content with the specified mode.
+	The modes are: text, text+speaker, text+claim, and text+claim+speaker.
+
+	:param df: pd.DataFrame: Specify the dataframe that is passed to this function
+	:param mode: str: Determine which columns to use for the head, relation and tail
+	:return: A dataframe with 3 columns: head, relation and tail
+	"""
 	logger.info(f"Creating nodes content with mode: {mode.upper()}")
 	assert mode in modalities_text
 
 	if mode == 'text':
-		# text
 		head = df['Governor'].copy()
 		relation = df['RelationType'].copy()
 		tail = df['Dependent'].copy()
 	elif mode == 'text+speaker':
-		# text + speaker
 		head = df.apply(lambda row: str(row['Governor']) + " " + str(row['Speaker2']), axis=1)
 		relation = df['RelationType'].copy()
 		tail = df.apply(lambda row: str(row['Dependent']) + " " + str(row['Speaker1']), axis=1)
 	elif mode == 'text+claim':
-		# text + claim/premise
 		head = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
 		relation = df['RelationType'].copy()
 		tail = df.apply(lambda row: str(row['Dependent']) + " " + str(row['D_type']), axis=1)
 	elif mode == 'text+claim+speaker':
-		# text + claim/premise + speaker
 		head = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']) + " " + str(row['Speaker2']),
 						axis=1)
 		relation = df['RelationType'].copy()
@@ -137,19 +146,43 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 	return new_df
 
 
-def add_nodes(df: pd.DataFrame, mode: str, mode_text: str):
+def add_nodes(df_original: pd.DataFrame, mode: str, mode_text: str):
+	"""
+	The add_nodes function adds nodes to the graph.
+
+	:param df_original: pd.DataFrame: Specify the dataframe that will be used for this function
+	:param mode: str: Specify which modality the nodes are being added to
+	:param mode_text: str: Determine whether the nodes are created from mode text or mode text+claim
+	:return: A dataframe with the columns head, relation, tail
+	"""
 	assert mode in modalities_nodes
 	assert mode_text in modalities_text
 
 	if mode_text == "text":
-		df = __add_nodes_mode_text(df, mode)
-	elif mode_text == "text+claim":
-		df = __add_nodes_mode_claim(df, mode)
+		df = __add_nodes_mode_text(df_original, mode)
+	else:  # text+claim
+		df = __add_nodes_mode_claim(df_original, mode)
 
 	return df.dropna().drop_duplicates().reset_index(drop=True)
 
 
 def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
+	"""
+	The __add_nodes_mode_text function creates nodes based on the mode argument.
+	The modes are: claim+premise, speaker, and year.
+		- If the mode is 'claim+premise', then it will create a node "claim" or "premise" for each node  in the
+		dataframe with a relation "is a" to their respective type.
+		- If the mode is 'speaker', then it will create a node "speaker" for each node in the dataframe with
+		relations of "said by" to their respective speakers (Speaker 1 or Speaker 2) as well as add all political
+		positions to the speaker's node
+		- If the mode is 'year', then it will create a node "year" with the year in which that debate was held and it
+		will connect to the respective nodes in the dataset with the relation "said in"
+
+	:param df: pd.DataFrame: Pass in the original dataframe
+	:param mode: str: Create the nodes based on the mode
+	:return: A dataframe with the nodes
+	"""
+
 	logger.info(f"Creating nodes with mode: {mode.upper()}")  # based on mode nodes "text"
 	if mode == 'claim+premise':
 		head = pd.concat([df['Dependent'].copy(), df['Governor'].copy()], axis=0)
@@ -181,6 +214,20 @@ def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
 
 
 def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
+	"""
+		The __add_nodes_mode_claim function creates nodes based on the mode argument.
+		The modes are: speaker and year.
+			- If the mode is 'speaker', then it will create a node "speaker" for each node in the dataframe with
+			relations of "said by" to their respective speakers (Speaker 1 or Speaker 2) as well as add all political
+			positions to the speaker's node
+			- If the mode is 'year', then it will create a node "year" with the year in which that debate was held and
+			it
+			will connect to the respective nodes in the dataset with the relation "said in"
+
+		:param df: pd.DataFrame: Pass in the original dataframe
+		:param mode: str: Create the nodes based on the mode
+		:return: A dataframe with the nodes
+	"""
 	logger.info(f"Creating nodes with mode: {mode.upper()}")  # based on mode nodes "text + claim/premise"
 	if mode == 'speaker':
 		governor = df.apply(lambda row: str(row['Governor']) + " " + str(row['G_type']), axis=1)
@@ -452,5 +499,5 @@ def generate_mappings(triplets_file: str,
 		logger.info("creating pretrained entity embeddings")
 		# Load BERT tokenizer and model
 		model = SentenceTransformer('all-MiniLM-L6-v2')
-		embeddings = model.encode(list(entity_to_id.keys()), show_progress_bar=True, device=device)
+		embeddings = model.encode(list(entity_to_id.keys()), show_progress_bar=True, device=config.DEVICE)
 		numpy.save(pretrained_embedding_file, embeddings)
