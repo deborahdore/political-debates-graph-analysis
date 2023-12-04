@@ -427,6 +427,185 @@ def triple_classification(model: Any,
 	logger.info(f"## ===== TRIPLE CLASSIFICATION COMPLETE ===== ##")
 
 
+def relation_classification(model: Any,
+							model_name: str,
+							noisy_triples_file: str,
+							triplets_file_utils: str,
+							metrics_file: str,
+							noise_ratio: float):
+	"""
+	The relation_classification function is used to evaluate the performance of a KGE model on relation classification.
+
+	:param model: Any: Pass the model to be evaluated
+	:param model_name: str: Identify the model in the metrics file
+	:param noisy_triples_file: str: Specify the path to the directory containing all of the noisy triples
+	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: Save the results of the triple classification
+	:param noise_ratio: float: Specify the percentage of noise in the training set
+	"""
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on relation classification ===== ##".upper())
+
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
+
+	# ===== LOAD ORIGINAL
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, True)
+
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
+																		  val_original,
+																		  test_original,
+																		  triplets_file_utils,
+																		  create_inverse_triples=False)
+
+	# ===== LOAD ALL FAKE
+	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_triples_file,
+																  100,
+																  drop_col_noise=False,
+																  get_noisy_test=True)
+	train_fake = train_fake[train_fake['noise'] == 1].copy()
+	val_fake = val_fake[val_fake['noise'] == 1].copy()
+	test_fake = test_fake[test_fake['noise'] == 1].copy()
+	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
+																						 val_fake,
+																						 test_fake,
+																						 triplets_file_utils,
+																						 create_inverse_triples=False)
+
+	# ===== Inference (computation of KGE scores) on Original Training Set ====== #
+	# REAL
+	training_scores_vector = get_scores(model=model, factory=train_factory)
+	training_scores_center = get_center(scores=training_scores_vector)
+
+	# ===== Inference (computation of KGE scores) on Validation Set ====== #
+	# FAKE
+	fake_validation_scores = get_scores(model=model, factory=val_fake_factory)
+	fake_validation_scores_center = get_center(scores=fake_validation_scores)
+
+	# REAL
+	real_validation_scores = get_scores(model=model, factory=val_factory)
+	real_validation_scores_center = get_center(scores=real_validation_scores)
+
+	# ===== Inference (computation of KGE scores) on Testing Set ====== #
+	# FAKE
+	fake_testing_scores = get_scores(model=model, factory=test_fake_factory)
+	fake_testing_scores_center = get_center(scores=fake_testing_scores)
+
+	# REAL
+	real_testing_scores = get_scores(model=model, factory=test_factory)
+	real_testing_scores_center = get_center(scores=real_testing_scores)
+
+	logger.info("Triples Classification statistics:".upper())
+	logger.info(f"training_scores_center: {training_scores_center}")
+	logger.info(f"fake_validation_scores_center: {fake_validation_scores_center}")
+	logger.info(f"real_validation_scores_center: {real_validation_scores_center}")
+	logger.info(f"fake_testing_scores_center: {fake_testing_scores_center}")
+	logger.info(f"real_testing_scores_center: {real_testing_scores_center}")
+
+	threshold = fake_validation_scores_center + ((real_validation_scores_center - fake_validation_scores_center) / 2)
+	logger.info(f"classification threshold: {threshold}")
+
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		relations = ['support', 'attack', 'equivalent']
+	else:
+		relations = pd.concat([train_original, val_original, test_original], axis=0)[
+			'relation'].drop_duplicates().values.tolist()
+
+	y_pred = []
+	test_original = test_original.values.tolist()
+	for [head, rel, tail] in test_original:
+
+		# take all relations
+		triples = []
+		idx = -1
+		for i, elem in enumerate(relations):
+			triples.append([head, elem, tail])
+			if elem == rel: idx = i
+
+		assert idx != -1
+		scores = get_scores_tensor(model,
+								   triples=triples,
+								   entities_label_id_map=entity_to_id,
+								   relation_label_id_map=relation_to_id)
+
+		# does the model believe that there is a correct triple?
+		if np.sort(scores)[-1] >= threshold:
+			# does the model believe that the real triple is correct?
+			score_real = scores[idx]
+			if score_real >= threshold:
+				# does the model believe this is the most probable triple?
+				if score_real == max(scores):
+					y_pred.append(1)
+				else:
+					y_pred.append(0)
+			else:
+				y_pred.append(0)
+		else:
+			y_pred.append(0)
+
+	y_true = [1] * len(test_original)
+	assert len(y_pred) == len(y_true)
+	assert sum(y_true) == len(real_testing_scores)
+	assert sum(y_pred) <= len(y_true)
+	assert sum(y_pred) >= 0
+
+	n_round = 10
+	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
+	logger.info(f"accuracy: {accuracy}")
+	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info(f"f1_macro: {f1_macro}")
+	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
+	logger.info(f"f1_pos: {f1_pos}")
+	f1_neg = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=0), n_round)
+	logger.info(f"f1_neg: {f1_neg}")
+	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info(f"precision: {precision}")
+	recall = round(metrics.recall_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info(f"recall: {recall}")
+
+	# compute distance among the two distribution (greater is better)
+	maximum = np.max(training_scores_vector)
+	minimum = np.min(fake_testing_scores)
+	if real_testing_scores_center > fake_testing_scores_center:
+		norm_distance = round(abs(real_testing_scores_center - fake_testing_scores_center) / abs(maximum - minimum),
+							  n_round)
+		logger.info(f"distance: {norm_distance}")
+	else:
+		norm_distance = float('inf')
+		logger.warning("WARNING: real_testing_scores_center <= fake_testing_scores_center")
+
+	# Compute Z-test (http://homework.uoregon.edu/pub/class/es202/ztest.html)
+	# Z = (mean_1 - mean_2) / sqrt{ (std1/sqrt(N1))**2 + (std2/sqrt(N2))**2 }
+	real_scores_error = (real_testing_scores.std() / (np.sqrt(real_testing_scores.shape[0]))) ** 2
+	fake_scores_error = (fake_testing_scores.std() / (np.sqrt(fake_testing_scores.shape[0]))) ** 2
+	Z_statistic = round((
+								real_testing_scores.mean() - fake_testing_scores.mean()) / np.sqrt(real_scores_error +
+																								   fake_scores_error),
+						2)
+	logger.info(f"Z-statistic: {round(Z_statistic, n_round)}")
+
+	results_eval = {
+		"accuracy"     : accuracy,
+		"f1_macro"     : f1_macro,
+		"f1_pos"       : f1_pos,
+		"f1_neg"       : f1_neg,
+		"precision"    : precision,
+		"recall"       : recall,
+		"Z_statistic"  : Z_statistic,
+		"norm_distance": norm_distance}
+
+	logger.info(results_eval)
+
+	# Check if the JSON file exists
+	if os.path.exists(metrics_file):
+		existing_results = read_json(metrics_file)
+		existing_results.update({"relation classification": results_eval})
+		save_json(existing_results, metrics_file)
+	else:
+		save_json({"relation classification": results_eval}, metrics_file)
+
+	logger.info(f"## ===== TRIPLE CLASSIFICATION COMPLETE ===== ##")
+
+
 # ======================== BERT EVALUATION  ======================== #
 def link_deletion_bert(model: BertForSequenceClassification,
 					   model_dir: str,

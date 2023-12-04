@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import torch
+
 # ======================== utils ======================== #
 VALID_MODELS = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "RotatE", "TransH", "BoxE",
 				"Bert"]
@@ -9,10 +10,12 @@ VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 # ===================== Settings ===================== #
 
 SPECIAL_BENCHMARKING_FLAG = True
-USE_PRETRAINED_EMBEDDINGS = True
+USE_PRETRAINED_EMBEDDINGS = False
 FORCE_TRAINING = True
+
 MODE_TEXT = 'text'
-MODE_NODE = ['speaker']
+MODE_NODE = []
+
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # ===================== Directories ===================== #
@@ -40,7 +43,6 @@ metrics_file = os.path.join(results_dir, "all/metrics_{model}_{ratio}.json")
 # ================== Asserts ================== #
 
 assert Path(dataset_dir).exists()
-assert len(MODE_NODE) > 0
 assert MODE_TEXT is not None
 
 # ================== Create Directories ================== #

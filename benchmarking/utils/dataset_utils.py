@@ -257,11 +257,7 @@ def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
 		return pd.DataFrame({'head': head, 'relation': "said in", 'tail': tail})
 
 
-def generate_noise(triplets_file: str,
-				   original_triplets_file: str,
-				   noisy_triples_file: str,
-				   valid_noise: [int],
-				   special_benchmarking_flag: bool = False):
+def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triples_file: str, valid_noise: [int]):
 	"""
 	The generate_noise function takes in a triplets file and generates noisy triples.
 	The function will generate the following files:
@@ -277,15 +273,18 @@ def generate_noise(triplets_file: str,
 	"""
 	edges_correct = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
 
-	# split dataset in partitions [0.8, 0.1, 0.1]
-	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123)
-	train, val = train_test_split(train, test_size=0.1, random_state=123)
+	# [split 0.8, 0.1, 0.1]
+	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123, stratify=edges_correct['relation'])
+	train, val = train_test_split(train, test_size=0.1, random_state=123, stratify=train['relation'])
 
-	if special_benchmarking_flag:
-		# 	in this case drop from val and test the additional nodes
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		# 	in this case drop from test the additional nodes
 		original_triples = read_tsv(original_triplets_file).dropna().drop_duplicates().reset_index(drop=True)
-		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
+
+		to_add = test.merge(original_triples, how='left', indicator=True).loc[
+			lambda x: x['_merge'] == 'left_only'].drop('_merge', axis=1)
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
+		train = pd.concat([train, to_add], axis=0).dropna().drop_duplicates().reset_index(drop=True)
 
 	train = train.dropna().drop_duplicates().reset_index(drop=True)
 	val = val.dropna().drop_duplicates().reset_index(drop=True)
@@ -461,10 +460,7 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
 
 
-def generate_mappings(triplets_file: str,
-					  triplets_file_utils: str,
-					  pretrained_embedding_file: str = None,
-					  pretrained: bool = False):
+def generate_mappings(triplets_file: str, triplets_file_utils: str, pretrained_embedding_file: str = None):
 	"""
 	The generate_mappings function takes in a triplets file and a triplets_file_utils string.
 	The function reads the triplet file, creates an entity to id mapping and relation to id mapping,
@@ -494,7 +490,7 @@ def generate_mappings(triplets_file: str,
 	relation_to_id_file = triplets_file_utils.format(file_name="relation_to_id")
 	save_json(relation_to_id, relation_to_id_file)
 
-	if pretrained:
+	if config.USE_PRETRAINED_EMBEDDINGS:
 		assert pretrained_embedding_file is not None
 		logger.info("creating pretrained entity embeddings")
 		# Load BERT tokenizer and model

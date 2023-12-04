@@ -230,7 +230,8 @@ def training(model_dir: str,
 	if not 'loss_kwargs' in pipeline_config.keys():
 		pipeline_config['loss_kwargs'] = None
 
-	if pretrained_embedding_file is not None:
+	if config.USE_PRETRAINED_EMBEDDINGS:
+		assert pretrained_embedding_file is not None
 		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
 		pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
 											   entity_initializer=PretrainedInitializer(
@@ -294,6 +295,7 @@ def hyperparameter_optimization(model_name: str,
 	:param model_dir: str: Save the model
 	:param noisy_triples_file: str: Load the triples from a file
 	:param triplets_file_utils: str: Load entity-to-id and relation-to-id mappings
+	:param pretrained_embedding_file: file where the pretrained embeddings are saves
 	:param ratio: float: Indicate the noise ratio of the dataset to be used
 	"""
 	ratio = 0  # only hypertrain on gold
@@ -310,7 +312,8 @@ def hyperparameter_optimization(model_name: str,
 																		  create_inverse_triples=False)
 
 	model_kwargs = None
-	if pretrained_embedding_file is not None:
+	if config.USE_PRETRAINED_EMBEDDINGS:
+		assert pretrained_embedding_file is not None
 		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
 		model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
 							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor), )

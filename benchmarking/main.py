@@ -7,6 +7,7 @@ from evaluation import link_deletion, \
 	link_deletion_bert, \
 	link_prediction, \
 	link_prediction_bert, \
+	relation_classification, \
 	triple_classification, \
 	triple_classification_bert
 from training import bert_training, hyperparameter_optimization, training
@@ -121,6 +122,13 @@ def kge_basic(model_name: str, noise: int):
 						  metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
 						  noise_ratio=noise)
 
+	relation_classification(model=model,
+							model_name=model_name,
+							noisy_triples_file=config.noisy_triples_file,
+							triplets_file_utils=config.triplets_file_utils,
+							metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
+							noise_ratio=noise)
+
 
 if __name__ == '__main__':
 	generate_dataset, optimization, noise, model_name = get_kwargs()
@@ -133,15 +141,12 @@ if __name__ == '__main__':
 		# generate node to label mappings
 		generate_mappings(triplets_file=config.triplets_file,
 						  triplets_file_utils=config.triplets_file_utils,
-						  pretrained_embedding_file=config.pretrained_embedding_file,
-						  pretrained=config.USE_PRETRAINED_EMBEDDINGS)
+						  pretrained_embedding_file=config.pretrained_embedding_file)
 		# for every level of noise, create a dataset
 		generate_noise(triplets_file=config.triplets_file,
 					   original_triplets_file=config.original_triplets_file,
 					   noisy_triples_file=config.noisy_triples_file,
-					   valid_noise=config.VALID_NOISE_RATIO,
-					   special_benchmarking_flag=config.SPECIAL_BENCHMARKING_FLAG)
-
+					   valid_noise=config.VALID_NOISE_RATIO)
 	if optimization:
 		if model_name == 'Bert': exit(1)
 		hyperparameter_optimization(model_name=model_name,
