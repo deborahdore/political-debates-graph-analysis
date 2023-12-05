@@ -273,17 +273,20 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 	"""
 	edges_correct = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
 
-	# [split 0.8, 0.1, 0.1]
-	train, test = train_test_split(edges_correct, test_size=0.1, random_state=123, stratify=edges_correct['relation'])
-	train, val = train_test_split(train, test_size=0.1, random_state=123, stratify=train['relation'])
+	train, test = train_test_split(edges_correct, test_size=0.2, random_state=123, stratify=edges_correct['relation'])
+	train, val = train_test_split(train, test_size=0.15, random_state=123, stratify=train['relation'])
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		# 	in this case drop from test the additional nodes
+		# 	in this case drop from test and val the additional nodes
 		original_triples = read_tsv(original_triplets_file).dropna().drop_duplicates().reset_index(drop=True)
 
-		to_add = test.merge(original_triples, how='left', indicator=True).loc[
-			lambda x: x['_merge'] == 'left_only'].drop('_merge', axis=1)
+		to_add = pd.concat([test.merge(original_triples, how='left', indicator=True).loc[
+								lambda x: x['_merge'] == 'left_only'].drop('_merge', axis=1),
+							val.merge(original_triples, how='left', indicator=True).loc[
+								lambda x: x['_merge'] == 'left_only'].drop('_merge', axis=1)], axis=0)
+		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
+
 		train = pd.concat([train, to_add], axis=0).dropna().drop_duplicates().reset_index(drop=True)
 
 	train = train.dropna().drop_duplicates().reset_index(drop=True)

@@ -207,6 +207,113 @@ def link_deletion(model: Any,
 	logger.info(f"## ===== LINK DELETION COMPLETE ===== ##")
 
 
+def relation_prediction(model: Any,
+						model_name: str,
+						noisy_triples_file: str,
+						triplets_file_utils: str,
+						metrics_file: str,
+						noise_ratio: float):
+	"""
+	The relation_prediction function is used to evaluate the performance of a model on relation prediction.
+
+	:param model: Any: Pass the model to the function
+	:param model_name: str: Save the metrics in a json file
+	:param noisy_triples_file: str: Specify the location of the noisy triples file
+	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: Save the results of the link deletion experiment
+	:param noise_ratio: float: Specify the amount of noise to be added to the dataset
+	"""
+	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on relation prediction ===== ##".upper())
+
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
+
+	# load original dataset
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+																			  noise=0,
+																			  drop_col_noise=True,
+																			  get_noisy_test=False)
+
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		relations = ['support', 'attack', 'equivalent']
+	else:
+		relations = train_original['relation'].drop_duplicates().values.tolist()
+
+	test_size = len(test_original)
+	ranks = []
+	for h, r, t in test_original.values.tolist():
+
+		# create fake relation triple
+		fake_triples = []
+		for relation in relations:
+			if relation == r: continue
+			fake_triples.append([h, relation, t])
+
+		# get scores
+		real_score = get_scores_tensor(model=model,
+									   triples=[[h, r, t]],
+									   entities_label_id_map=entity_to_id,
+									   relation_label_id_map=relation_to_id)
+
+		fake_score = get_scores_tensor(model=model,
+									   triples=fake_triples,
+									   entities_label_id_map=entity_to_id,
+									   relation_label_id_map=relation_to_id,
+									   sort=True)
+
+		rank = len(fake_score) - np.searchsorted(a=fake_score, v=real_score, side='right') + 1
+		ranks.append(rank)
+
+	# Metrics
+	mr_calculator = ArithmeticMeanRank()
+	adjusted_mr_calculator = AdjustedArithmeticMeanRank()
+	mrr_calculator = InverseHarmonicMeanRank()
+	adjusted_mrr_calculator = AdjustedInverseHarmonicMeanRank()
+	hits_at_1_calculator = HitsAtK(k=1)
+	hits_at_2_calculator = HitsAtK(k=2)
+
+	n_round = 10
+	ranks_array = np.array(ranks)
+
+	# MR
+	mr = round(float(mr_calculator(ranks_array, test_size)), n_round)
+
+	# ADJUSTED MR
+	adjusted_mr = round(float(adjusted_mr_calculator(ranks_array, test_size)), n_round)
+
+	# MRR
+	mrr = round(float(mrr_calculator(ranks_array, test_size)), n_round)
+
+	# ADJUSTED MRR
+	adjusted_mrr = round(float(adjusted_mrr_calculator(ranks_array, test_size)), n_round)
+
+	# HITS AT 1
+	hits_at_1 = round(float(hits_at_1_calculator(ranks_array)), n_round)
+
+	# HITS AT 2
+	hits_at_2 = round(float(hits_at_2_calculator(ranks_array)), n_round)
+
+	results_eval = {
+		'hits_at_1'   : hits_at_1,
+		'hits_at_2'   : hits_at_2,
+		'mr'          : mr,
+		'adjusted_mr' : adjusted_mr,
+		'mrr'         : mrr,
+		'adjusted_mrr': adjusted_mrr}
+
+	logger.info(results_eval)
+
+	# Check if the JSON file exists
+	if os.path.isfile(metrics_file):
+		existing_results = read_json(metrics_file)
+		existing_results.update({"relation prediction": results_eval})
+		save_json(existing_results, metrics_file)
+	else:
+		save_json({"relation prediction": results_eval}, metrics_file)
+
+	logger.info(f"## ===== RELATION PREDICTION COMPLETE ===== ##")
+
+
 def link_prediction(model: Any,
 					noisy_triples_file: str,
 					triplets_file_utils: str,
@@ -512,8 +619,12 @@ def relation_classification(model: Any,
 
 	y_pred = []
 	test_original = test_original.values.tolist()
-	for [head, rel, tail] in test_original:
+	len_test = len(test_original)
 
+	for head, rel, tail in test_original:
+		if rel not in relations:
+			len_test = len_test - 1
+			continue
 		# take all relations
 		triples = []
 		idx = -1
@@ -527,26 +638,15 @@ def relation_classification(model: Any,
 								   entities_label_id_map=entity_to_id,
 								   relation_label_id_map=relation_to_id)
 
-		# does the model believe that there is a correct triple?
-		if np.sort(scores)[-1] >= threshold:
-			# does the model believe that the real triple is correct?
-			score_real = scores[idx]
-			if score_real >= threshold:
-				# does the model believe this is the most probable triple?
-				if score_real == max(scores):
-					y_pred.append(1)
-				else:
-					y_pred.append(0)
-			else:
-				y_pred.append(0)
-		else:
-			y_pred.append(0)
+		# does the model believe that the real triple is the most probable triple? and does it think that it's good?
+		res = 0
+		if (idx == np.argmax(scores)) and (scores[idx] >= threshold): res = 1
 
-	y_true = [1] * len(test_original)
+		y_pred.append(res)
+
+	y_true = [1] * len_test
+
 	assert len(y_pred) == len(y_true)
-	assert sum(y_true) == len(real_testing_scores)
-	assert sum(y_pred) <= len(y_true)
-	assert sum(y_pred) >= 0
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
@@ -603,7 +703,7 @@ def relation_classification(model: Any,
 	else:
 		save_json({"relation classification": results_eval}, metrics_file)
 
-	logger.info(f"## ===== TRIPLE CLASSIFICATION COMPLETE ===== ##")
+	logger.info(f"## ===== RELATION CLASSIFICATION COMPLETE ===== ##")
 
 
 # ======================== BERT EVALUATION  ======================== #
