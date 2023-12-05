@@ -239,10 +239,15 @@ def training(model_dir: str,
 
 	logger.info(f"Best params: {pipeline_config}")
 
+	whitelist = None
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		whitelist = {'support', 'attack', 'equivalent'}
+
 	result = pipeline(  # dataset args
 		training=train_factory,
 		validation=val_factory,
 		testing=test_factory,
+		evaluation_relation_whitelist=whitelist,
 		# model args
 		model=model_name,
 		model_kwargs=pipeline_config['model_kwargs'],
@@ -319,11 +324,15 @@ def hyperparameter_optimization(model_name: str,
 							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor), )
 
 	# Hyper-training pipeline
+	whitelist = None
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		whitelist = {'support', 'attack', 'equivalent'}
 	hpo_results = hpo_pipeline(training=train_factory,
 							   validation=val_factory,
 							   testing=test_factory,
 							   model=model_name,
 							   model_kwargs=model_kwargs,
+							   evaluation_relation_whitelist=whitelist,
 							   # optimizer args
 							   optimizer="Adam",
 							   optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),

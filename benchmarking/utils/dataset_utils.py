@@ -280,13 +280,13 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 	logger.info(counts)
 
 	if config.SPECIAL_BENCHMARKING_FLAG and len(config.MODE_NODE) > 0:
-		# 	in this case drop from test and val the additional nodes
+		# 	in this case drop from test the additional nodes
 		original_triples = read_tsv(original_triplets_file).dropna().drop_duplicates().reset_index(drop=True)
-		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
 		# balance test
-		target = int((counts.get('support') + counts.get('attack') + counts.get('equivalent')) / 3 * 1.5)
+		target = int((counts.get('support') + counts.get('attack') + counts.get('equivalent')) / 2)
+		logger.info(f"Balancing dataset with target: {target}")
 
 		for mode in config.MODE_NODE:
 			if mode == 'speaker':
@@ -296,7 +296,7 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 			if mode == 'claim+premise':
 				train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
 
-		print(train['relation'].value_counts())
+		logger.info(train['relation'].value_counts())
 
 	train = train.dropna().drop_duplicates().reset_index(drop=True)
 	val = val.dropna().drop_duplicates().reset_index(drop=True)
