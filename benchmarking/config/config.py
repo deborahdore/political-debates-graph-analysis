@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 import torch
 
 # ======================== utils ======================== #
@@ -14,7 +15,7 @@ USE_PRETRAINED_EMBEDDINGS = False
 FORCE_TRAINING = True
 
 MODE_TEXT = 'text'
-MODE_NODE = []
+MODE_NODE = ['speaker', 'year']
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 

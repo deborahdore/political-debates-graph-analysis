@@ -3,13 +3,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
+from config import config
 from pykeen.models.predict import predict_triples_df
 from pykeen.triples import TriplesFactory
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
-from config import config
 
 def get_scores(model: Any, factory: TriplesFactory):
 	"""
@@ -49,11 +49,9 @@ def get_scores_tensor(model: Any,
 		mapped_triples.append([h_id, r_id, t_id])
 	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=config.DEVICE, requires_grad=False)
 
-	scores = predict_triples_df(model=model,
-								triples=mapped_triples_tensor,
-								triples_factory=None,
-								batch_size=None,
-								mode=None, )["score"].values
+	scores = \
+	predict_triples_df(model=model, triples=mapped_triples_tensor, triples_factory=None, batch_size=None, mode=None, )[
+		"score"].values
 
 	assert len(scores) == len(triples)
 
@@ -74,23 +72,17 @@ def get_center(scores: np.array):
 	return float(np.mean(a=sorted(scores)))  # float(np.median(a=sorted(scores)))
 
 
-def get_probabilities_bert(model: BertForSequenceClassification,
-						   dataloader: DataLoader,
-						   sort: bool = False):
+def get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
 	prob, index = __get_probabilities_bert(model, dataloader, sort)
 	return prob
 
 
-def get_probabilities_bert_index(model: BertForSequenceClassification,
-								 dataloader: DataLoader,
-								 sort: bool = False):
+def get_probabilities_bert_index(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
 	prob, index = __get_probabilities_bert(model, dataloader, sort)
 	return index
 
 
-def __get_probabilities_bert(model: BertForSequenceClassification,
-							 dataloader: DataLoader,
-							 sort: bool = False):
+def __get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
 	score_test = []
 	score_test_index = []
 	with torch.no_grad():

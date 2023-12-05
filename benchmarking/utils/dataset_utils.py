@@ -276,18 +276,27 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 	train, test = train_test_split(edges_correct, test_size=0.2, random_state=123, stratify=edges_correct['relation'])
 	train, val = train_test_split(train, test_size=0.15, random_state=123, stratify=train['relation'])
 
-	if config.SPECIAL_BENCHMARKING_FLAG:
+	counts = train['relation'].value_counts()
+	logger.info(counts)
+
+	if config.SPECIAL_BENCHMARKING_FLAG and len(config.MODE_NODE) > 0:
 		# 	in this case drop from test and val the additional nodes
 		original_triples = read_tsv(original_triplets_file).dropna().drop_duplicates().reset_index(drop=True)
-
-		to_add = pd.concat([test.merge(original_triples, how='left', indicator=True).loc[
-								lambda x: x['_merge'] == 'left_only'].drop('_merge', axis=1),
-							val.merge(original_triples, how='left', indicator=True).loc[
-								lambda x: x['_merge'] == 'left_only'].drop('_merge', axis=1)], axis=0)
 		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
-		train = pd.concat([train, to_add], axis=0).dropna().drop_duplicates().reset_index(drop=True)
+		# balance test
+		target = int((counts.get('support') + counts.get('attack') + counts.get('equivalent')) / 3 * 1.5)
+
+		for mode in config.MODE_NODE:
+			if mode == 'speaker':
+				train[train['relation'] == 'said by'] = train[train['relation'] == 'said by'].sample(n=target)
+			if mode == 'year':
+				train[train['relation'] == 'said in'] = train[train['relation'] == 'said in'].sample(n=target)
+			if mode == 'claim+premise':
+				train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
+
+		print(train['relation'].value_counts())
 
 	train = train.dropna().drop_duplicates().reset_index(drop=True)
 	val = val.dropna().drop_duplicates().reset_index(drop=True)

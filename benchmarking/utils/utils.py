@@ -3,9 +3,8 @@ import json
 
 import pandas as pd
 import torch
-from loguru import logger
-
 from config import config
+from loguru import logger
 
 
 def load(file: str):
