@@ -1,8 +1,8 @@
 import math
 
+import config
 import numpy
 import pandas as pd
-from config import config
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sentence_transformers import SentenceTransformer
@@ -142,7 +142,7 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 
 	assert head.size == relation.size == tail.size
 	new_df = pd.DataFrame({'head': head, 'relation': relation, 'tail': tail})
-	new_df = new_df.dropna().drop_duplicates().reset_index(drop=True)
+	new_df = new_df.dropna().reset_index(drop=True)
 	return new_df
 
 
@@ -163,7 +163,7 @@ def add_nodes(df_original: pd.DataFrame, mode: str, mode_text: str):
 	else:  # text+claim
 		df = __add_nodes_mode_claim(df_original, mode)
 
-	return df.dropna().drop_duplicates().reset_index(drop=True)
+	return df.dropna().reset_index(drop=True)
 
 
 def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
@@ -244,7 +244,7 @@ def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
 		role_df = pd.DataFrame({'head': role_head, 'relation': "role", 'tail': role_tail})
 
 		final_df = pd.concat([speaker_df, role_df], axis=0)
-		final_df = final_df.dropna().drop_duplicates().reset_index(drop=True)
+		final_df = final_df.dropna().reset_index(drop=True)
 		return final_df
 
 	elif mode == 'year':
@@ -271,36 +271,22 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 	:return: A dataframe with the following columns: head, relation, tail, noise (1 if it's a synthetic noisy triple,
 	0 if not)
 	"""
-	edges_correct = read_tsv(triplets_file).dropna().drop_duplicates().reset_index(drop=True)
+	edges_correct = read_tsv(triplets_file).dropna().reset_index(drop=True)
 
 	train, test = train_test_split(edges_correct, test_size=0.2, random_state=123, stratify=edges_correct['relation'])
 	train, val = train_test_split(train, test_size=0.15, random_state=123, stratify=train['relation'])
 
-	counts = train['relation'].value_counts()
-	logger.info(counts)
-
-	if config.SPECIAL_BENCHMARKING_FLAG and len(config.MODE_NODE) > 0:
+	if config.SPECIAL_BENCHMARKING_FLAG:
 		# 	in this case drop from test the additional nodes
-		original_triples = read_tsv(original_triplets_file).dropna().drop_duplicates().reset_index(drop=True)
+		original_triples = read_tsv(original_triplets_file).dropna().reset_index(drop=True)
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
+		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
-		# balance test
-		target = int((counts.get('support') + counts.get('attack') + counts.get('equivalent')) / 2)
-		logger.info(f"Balancing dataset with target: {target}")
+		train = training_strategy(train)
 
-		for mode in config.MODE_NODE:
-			if mode == 'speaker':
-				train[train['relation'] == 'said by'] = train[train['relation'] == 'said by'].sample(n=target)
-			if mode == 'year':
-				train[train['relation'] == 'said in'] = train[train['relation'] == 'said in'].sample(n=target)
-			if mode == 'claim+premise':
-				train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
-
-		logger.info(train['relation'].value_counts())
-
-	train = train.dropna().drop_duplicates().reset_index(drop=True)
-	val = val.dropna().drop_duplicates().reset_index(drop=True)
-	test = test.dropna().drop_duplicates().reset_index(drop=True)
+	train = train.dropna().reset_index(drop=True)
+	val = val.dropna().reset_index(drop=True)
+	test = test.dropna().reset_index(drop=True)
 
 	for noise_ratio in valid_noise:
 		train = __generate_noise(train, noise_ratio=noise_ratio)
@@ -310,6 +296,35 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 		save_tsv(df=train, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="train"))
 		save_tsv(df=val, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="val"))
 		save_tsv(df=test, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="test"))
+
+
+def training_strategy(train):
+	# downsample
+		# counts = train['relation'].value_counts()
+		# target = int((counts.get('support') + counts.get('attack') + counts.get('equivalent')) / 3)
+		# logger.info(f"Balancing dataset with target: {target}")
+		# for mode in config.MODE_NODE:
+		# 	if mode == 'speaker':
+		# 		train[train['relation'] == 'said by'] = train[train['relation'] == 'said by'].sample(n=target)
+		# 	if mode == 'year':
+		# 		train[train['relation'] == 'said in'] = train[train['relation'] == 'said in'].sample(n=target)
+		# 	if mode == 'claim+premise':
+		# 		train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
+
+		# upsample  # target = -1  # for mode in config.MODE_NODE:  # 	if mode == 'speaker':  # 		if target < len(
+		# train[train['relation'] == 'said by']):  # 			target = len(train[train['relation'] == 'said by'])  # 	if
+		# mode == 'year':  # 		if target < len(train[train['relation'] == 'said in']):  # 			target = len(
+		# train[train['relation'] == 'said in'])  # 	if mode == 'claim+premise':  # 		if target < len(train[train[
+		# 'relation'] == 'is a']):  # 			target = len(train[train['relation'] == 'is a'])
+
+	target = len(train[train['relation'] == 'support']) * 3
+	for rel in ['support', 'attack', 'equivalent']:
+		count = target - len(train[train['relation'] == rel])
+		samples = train[train['relation'] == rel].sample(n=count, replace=True)
+		train = pd.concat([train, samples], axis=0)
+
+	logger.info("UPSAMPLING TRAIN STRATEGY")
+	return train
 
 
 def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
@@ -341,7 +356,7 @@ def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
 	rel = relations.sample(n=noise_to_add, replace=True).sample(frac=1).reset_index(drop=True)
 
 	edges_noisy = pd.DataFrame({'head': heads, 'relation': rel, 'tail': tails})
-	edges_noisy = edges_noisy.dropna().drop_duplicates().reset_index(drop=True)
+	edges_noisy = edges_noisy.dropna().reset_index(drop=True)
 
 	intersection = len(pd.merge(edges_correct, edges_noisy, how='inner'))
 	while not intersection == 0:
@@ -355,15 +370,14 @@ def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
 
 		# concat
 		edges_noisy = pd.concat([pd.DataFrame({'head': heads, 'relation': rel, 'tail': tails}),
-								 edges_noisy]).dropna().drop_duplicates().reset_index(drop=True)
+								 edges_noisy]).dropna().reset_index(drop=True)
 		# recompute intersection
 		intersection = len(pd.merge(edges_correct, edges_noisy, how='inner'))
 
 	edges_correct['noise'] = 0
 	edges_noisy['noise'] = 1  # identify noisy triples
 
-	final_df = pd.concat([edges_correct, edges_noisy], axis=0).sample(frac=1)
-	final_df = final_df.dropna().drop_duplicates().reset_index(drop=True)
+	final_df = pd.concat([edges_correct, edges_noisy], axis=0).sample(frac=1).dropna().reset_index(drop=True)
 
 	return final_df
 

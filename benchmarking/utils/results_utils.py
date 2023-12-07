@@ -1,7 +1,7 @@
 import os.path
 
 import pandas as pd
-from config.config import metrics_file, results_dir, valid_models, valid_noise_ratio
+from config import metrics_file, results_dir, valid_models, valid_noise_ratio
 from utils.utils import read_json, save_json
 
 

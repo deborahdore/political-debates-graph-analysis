@@ -15,7 +15,7 @@ from sklearn import metrics
 from torch.utils.data import DataLoader, SequentialSampler
 from transformers import BertForSequenceClassification
 
-from config import config
+import config
 from utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
 from utils.evaluation_utils import adjust_dataset_for_bert, \
 	get_center, \
@@ -297,8 +297,8 @@ def relation_prediction(model: Any,
 		'hits_at_1'   : hits_at_1,
 		'hits_at_2'   : hits_at_2,
 		'mr'          : mr,
-		'adjusted_mr' : adjusted_mr,
 		'mrr'         : mrr,
+		'adjusted_mr' : adjusted_mr,
 		'adjusted_mrr': adjusted_mrr}
 
 	logger.info(results_eval)
@@ -601,7 +601,7 @@ def relation_classification(model: Any,
 	real_testing_scores = get_scores(model=model, factory=test_factory)
 	real_testing_scores_center = get_center(scores=real_testing_scores)
 
-	logger.info("Triples Classification statistics:".upper())
+	logger.info("Relation Classification statistics:".upper())
 	logger.info(f"training_scores_center: {training_scores_center}")
 	logger.info(f"fake_validation_scores_center: {fake_validation_scores_center}")
 	logger.info(f"real_validation_scores_center: {real_validation_scores_center}")
@@ -617,7 +617,9 @@ def relation_classification(model: Any,
 		relations = pd.concat([train_original, val_original, test_original], axis=0)[
 			'relation'].drop_duplicates().values.tolist()
 
-	y_pred = []
+	y_true = []
+	triples = []
+
 	test_original = test_original.values.tolist()
 	len_test = len(test_original)
 
@@ -625,26 +627,20 @@ def relation_classification(model: Any,
 		if rel not in relations:
 			len_test = len_test - 1
 			continue
-		# take all relations
-		triples = []
-		idx = -1
+
 		for i, elem in enumerate(relations):
 			triples.append([head, elem, tail])
-			if elem == rel: idx = i
+			if elem == rel:
+				y_true.append(1)
+			else:
+				y_true.append(0)
 
-		assert idx != -1
-		scores = get_scores_tensor(model,
-								   triples=triples,
-								   entities_label_id_map=entity_to_id,
-								   relation_label_id_map=relation_to_id)
+	scores = get_scores_tensor(model,
+							   triples=triples,
+							   entities_label_id_map=entity_to_id,
+							   relation_label_id_map=relation_to_id)
 
-		# does the model believe that the real triple is the most probable triple? and does it think that it's good?
-		res = 0
-		if (idx == np.argmax(scores)) and (scores[idx] >= threshold): res = 1
-
-		y_pred.append(res)
-
-	y_true = [1] * len_test
+	y_pred = [1 if y >= threshold else 0 for y in scores]
 
 	assert len(y_pred) == len(y_true)
 

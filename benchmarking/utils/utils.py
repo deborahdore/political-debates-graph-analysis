@@ -3,7 +3,7 @@ import json
 
 import pandas as pd
 import torch
-from config import config
+import config
 from loguru import logger
 
 

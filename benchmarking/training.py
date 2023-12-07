@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from tqdm import tqdm
 from transformers import BertForSequenceClassification, get_linear_schedule_with_warmup
 
-from config import config
+import config
 from utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
 from utils.evaluation_utils import adjust_dataset_for_bert, tokenize_and_generate_dataset
 from utils.utils import read_json
@@ -199,6 +199,9 @@ def training(model_dir: str,
 												   noise=ratio,
 												   drop_col_noise=False,
 												   get_noisy_test=False)
+	logger.info("RELATION COUNTS: ")
+	logger.info(train['relation'].value_counts())
+
 	# creates triples factory
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
 																		  val,
@@ -239,15 +242,12 @@ def training(model_dir: str,
 
 	logger.info(f"Best params: {pipeline_config}")
 
-	whitelist = None
-	if config.SPECIAL_BENCHMARKING_FLAG:
-		whitelist = {'support', 'attack', 'equivalent'}
-
 	result = pipeline(  # dataset args
 		training=train_factory,
 		validation=val_factory,
 		testing=test_factory,
-		evaluation_relation_whitelist=whitelist,
+		result_tracker='wandb',
+		result_tracker_kwargs=dict(project='kge_experiments', experiment=f'only_text_upsampling_{model_name}', ),
 		# model args
 		model=model_name,
 		model_kwargs=pipeline_config['model_kwargs'],
@@ -277,7 +277,7 @@ def training(model_dir: str,
 		filter_validation_when_testing=True,
 		use_tqdm=True,
 		device=config.DEVICE,
-		random_seed=42)
+		random_seed=123)
 
 	# save trained model
 	result.save_model(path=model_file)
@@ -310,33 +310,35 @@ def hyperparameter_optimization(model_name: str,
 	# get train, val, test
 	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, get_noisy_test=False)
 
+	logger.info("RELATION COUNTS: ")
+	logger.info(train['relation'].value_counts())
+
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
 																		  val,
 																		  test,
 																		  triplets_file_utils,
 																		  create_inverse_triples=False)
 
-	model_kwargs = None
 	if config.USE_PRETRAINED_EMBEDDINGS:
 		assert pretrained_embedding_file is not None
 		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
 		model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
 							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor), )
+		model_kwargs_ranges = None
+	else:
+		model_kwargs = None
+		model_kwargs_ranges = dict(embedding_dim=dict(type=int, low=5, high=150))
 
-	# Hyper-training pipeline
-	whitelist = None
-	if config.SPECIAL_BENCHMARKING_FLAG:
-		whitelist = {'support', 'attack', 'equivalent'}
 	hpo_results = hpo_pipeline(training=train_factory,
 							   validation=val_factory,
 							   testing=test_factory,
 							   model=model_name,
 							   model_kwargs=model_kwargs,
-							   evaluation_relation_whitelist=whitelist,
+							   model_kwargs_ranges=model_kwargs_ranges,
 							   # optimizer args
 							   optimizer="Adam",
-							   optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),
-							   # # training loop args
+							   #optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01, scale="log"), ),
+							   # training loop args
 							   training_loop="slcwa",
 							   negative_sampler="basic",
 							   negative_sampler_kwargs={"filtered": True, "filterer": "python-set", },
@@ -366,12 +368,13 @@ def hyperparameter_optimization(model_name: str,
 												  n_ei_candidates=32, ),
 							   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 							   direction="maximize",
-							   n_trials=30)
+							   n_trials=config.NUM_TRIALS)
 
 	logger.info(f"Best hyper-parameters: {hpo_results.study.best_params}")
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())
 
 	logger.info(f"saving {model_name} to {model_dir}")
 	hpo_results.objective.evaluation_kwargs['additional_filter_triples'] = None
+	hpo_results.objective.model_kwargs = None
 	hpo_results.save_to_directory(model_dir)
 	gc.collect()

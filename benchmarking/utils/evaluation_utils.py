@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import torch
-from config import config
+import config
 from pykeen.models.predict import predict_triples_df
 from pykeen.triples import TriplesFactory
 from torch.nn import functional as F

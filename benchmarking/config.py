@@ -13,9 +13,10 @@ VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 SPECIAL_BENCHMARKING_FLAG = True
 USE_PRETRAINED_EMBEDDINGS = False
 FORCE_TRAINING = True
+NUM_TRIALS = 20
 
 MODE_TEXT = 'text'
-MODE_NODE = ['speaker', 'year']
+MODE_NODE = []
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -25,7 +26,6 @@ base_dir = os.path.abspath(".")
 dataset_dir = os.path.join(base_dir, "dataset")
 models_dir = os.path.join(base_dir, "models")
 model_dir = os.path.join(models_dir, "{model}")
-config_dir = os.path.join(base_dir, "config")
 results_dir = os.path.join(base_dir, "evaluation_results")
 noisy_dir = os.path.join(dataset_dir, "{noise}")
 excel_dir = os.path.join(results_dir, "excel")
@@ -49,7 +49,6 @@ assert MODE_TEXT is not None
 # ================== Create Directories ================== #
 
 Path(models_dir).mkdir(parents=True, exist_ok=True)
-Path(config_dir).mkdir(parents=True, exist_ok=True)
 Path(results_dir).mkdir(parents=True, exist_ok=True)
 Path(excel_dir).mkdir(parents=True, exist_ok=True)
 Path(os.path.join(results_dir, "all")).mkdir(parents=True, exist_ok=True)
