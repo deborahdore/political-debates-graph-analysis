@@ -282,7 +282,7 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
-		train = training_strategy(train)
+		# train = training_strategy(train)
 
 	train = train.dropna().reset_index(drop=True)
 	val = val.dropna().reset_index(drop=True)
@@ -300,30 +300,14 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 
 def training_strategy(train):
 	# downsample
-		# counts = train['relation'].value_counts()
-		# target = int((counts.get('support') + counts.get('attack') + counts.get('equivalent')) / 3)
-		# logger.info(f"Balancing dataset with target: {target}")
-		# for mode in config.MODE_NODE:
-		# 	if mode == 'speaker':
-		# 		train[train['relation'] == 'said by'] = train[train['relation'] == 'said by'].sample(n=target)
-		# 	if mode == 'year':
-		# 		train[train['relation'] == 'said in'] = train[train['relation'] == 'said in'].sample(n=target)
-		# 	if mode == 'claim+premise':
-		# 		train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
-
-		# upsample  # target = -1  # for mode in config.MODE_NODE:  # 	if mode == 'speaker':  # 		if target < len(
-		# train[train['relation'] == 'said by']):  # 			target = len(train[train['relation'] == 'said by'])  # 	if
-		# mode == 'year':  # 		if target < len(train[train['relation'] == 'said in']):  # 			target = len(
-		# train[train['relation'] == 'said in'])  # 	if mode == 'claim+premise':  # 		if target < len(train[train[
-		# 'relation'] == 'is a']):  # 			target = len(train[train['relation'] == 'is a'])
-
-	target = len(train[train['relation'] == 'support']) * 3
-	for rel in ['support', 'attack', 'equivalent']:
-		count = target - len(train[train['relation'] == rel])
-		samples = train[train['relation'] == rel].sample(n=count, replace=True)
-		train = pd.concat([train, samples], axis=0)
-
-	logger.info("UPSAMPLING TRAIN STRATEGY")
+	target = len(train[train['relation'] == 'attack'])
+	for mode in config.MODE_NODE:
+		if mode == 'speaker':
+			train[train['relation'] == 'said by'] = train[train['relation'] == 'said by'].sample(n=target)
+		if mode == 'year':
+			train[train['relation'] == 'said in'] = train[train['relation'] == 'said in'].sample(n=target)
+		if mode == 'claim+premise':
+			train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
 	return train
 
 
