@@ -1,9 +1,9 @@
 import csv
 import json
 
+import config
 import pandas as pd
 import torch
-import config
 from loguru import logger
 
 

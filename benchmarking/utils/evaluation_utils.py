@@ -1,9 +1,9 @@
 from typing import Any
 
+import config
 import numpy as np
 import pandas as pd
 import torch
-import config
 from pykeen.models.predict import predict_triples_df
 from pykeen.triples import TriplesFactory
 from torch.nn import functional as F
@@ -49,11 +49,9 @@ def get_scores_tensor(model: Any,
 		mapped_triples.append([h_id, r_id, t_id])
 	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=config.DEVICE, requires_grad=False)
 
-	scores = predict_triples_df(model=model,
-								triples=mapped_triples_tensor,
-								triples_factory=None,
-								batch_size=None,
-								mode=None, )["score"].values
+	scores = \
+	predict_triples_df(model=model, triples=mapped_triples_tensor, triples_factory=None, batch_size=None, mode=None, )[
+		"score"].values
 
 	assert len(scores) == len(triples)
 

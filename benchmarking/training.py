@@ -338,8 +338,6 @@ def hyperparameter_optimization(model_name: str,
 							   model_kwargs_ranges=model_kwargs_ranges,
 							   # optimizer args
 							   optimizer="Adam",
-							   # optimizer_kwargs_ranges=dict(lr=dict(type=float, low=0.0001, high=0.01,
-							   # scale="log"), ),
 							   # training loop args
 							   training_loop="slcwa",
 							   negative_sampler="basic",
