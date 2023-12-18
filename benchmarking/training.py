@@ -263,7 +263,9 @@ def training(model_dir: str,
 		# training Loop args
 		training_loop='slcwa',
 		negative_sampler='bernoulli',
-		negative_sampler_kwargs={"filtered": True, "filterer": "python-set", "corruption_scheme": ('h', 'r', 't')},
+		negative_sampler_kwargs=dict(filterer='python-set',
+									 filtered=True),
+									 # corruption_scheme=('head', 'relation', 'tail')),
 		# training args
 		training_kwargs=pipeline_config['training_kwargs'],
 		stopper=None,
@@ -341,10 +343,9 @@ def hyperparameter_optimization(model_name: str,
 							   # training loop args
 							   training_loop="slcwa",
 							   negative_sampler="bernoulli",
-							   negative_sampler_kwargs={
-								   "filtered"         : True,
-								   "filterer"         : "python-set",
-								   "corruption_scheme": ('h', 'r', 't')},
+							   negative_sampler_kwargs=dict(filterer='python-set',
+															filtered=True),
+															# corruption_scheme=('head', 'relation', 'tail')),
 							   # training args
 							   training_kwargs={"use_tqdm_batch": False, },
 							   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),
