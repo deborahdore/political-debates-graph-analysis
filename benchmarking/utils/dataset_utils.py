@@ -299,7 +299,7 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 
 
 def training_strategy(train):
-	# downsample
+	logger.info("Down-sampling dataset")
 	target = len(train[train['relation'] == 'attack'])
 	for mode in config.MODE_NODE:
 		if mode == 'speaker':
