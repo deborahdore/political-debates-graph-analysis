@@ -8,7 +8,7 @@ from loguru import logger
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pykeen.hpo import hpo_pipeline
-from pykeen.losses import FocalLoss
+from pykeen.losses import SoftMarginRankingLoss
 from pykeen.nn.init import PretrainedInitializer
 from pykeen.pipeline import pipeline
 from sklearn.metrics import classification_report
@@ -263,7 +263,7 @@ def training(model_dir: str,
 		clear_optimizer=True,
 		# training Loop args
 		training_loop='slcwa',
-		loss=FocalLoss(),
+		loss=SoftMarginRankingLoss(),
 		negative_sampler="basic",
 		negative_sampler_kwargs=dict(filterer='python-set',
 									 filtered=True,
@@ -343,7 +343,7 @@ def hyperparameter_optimization(model_name: str,
 							   optimizer="Adam",
 							   # training loop args
 							   training_loop="slcwa",
-							   loss=FocalLoss(),
+							   loss=SoftMarginRankingLoss(),
 							   negative_sampler="basic",
 							   negative_sampler_kwargs=dict(filterer='python-set',
 															filtered=True,
