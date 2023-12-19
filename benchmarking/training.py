@@ -8,6 +8,7 @@ from loguru import logger
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pykeen.hpo import hpo_pipeline
+from pykeen.losses import FocalLoss
 from pykeen.nn.init import PretrainedInitializer
 from pykeen.pipeline import pipeline
 from sklearn.metrics import classification_report
@@ -262,10 +263,11 @@ def training(model_dir: str,
 		clear_optimizer=True,
 		# training Loop args
 		training_loop='slcwa',
-		negative_sampler='bernoulli',
+		loss=FocalLoss(),
+		negative_sampler="basic",
 		negative_sampler_kwargs=dict(filterer='python-set',
-									 filtered=True),
-									 # corruption_scheme=('head', 'relation', 'tail')),
+									 filtered=True,
+									 corruption_scheme=('head', 'relation', 'tail')),
 		# training args
 		training_kwargs=pipeline_config['training_kwargs'],
 		stopper=None,
@@ -331,7 +333,6 @@ def hyperparameter_optimization(model_name: str,
 	else:
 		model_kwargs = None
 		model_kwargs_ranges = dict(embedding_dim=dict(type=int, low=5, high=150))
-
 	hpo_results = hpo_pipeline(training=train_factory,
 							   validation=val_factory,
 							   testing=test_factory,
@@ -342,10 +343,11 @@ def hyperparameter_optimization(model_name: str,
 							   optimizer="Adam",
 							   # training loop args
 							   training_loop="slcwa",
-							   negative_sampler="bernoulli",
+							   loss=FocalLoss(),
+							   negative_sampler="basic",
 							   negative_sampler_kwargs=dict(filterer='python-set',
-															filtered=True),
-															# corruption_scheme=('head', 'relation', 'tail')),
+															filtered=True,
+															corruption_scheme=('head', 'relation', 'tail')),
 							   # training args
 							   training_kwargs={"use_tqdm_batch": False, },
 							   training_kwargs_ranges=dict(num_epochs=dict(type=int, low=30, high=200, q=5),

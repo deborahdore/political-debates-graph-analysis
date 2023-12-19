@@ -299,15 +299,26 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 
 
 def training_strategy(train):
-	logger.info("Down-sampling dataset")
+	logger.info("down-sampling dataset")
 	target = len(train[train['relation'] == 'attack'])
 	for mode in config.MODE_NODE:
 		if mode == 'speaker':
-			train[train['relation'] == 'said by'] = train[train['relation'] == 'said by'].sample(n=target)
-		if mode == 'year':
-			train[train['relation'] == 'said in'] = train[train['relation'] == 'said in'].sample(n=target)
-		if mode == 'claim+premise':
-			train[train['relation'] == 'is a'] = train[train['relation'] == 'is a'].sample(n=target)
+			samples = train[train['relation'] == 'said by'].sample(n=target)
+			train.drop(train[train['relation'] == 'said by'].index, inplace=True)
+			train = pd.concat([train, samples], axis=0)
+			continue
+		elif mode == 'year':
+			samples = train[train['relation'] == 'said in'].sample(n=target)
+			train.drop(train[train['relation'] == 'said in'].index, inplace=True)
+			train = pd.concat([train, samples], axis=0)
+			continue
+		elif mode == 'claim+premise':
+			samples = train[train['relation'] == 'is a'].sample(n=target)
+			train.drop(train[train['relation'] == 'is a'].index, inplace=True)
+			train = pd.concat([train, samples], axis=0)
+			continue
+
+	train.dropna().drop_duplicates().reset_index(drop=True)
 	return train
 
 
