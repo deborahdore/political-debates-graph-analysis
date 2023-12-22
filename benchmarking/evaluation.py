@@ -481,8 +481,12 @@ def triple_classification(model: Any,
 	logger.info(f"accuracy: {accuracy}")
 	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
 	logger.info(f"f1_macro: {f1_macro}")
+	f1_micro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="micro"), n_round)
+	logger.info(f"f1_micro: {f1_micro}")
 	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
 	logger.info(f"f1_pos: {f1_pos}")
+	f1_weighted = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="weighted"), n_round)
+	logger.info(f"f1_weighted: {f1_weighted}")
 	f1_neg = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=0), n_round)
 	logger.info(f"f1_neg: {f1_neg}")
 	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
@@ -514,6 +518,8 @@ def triple_classification(model: Any,
 	results_eval = {
 		"accuracy"     : accuracy,
 		"f1_macro"     : f1_macro,
+		"f1_micro"     : f1_micro,
+		"f1_weighted"  : f1_weighted,
 		"f1_pos"       : f1_pos,
 		"f1_neg"       : f1_neg,
 		"precision"    : precision,
@@ -649,8 +655,12 @@ def relation_classification(model: Any,
 	logger.info(f"accuracy: {accuracy}")
 	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
 	logger.info(f"f1_macro: {f1_macro}")
+	f1_micro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="micro"), n_round)
+	logger.info(f"f1_micro: {f1_micro}")
 	f1_pos = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=1), n_round)
 	logger.info(f"f1_pos: {f1_pos}")
+	f1_weighted = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="weighted"), n_round)
+	logger.info(f"f1_weighted: {f1_weighted}")
 	f1_neg = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="binary", pos_label=0), n_round)
 	logger.info(f"f1_neg: {f1_neg}")
 	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
@@ -682,6 +692,8 @@ def relation_classification(model: Any,
 	results_eval = {
 		"accuracy"     : accuracy,
 		"f1_macro"     : f1_macro,
+		"f1_micro"     : f1_micro,
+		"f1_weighted"  : f1_weighted,
 		"f1_pos"       : f1_pos,
 		"f1_neg"       : f1_neg,
 		"precision"    : precision,

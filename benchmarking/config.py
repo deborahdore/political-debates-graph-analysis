@@ -10,15 +10,15 @@ VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 
 # ===================== Settings ===================== #
 
-SPECIAL_BENCHMARKING_FLAG = True
-USE_PRETRAINED_EMBEDDINGS = True
+SPECIAL_BENCHMARKING_FLAG = False
+USE_PRETRAINED_EMBEDDINGS = False
 FORCE_TRAINING = True
 NUM_TRIALS = 30
 
-WANDB_PROJECT_NAME = "kge_trial_1"
+WANDB_PROJECT_NAME = "KGE Basic Benchmarking"
 
 MODE_TEXT = 'text'
-MODE_NODE = ['speaker', 'year']
+MODE_NODE = []
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -41,7 +41,7 @@ triplets_file_utils = os.path.join(dataset_dir, "{file_name}.json")
 pretrained_embedding_file = os.path.join(dataset_dir, "pretrained_embedding_file.npy")
 noisy_triples_file = os.path.join(noisy_dir, "triplets_file_{use}.tsv")
 original_noisy_triples_file = os.path.join(noisy_dir, "original_triplets_file_{use}.tsv")
-metrics_file = os.path.join(results_dir, "all/metrics_{model}_{ratio}.json")
+metrics_file = os.path.join(results_dir, "all/{model}_{ratio}_metrics.json")
 
 # ================== Asserts ================== #
 

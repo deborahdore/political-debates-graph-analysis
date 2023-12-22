@@ -277,12 +277,12 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 	train, val = train_test_split(train, test_size=0.15, random_state=123, stratify=train['relation'])
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		# 	in this case drop from test the additional nodes
+		# 	in this case drop from test and val the additional nodes
 		original_triples = read_tsv(original_triplets_file).dropna().reset_index(drop=True)
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
-		train = training_strategy(train)
+	# train = training_strategy(train)
 
 	train = train.dropna().reset_index(drop=True)
 	val = val.dropna().reset_index(drop=True)
