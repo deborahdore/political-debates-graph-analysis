@@ -262,9 +262,8 @@ def training(model_dir: str,
 		clear_optimizer=True,
 		# training Loop args
 		training_loop='slcwa',
-		negative_sampler="basic",
+		negative_sampler="bernoulli",
 		negative_sampler_kwargs=dict(filterer='python-set', filtered=True),
-		# corruption_scheme=('head', 'relation', 'tail')),
 		# training args
 		training_kwargs=pipeline_config['training_kwargs'],
 		stopper=None,
@@ -340,7 +339,7 @@ def hyperparameter_optimization(model_name: str,
 							   optimizer="Adam",
 							   # training loop args
 							   training_loop="slcwa",
-							   negative_sampler="basic",
+							   negative_sampler="bernoulli",
 							   negative_sampler_kwargs=dict(filterer='python-set', filtered=True),
 							   # corruption_scheme=('head', 'relation', 'tail')),
 							   # training args

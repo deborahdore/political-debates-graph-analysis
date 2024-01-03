@@ -10,15 +10,15 @@ VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 
 # ===================== Settings ===================== #
 
-SPECIAL_BENCHMARKING_FLAG = False
-USE_PRETRAINED_EMBEDDINGS = False
+SPECIAL_BENCHMARKING_FLAG = True
+USE_PRETRAINED_EMBEDDINGS = True
 FORCE_TRAINING = True
 NUM_TRIALS = 30
 
-WANDB_PROJECT_NAME = "KGE Basic Benchmarking"
+WANDB_PROJECT_NAME = "KGE Experiments"
 
 MODE_TEXT = 'text'
-MODE_NODE = []
+MODE_NODE = ['speaker', 'year']
 
 DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 

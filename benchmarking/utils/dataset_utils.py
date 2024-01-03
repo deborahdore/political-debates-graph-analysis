@@ -282,7 +282,7 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 		test = test.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 		val = val.merge(original_triples, on=['head', 'relation', 'tail'], how='inner')
 
-	# train = training_strategy(train)
+		train = training_strategy(train)
 
 	train = train.dropna().reset_index(drop=True)
 	val = val.dropna().reset_index(drop=True)
@@ -318,7 +318,11 @@ def training_strategy(train):
 			train = pd.concat([train, samples], axis=0)
 			continue
 
+	samples = train[train['relation'] == 'support'].sample(n=target)
+	train.drop(train[train['relation'] == 'support'].index, inplace=True)
+	train = pd.concat([train, samples], axis=0)
 	train.dropna().drop_duplicates().reset_index(drop=True)
+
 	return train
 
 
