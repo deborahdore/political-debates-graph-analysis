@@ -1,4 +1,4 @@
-import ast
+import argparse
 import os.path
 import sys
 
@@ -30,20 +30,27 @@ def get_kwargs():
 	- noise argument containing the noise ratio to optimize/train the model on
 
 	"""
-	assert "--generate" in sys.argv
-	assert "--optimize" in sys.argv
-	assert "--model" in sys.argv
-	assert "--noise" in sys.argv
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--generate",
+						default=False,
+						action='store_true',
+						help="Whether or not to generate a new dataset")
 
-	gen_arg = ast.literal_eval(sys.argv[sys.argv.index("--generate") + 1])
-	opt_arg = ast.literal_eval(sys.argv[sys.argv.index("--optimize") + 1])
-	noise_arg = int(sys.argv[sys.argv.index("--noise") + 1])
-	model_arg = sys.argv[sys.argv.index("--model") + 1]
+	parser.add_argument("--optimize",
+						default=False,
+						action='store_true',
+						help="Whether or not to perform hyper-parameter optimization on the model")
 
-	assert noise_arg in config.VALID_NOISE_RATIO
-	assert model_arg in config.VALID_MODELS
+	parser.add_argument("--model", type=str, required=True, help="Model (name) to use")
 
-	return gen_arg, opt_arg, noise_arg, model_arg
+	parser.add_argument("--noise", type=int, required=True, help="Noise level to train the model on")
+
+	args = parser.parse_args()
+
+	assert args.noise in config.VALID_NOISE_RATIO
+	assert args.model in config.VALID_MODELS
+
+	return args.generate, args.optimize, args.noise, args.model
 
 
 def bert_basic(model_name: str, noise: int):
