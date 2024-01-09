@@ -273,6 +273,12 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 	"""
 	edges_correct = read_tsv(triplets_file).dropna().reset_index(drop=True)
 
+	# original node distribution
+	total_nodes = len(edges_correct)
+	for rel in edges_correct['relation'].value_counts().keys():
+		percentage = (edges_correct['relation'].value_counts()[rel] / total_nodes) * 100
+		logger.info(f"Percentage of {rel}: {percentage}%")
+
 	train, test = train_test_split(edges_correct, test_size=0.2, random_state=123, stratify=edges_correct['relation'])
 	train, val = train_test_split(train, test_size=0.15, random_state=123, stratify=train['relation'])
 

@@ -212,7 +212,8 @@ def relation_prediction(model: Any,
 						noisy_triples_file: str,
 						triplets_file_utils: str,
 						metrics_file: str,
-						noise_ratio: float):
+						noise_ratio: float,
+						relation_to_evaluate: str = None):
 	"""
 	The relation_prediction function is used to evaluate the performance of a model on relation prediction.
 
@@ -241,6 +242,11 @@ def relation_prediction(model: Any,
 
 	test_size = len(test_original)
 	ranks = []
+
+	if relation_to_evaluate is not None:
+		logger.info(f"Evaluating only {relation_to_evaluate} relations")
+		test_original = test_original[test_original['relation'] == relation_to_evaluate]
+
 	for h, r, t in test_original.values.tolist():
 
 		# create fake relation triple
@@ -304,12 +310,17 @@ def relation_prediction(model: Any,
 	logger.info(results_eval)
 
 	# Check if the JSON file exists
+	if relation_to_evaluate is not None:
+		title = f"relation prediction {relation_to_evaluate}"
+	else:
+		title = "relation prediction"
+
 	if os.path.isfile(metrics_file):
 		existing_results = read_json(metrics_file)
-		existing_results.update({"relation prediction": results_eval})
+		existing_results.update({title: results_eval})
 		save_json(existing_results, metrics_file)
 	else:
-		save_json({"relation prediction": results_eval}, metrics_file)
+		save_json({title: results_eval}, metrics_file)
 
 	logger.info(f"## ===== RELATION PREDICTION COMPLETE ===== ##")
 

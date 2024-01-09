@@ -124,12 +124,15 @@ def kge_basic(model_name: str, noise: int):
 				  metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
 				  noise_ratio=noise)
 
-	relation_prediction(model=model,
-						model_name=model_name,
-						noisy_triples_file=config.noisy_triples_file,
-						triplets_file_utils=config.triplets_file_utils,
-						metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-						noise_ratio=noise)
+	for relation_to_evaluate in [None, 'support', 'attack', 'equivalent']:
+		relation_prediction(model=model,
+							model_name=model_name,
+							noisy_triples_file=config.noisy_triples_file,
+							triplets_file_utils=config.triplets_file_utils,
+							metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
+							noise_ratio=noise,
+							relation_to_evaluate=relation_to_evaluate)
+
 
 	triple_classification(model=model,
 						  model_name=model_name,
