@@ -76,8 +76,6 @@ def bert_basic(ratio: int):
 					   noise_ratio=ratio)
 
 	triple_classification_bert(model=model,
-							   model_dir=config.model_dir.format(model="bert"),
-							   model_name='bert',
 							   noisy_triples_file=config.noisy_triples_file,
 							   metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
 							   noise_ratio=ratio)
