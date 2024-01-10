@@ -41,8 +41,6 @@ class ExtendedBertTokenizer(BertTokenizer):
 		:param processor: Processor
 		:return:
 		"""
-		import ipdb;
-		ipdb.set_trace()
 		assert input_ids.shape == label_ids.shape
 
 		sentences = []
@@ -182,8 +180,6 @@ class ExtendedRobertaTokenizer(RobertaTokenizer):
 			y_pred = []
 
 			for j, token_id in enumerate(input_ids[i].cpu().numpy()):  # iterate over tokens of one sequence
-				import ipdb;
-				ipdb.set_trace()
 				token = self._convert_id_to_token(token_id)
 
 				if processor is not None:

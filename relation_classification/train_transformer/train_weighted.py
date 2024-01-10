@@ -54,7 +54,7 @@ ALL_MODELS = sum((tuple(conf.pretrained_config_archive_map.keys()) for conf in
 
 MODEL_CLASSES = {
 	"bert"           : (BertConfig, BertForSequenceClassification, BertTokenizer),
-	"bertweighted"   : (BertConfig, BertForSequenceClassificationWeighted, BertTokenizer),
+	"bertweighted"   : (BertConfig, BertForSequenceClassificationWeighted, ExtendedBertTokenizer),
 	"roberta"        : (RobertaConfig, RobertaForSequenceClassification, RobertaTokenizer),
 	"robertaweighted": (RobertaConfig, RobertaForSequenceClassificationWeighted, ExtendedRobertaTokenizer),
 	"bert-seqtag"    : (BertConfig, BertForSequenceTagging, ExtendedBertTokenizer)
