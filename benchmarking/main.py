@@ -20,7 +20,7 @@ def get_kwargs():
 	Parse the command line arguments
 
 	:return:
-	- generate argument containing True/False. If true, the datasets with noise will be generated
+	- Generate argument containing True/False. If true, the datasets with noise will be generated
 	- optimize argument containing True/False. If true, will perform hyperparameter optimization
 	- model argument containing the model name to be optimized/trained
 	- noise argument containing the noise ratio to optimize/train the model on

@@ -1,0 +1,34 @@
+{
+  "relation prediction"           : {
+    "hits_at_1"   : 0.4205786549,
+    "hits_at_2"   : 0.6407357731,
+    "mr"          : 1.9386855719,
+    "mrr"         : 0.6504119563,
+    "adjusted_mr" : 0.0007427914,
+    "adjusted_mrr": 0.6497988276
+  },
+  "relation prediction support"   : {
+    "hits_at_1"   : 0.4516203704,
+    "hits_at_2"   : 0.6347222222,
+    "mr"          : 1.9136574074,
+    "mrr"         : 0.6649305556,
+    "adjusted_mr" : 0.0007332021,
+    "adjusted_mrr": 0.6643428905
+  },
+  "relation prediction attack"    : {
+    "hits_at_1"   : 0.2513089005,
+    "hits_at_2"   : 0.6623036649,
+    "mr"          : 2.0863874346,
+    "mrr"         : 0.5693717277,
+    "adjusted_mr" : 0.0007993822,
+    "adjusted_mrr": 0.5686164658
+  },
+  "relation prediction equivalent": {
+    "hits_at_1"   : 0.3851851852,
+    "hits_at_2"   : 0.7111111111,
+    "mr"          : 1.9037037037,
+    "mrr"         : 0.6444444444,
+    "adjusted_mr" : 0.0007293884,
+    "adjusted_mrr": 0.6438208496
+  }
+}
