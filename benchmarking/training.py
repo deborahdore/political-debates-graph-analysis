@@ -22,12 +22,19 @@ from utils.evaluation_utils import adjust_dataset_for_bert, tokenize_and_generat
 from utils.utils import read_json
 
 
-def bert_training(model_file: str, model_name: str, noisy_triples_file: str, ratio: float):
+def bert_training(model_file: str, noisy_triples_file: str, ratio: int):
+	""" Train bert
+
+	:param model_file: str: file where the model will be saved
+	:param noisy_triples_file: str: dataset file
+	:param ratio: int: noise ratio to train the model on
+	"""
+
 	batch_size = 16
 	learning_rate = 2e-5
 	epochs = 3
 
-	logger.info(f"## ===== BASIC TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
+	logger.info(f"## ===== BASIC TRAINING BERT on {ratio}% noise ratio ===== ##".upper())
 	# load dataset
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
 																			  100,
@@ -48,7 +55,6 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	test = adjust_dataset_for_bert(test, int(True))
 
 	# PREPARE FAKE TRIPLES
-
 	train_noise = train_original[train_original['noise'] == 1].copy()
 	val_noise = val_original[val_original['noise'] == 1].copy()
 	test_noise = test_original[test_original['noise'] == 1].copy()
@@ -132,7 +138,7 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 		loss_val_avg = loss_val_total / len(dataloader_val)
 		logger.info(f'Validation loss: {loss_val_avg}')
 
-	logger.info(f"{model_name} training complete")
+	logger.info("BERT training complete")
 
 	# test
 	loss_test_total = 0.0
@@ -160,7 +166,7 @@ def bert_training(model_file: str, model_name: str, noisy_triples_file: str, rat
 	logger.info(f"[test] Average Test Loss: {avg_test_loss:.20f}")
 
 	# saving model
-	logger.info(f"saving {model_name} to {model_file}")
+	logger.info(f"saving BERT to {model_file}")
 	torch.save(model, model_file)
 
 	class_report = classification_report(y_true, y_pred)
@@ -180,16 +186,16 @@ def training(model_dir: str,
 			 ratio: float,
 			 pretrained_embedding_file: str = None):
 	"""
-	The training function is the main function of this module and trains the model with the optimal hyperparameter.
+	Train KGE model
 
-	:param model_file: str: Specify where to save model
-	:param model_dir: str: Specify the directory where the model's hyperparameters are saved
-	:param model_name: str: Name of the model to train
-	:param noisy_triples_file: str: Specify the location of the noisy triples file
-	:param triplets_file_utils: str: Contains entity-to-id and relation-to-id mappings
-	:param pretrained_embedding_file: Contains pretrained Embeddings
-	:param plot_dir: str: Save the plot of the loss function
-	:param ratio: float: Determine the amount of noise in the training data
+	:param model_file: str: file where the model will be saved
+	:param model_dir: str: directory where the model's hyperparameters are saved
+	:param model_name: str: name of the model to train
+	:param noisy_triples_file: str: dataset file
+	:param triplets_file_utils: str: file where entity-to-id and relation-to-id mappings are stored
+	:param pretrained_embedding_file: file that contains pretrained Embeddings
+	:param ratio: float: the amount of noise in the training data
+
 	:return: A result object, which contains the trained model
 	"""
 	logger.info(f"## ===== BASIC TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
@@ -297,21 +303,19 @@ def hyperparameter_optimization(model_name: str,
 								triplets_file_utils: str,
 								pretrained_embedding_file: str = None):
 	"""
-	The hyperparameter_optimization function is used to optimize the hyperparameters of a model.
+	Optimize the hyperparameters of a model
 
-	:param model_name: str: Specify the model to be used for training
-	:param model_dir: str: Save the model
-	:param noisy_triples_file: str: Load the triples from a file
-	:param triplets_file_utils: str: Load entity-to-id and relation-to-id mappings
-	:param pretrained_embedding_file: file where the pretrained embeddings are saves
-	:param ratio: float: Indicate the noise ratio of the dataset to be used
+	:param model_name: str: name of the model to optimize
+	:param model_dir: str: directory where the best hyperparameters will be saved
+	:param noisy_triples_file: str: dataset file
+	:param triplets_file_utils: str: file where entity-to-id and relation-to-id mappings are stored
+	:param pretrained_embedding_file: str: file where the pretrained embeddings are saved
 	"""
-	ratio = 0  # only hypertrain on gold
 
-	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING {model_name} on {ratio}% noise ratio ===== ##".upper())
+	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING {model_name} ===== ##".upper())
 
 	# get train, val, test
-	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=ratio, get_noisy_test=False)
+	train, test, val = get_train_val_test_from_dir(noisy_triples_file, noise=0, get_noisy_test=False)
 
 	logger.info("RELATION COUNTS: ")
 	logger.info(train['relation'].value_counts())

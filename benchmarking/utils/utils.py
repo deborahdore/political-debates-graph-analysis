@@ -1,19 +1,18 @@
 import csv
 import json
 
-import config
 import pandas as pd
 import torch
 from loguru import logger
 
+import config
+
 
 def load(file: str):
 	"""
-	The load function takes a file name as an argument and returns the contents of that file in a list.
-	The function opens the specified file, reads it line by line, and appends each row to a list.
+	Load a file
 
-
-	:param file: str: Specify the file name to be loaded
+	:param file: str: file path
 	:return: A list of lists
 	"""
 	logger.info(f"loading {file}")
@@ -28,11 +27,10 @@ def load(file: str):
 
 def save(dataset: [], csv_file: str):
 	"""
-	The save function takes a dataset and saves it to a csv file.
+	Saves into a csv
 
-	:param dataset: []: Specify the dataset to be saved
-	:param csv_file: str: Specify the file name of the csv to be saved
-	:return: The number of rows written to the csv file
+	:param dataset: []: dataset to be saved
+	:param csv_file: str: file where dataset will be saves
 	"""
 	logger.info(f"saving dataset to {csv_file}")
 	with open(csv_file, 'w', newline='') as csvfile:
@@ -42,11 +40,10 @@ def save(dataset: [], csv_file: str):
 
 def save_tsv(df: pd.DataFrame, tsv_file_path: str):
 	"""
-	The save_tsv function saves a dataframe to a tsv file.
+	Saves dataframe into a tsv
 
-	:param df: pd.DataFrame: Specify the dataframe that is being passed into the function
-	:param tsv_file_path: str: Specify the path to the tsv file
-	:return: A dataframe that is saved as a tsv file
+	:param df: pd.Dataframe: dataframe to be saved
+	:param tsv_file_path: str: file where the dataframe will be saved
 	"""
 	logger.info(f"saving dataframe to tsv {tsv_file_path}")
 	df.to_csv(tsv_file_path, index=False, header=True)
@@ -54,9 +51,9 @@ def save_tsv(df: pd.DataFrame, tsv_file_path: str):
 
 def read_tsv(tsv_file_path: str):
 	"""
-	The read_tsv function reads in a tab-separated file and returns a pandas dataframe.
+	Reads a tsv into a dataframe
 
-	:param tsv_file_path: str: Specify the path of the file to be loaded
+	:param tsv_file_path: str: file to be read
 	:return: A pandas dataframe
 	"""
 	logger.info(f"Loading {tsv_file_path}")
@@ -65,9 +62,9 @@ def read_tsv(tsv_file_path: str):
 
 def read_json(json_file_name: str):
 	"""
-	The read_json function reads a json file and returns the data as a dictionary.
+	Read a json file
 
-	:param json_file_name: str: Specify the file name of the json file that will be read
+	:param json_file_name: str: json file that will be read
 	:return: A dictionary
 	"""
 	logger.info(f"reading json {json_file_name}")
@@ -79,12 +76,10 @@ def read_json(json_file_name: str):
 
 def save_json(json_obj: json, json_file_name: str):
 	"""
-	The save_json function takes a json object and saves it to the specified file name.
+	Saves json
 
-
-	:param json_obj: json: Specify the type of data that is being passed into the function
-	:param json_file_name: str: Specify the name of the json file to be written
-	:return: Nothing
+	:param json_obj: json: json object to save
+	:param json_file_name: str: file where the json object will be saved
 	"""
 	logger.info("[write_json] writing json file")
 	with open(json_file_name, 'w') as file:
@@ -94,10 +89,9 @@ def save_json(json_obj: json, json_file_name: str):
 
 def load_model(model_file: str):
 	"""
-	The load_model function loads a model from the specified file and returns it.
+	Load a torch model
 
-	:param model_file: str: Specify the path to the model file
-	:param device:torch.device: Specify the device on which to load the model
-	:return: A dictionary of the model's state_dict
+	:param model_file: str: file that contains the model parameters
+	:return: the model
 	"""
 	return torch.load(model_file, map_location=config.DEVICE)

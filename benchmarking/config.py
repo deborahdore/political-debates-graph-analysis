@@ -5,7 +5,7 @@ import torch
 
 # ======================== utils ======================== #
 VALID_MODELS = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "RotatE", "TransH", "BoxE",
-				"Bert"]
+				"bert"]
 VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 
 # ===================== Settings ===================== #

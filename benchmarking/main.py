@@ -1,6 +1,5 @@
 import argparse
 import os.path
-import sys
 
 import config
 from evaluation import link_deletion, \
@@ -18,18 +17,15 @@ from utils.utils import load_model
 
 def get_kwargs():
 	"""
-	The get_kwargs function parses the command line arguments and returns them as a tuple.
-	The function first checks that all the required arguments are present in sys.argv, then it
-	parses each argument into its respective type (e.g., int, float, str). The function returns a
-	tuple containing these parsed values.
+	Parse the command line arguments
 
-	:return: A tuple of four elements:
+	:return:
 	- generate argument containing True/False. If true, the datasets with noise will be generated
 	- optimize argument containing True/False. If true, will perform hyperparameter optimization
 	- model argument containing the model name to be optimized/trained
 	- noise argument containing the noise ratio to optimize/train the model on
-
 	"""
+
 	parser = argparse.ArgumentParser()
 	parser.add_argument("--generate",
 						default=False,
@@ -41,9 +37,12 @@ def get_kwargs():
 						action='store_true',
 						help="Whether or not to perform hyper-parameter optimization on the model")
 
-	parser.add_argument("--model", type=str, required=True, help="Model (name) to use")
+	parser.add_argument("--model", type=str, required=True, help=f"Model (name) to use ({config.VALID_MODELS})")
 
-	parser.add_argument("--noise", type=int, required=True, help="Noise level to train the model on")
+	parser.add_argument("--noise",
+						type=int,
+						required=True,
+						help=f"Noise level to train the model on ({config.VALID_NOISE_RATIO})")
 
 	args = parser.parse_args()
 
@@ -53,58 +52,52 @@ def get_kwargs():
 	return args.generate, args.optimize, args.noise, args.model
 
 
-def bert_basic(model_name: str, noise: int):
+def bert_basic(ratio: int):
 	"""
-	The bert_basic function is used to train a BERT model on the noisy triples file, and then evaluate it using link
-	prediction, link deletion, and triple classification.
+	Train and evaluate Bert model
 
-	:param model_name:str: Name the model
-	:param noise:int: Specify the noise ratio
+	:param ratio:int: Specify the noise ratio of the dataset
 	"""
-	model_file = os.path.join(config.model_dir.format(model="Bert"), f"{noise}/{model_name}_{noise}.pt")
+	model_file = os.path.join(config.model_dir.format(model="bert"), f"{ratio}/bert_{ratio}.pt")
+
 	if not os.path.exists(model_file) or config.FORCE_TRAINING:
-		model = bert_training(model_file=model_file,
-							  model_name='Bert',
-							  noisy_triples_file=config.noisy_triples_file,
-							  ratio=noise)
+		model = bert_training(model_file=model_file, noisy_triples_file=config.noisy_triples_file, ratio=ratio)
 	else:
 		model = load_model(model_file)
 
 	link_prediction_bert(model=model,
-						 model_dir=config.model_dir.format(model="Bert"),
-						 model_name='Bert',
 						 noisy_triples_file=config.noisy_triples_file,
-						 metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-						 noise_ratio=noise)
+						 metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
+						 noise_ratio=ratio)
+
 	link_deletion_bert(model=model,
-					   model_dir=config.model_dir.format(model="Bert"),
-					   model_name='Bert',
 					   noisy_triples_file=config.noisy_triples_file,
-					   metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-					   noise_ratio=noise)
+					   metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
+					   noise_ratio=ratio)
+
 	triple_classification_bert(model=model,
-							   model_dir=config.model_dir.format(model="Bert"),
-							   model_name='Bert',
+							   model_dir=config.model_dir.format(model="bert"),
+							   model_name='bert',
 							   noisy_triples_file=config.noisy_triples_file,
-							   metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-							   noise_ratio=noise)
+							   metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
+							   noise_ratio=ratio)
 
 
-def kge_basic(model_name: str, noise: int):
+def kge_basic(name: str, ratio: int):
 	"""
-	The kge_basic function is a wrapper function that trains and evaluates the KGE model.
+	Trains and evaluate a KGE model
 
-	:param model_name: str: Name the model
-	:param noise: int: Specify the noise ratio of the dataset
+	:param name: str: Name the model to train/evaluate
+	:param ratio: int: Specify the noise ratio of the dataset
 	"""
-	model_file = os.path.join(config.model_dir.format(model=model_name), f"{noise}/{model_name}_{noise}.pt")
+	model_file = os.path.join(config.model_dir.format(model=name), f"{ratio}/{name}_{ratio}.pt")
 	if not os.path.exists(model_file) or config.FORCE_TRAINING:
-		result = training(model_dir=config.model_dir.format(model=model_name),
-						  model_name=model_name,
+		result = training(model_dir=config.model_dir.format(model=name),
+						  model_name=name,
 						  model_file=model_file,
 						  noisy_triples_file=config.noisy_triples_file,
 						  triplets_file_utils=config.triplets_file_utils,
-						  ratio=noise,
+						  ratio=ratio,
 						  pretrained_embedding_file=config.pretrained_embedding_file)
 		model = result.model
 
@@ -114,42 +107,42 @@ def kge_basic(model_name: str, noise: int):
 	link_prediction(model=model,
 					noisy_triples_file=config.noisy_triples_file,
 					triplets_file_utils=config.triplets_file_utils,
-					model_name=model_name,
-					metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-					noise_ratio=noise)
+					model_name=name,
+					metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+					noise_ratio=ratio)
 	link_deletion(model=model,
-				  model_name=model_name,
+				  model_name=name,
 				  noisy_triples_file=config.noisy_triples_file,
 				  triplets_file_utils=config.triplets_file_utils,
-				  metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-				  noise_ratio=noise)
+				  metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+				  noise_ratio=ratio)
 
 	for relation_to_evaluate in [None, 'support', 'attack', 'equivalent']:
 		relation_prediction(model=model,
-							model_name=model_name,
+							model_name=name,
 							noisy_triples_file=config.noisy_triples_file,
 							triplets_file_utils=config.triplets_file_utils,
-							metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-							noise_ratio=noise,
+							metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+							noise_ratio=ratio,
 							relation_to_evaluate=relation_to_evaluate)
 
-
 	triple_classification(model=model,
-						  model_name=model_name,
+						  model_name=name,
 						  noisy_triples_file=config.noisy_triples_file,
 						  triplets_file_utils=config.triplets_file_utils,
-						  metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-						  noise_ratio=noise)
+						  metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+						  noise_ratio=ratio)
 
 	relation_classification(model=model,
-							model_name=model_name,
+							model_name=name,
 							noisy_triples_file=config.noisy_triples_file,
 							triplets_file_utils=config.triplets_file_utils,
-							metrics_file=config.metrics_file.format(model=model_name, ratio=noise),
-							noise_ratio=noise)
+							metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+							noise_ratio=ratio)
 
 
-if __name__ == '__main__':
+def main():
+	""" Main function """
 	generate_dataset, optimization, noise, model_name = get_kwargs()
 
 	if generate_dataset:
@@ -167,7 +160,7 @@ if __name__ == '__main__':
 					   noisy_triples_file=config.noisy_triples_file,
 					   valid_noise=config.VALID_NOISE_RATIO)
 	if optimization:
-		if model_name == 'Bert': exit(1)
+		if model_name == 'bert': exit(1)
 		hyperparameter_optimization(model_name=model_name,
 									model_dir=config.model_dir.format(model=model_name),
 									noisy_triples_file=config.noisy_triples_file,
@@ -175,7 +168,11 @@ if __name__ == '__main__':
 									pretrained_embedding_file=config.pretrained_embedding_file)
 
 	else:
-		if model_name == 'Bert':
-			bert_basic(model_name, noise)
+		if model_name == 'bert':
+			bert_basic(noise)
 		else:
 			kge_basic(model_name, noise)
+
+
+if __name__ == '__main__':
+	main()

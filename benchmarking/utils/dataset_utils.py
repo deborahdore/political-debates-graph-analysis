@@ -1,12 +1,13 @@
 import math
 
-import config
 import numpy
 import pandas as pd
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
+
+import config
 from utils.utils import load, read_json, read_tsv, save_json, save_tsv
 
 modalities_text = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
@@ -44,9 +45,9 @@ political_positions = {
 
 def get_nodes(dataset: pd.DataFrame):
 	"""
-	The get_nodes function takes a dataset as input and returns the unique nodes in that dataset.
+	Finds the unique nodes in the dataset
 
-	:param dataset: pd.DataFrame: Extract the nodes from the dataset
+	:param dataset: pd.DataFrame: the dataset where to search the nodes
 	:return: A list of all unique nodes in the dataset
 	"""
 	logger.info("extracting nodes from dataset")
@@ -59,19 +60,11 @@ def get_nodes(dataset: pd.DataFrame):
 
 def generate_triplets(original_dataset_file: str, triples_file: str, original_triplets_file: str):
 	"""
-	The generate_triplets function takes in a file path to an original dataset and a file path to the destination
-	file where the generated triples will be saved. The function then loads the original dataset, creates nodes for
-	the subject and object of each triplet, drops unnecessary columns from the dataframe, renames columns so that they
-	match what is expected by our model (subject, predicate, object), preprocesses created dataset by converting all
-	strings to lowercase and removing duplicates/null values. Finally it saves this new dataframe as a list of lists in
-	the destination file.
+	Generate the triples from the dataset
 
-	:param mode_nodes: how to create the nodes
-	:param mode_text: how to create the nodes' text
-	:param original_dataset_file: str: Specify the file path of the original dataset
-	:param triples_file: str: Specify the file that contains the triples
-	:param original_triplets_file: Specify the file that contains the triples without any addition of nodes
-	:return: A list of triples
+	:param original_dataset_file: str: the original dataset file
+	:param triples_file: str: file used to save the new triples created with the corresponding modalities
+	:param original_triplets_file: file used to save the pure triples without any addition
 	"""
 	logger.info("generating triplets")
 	logger.info(f"original dataset: {original_dataset_file}")
@@ -92,12 +85,12 @@ def generate_triplets(original_dataset_file: str, triples_file: str, original_tr
 	save_tsv(preprocess_dataset(df), triples_file)
 
 
-def preprocess_dataset(df):
+def preprocess_dataset(df: pd.DataFrame):
 	"""
 	Processes a dataframe
 
-	:param df: Pass in the dataframe that is created from the csv file
-	:return: A dataframe that is lowercased, stripped of punctuation and whitespace,
+	:param df: DataFrame: the dataframe to process
+	:return: the processed dataframe
 	"""
 	logger.info("preprocessing created dataset")
 	df = df.applymap(lambda x: str(x))
@@ -110,13 +103,11 @@ def preprocess_dataset(df):
 
 def configure_nodes(df: pd.DataFrame, mode: str):
 	"""
-	The configure_nodes function takes a dataframe and a mode as input.
-	The function then creates nodes content with the specified mode.
-	The modes are: text, text+speaker, text+claim, and text+claim+speaker.
+	Create nodes content with the specified mode.
 
-	:param df: pd.DataFrame: Specify the dataframe that is passed to this function
-	:param mode: str: Determine which columns to use for the head, relation and tail
-	:return: A dataframe with 3 columns: head, relation and tail
+	:param df: pd.DataFrame: starting dataframe
+	:param mode: str: Determine which nodes to add to the dataframe
+	:return: a dataframe
 	"""
 	logger.info(f"Creating nodes content with mode: {mode.upper()}")
 	assert mode in modalities_text
@@ -148,12 +139,13 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 
 def add_nodes(df_original: pd.DataFrame, mode: str, mode_text: str):
 	"""
-	The add_nodes function adds nodes to the graph.
+	Wrapper function that selects the modality for adding nodes based on the modality that was chosen for the features
+	of the nodes before
 
-	:param df_original: pd.DataFrame: Specify the dataframe that will be used for this function
-	:param mode: str: Specify which modality the nodes are being added to
-	:param mode_text: str: Determine whether the nodes are created from mode text or mode text+claim
-	:return: A dataframe with the columns head, relation, tail
+	:param df_original: pd.DataFrame: starting dataframe
+	:param mode: str: the modality that specifies which nodes to add
+	:param mode_text: str: determine whether the nodes were created from mode text or mode text+claim
+	:return: A dataframe
 	"""
 	assert mode in modalities_nodes
 	assert mode_text in modalities_text
@@ -178,9 +170,9 @@ def __add_nodes_mode_text(df: pd.DataFrame, mode: str):
 		- If the mode is 'year', then it will create a node "year" with the year in which that debate was held and it
 		will connect to the respective nodes in the dataset with the relation "said in"
 
-	:param df: pd.DataFrame: Pass in the original dataframe
+	:param df: pd.DataFrame: the original dataframe
 	:param mode: str: Create the nodes based on the mode
-	:return: A dataframe with the nodes
+	:return: A dataframe
 	"""
 
 	logger.info(f"Creating nodes with mode: {mode.upper()}")  # based on mode nodes "text"
@@ -260,14 +252,11 @@ def __add_nodes_mode_claim(df: pd.DataFrame, mode: str):
 def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triples_file: str, valid_noise: [int]):
 	"""
 	The generate_noise function takes in a triplets file and generates noisy triples.
-	The function will generate the following files:
-		- train_noisy_{noise}.csv, test_noisy_{noise}.csv, val_noisy_{noise}.csv for each noise ratio in valid_ratio.
 
-	:param triplets_file: str: Specify the path to the file containing all triplets
-	:param original_triplets_file: str: Specify the path to the file containing triplets without additional nodes
-	:param noisy_triples_file: str: Specify the file path of the noisy triples
+	:param triplets_file: str: the path to the file containing all triplets
+	:param original_triplets_file: str: the path to the file containing triplets without additional nodes
+	:param noisy_triples_file: str: the file path of the noisy triples
 	:param valid_noise: [float]: list of the noise ratio
-	:param special_benchmarking_flag: bool: Whenever to drop the additional nodes from validation and testing or not
 	:return: A dataframe with the following columns: head, relation, tail, noise (1 if it's a synthetic noisy triple,
 	0 if not)
 	"""
@@ -304,7 +293,13 @@ def generate_noise(triplets_file: str, original_triplets_file: str, noisy_triple
 		save_tsv(df=test, tsv_file_path=noisy_triples_file.format(noise=noise_ratio, use="test"))
 
 
-def training_strategy(train):
+def training_strategy(train: pd.DataFrame):
+	"""
+	Down-sampling strategy
+
+	:param train: DataFrame: the dataframe to balance
+	:return: the balanced dataframe
+	"""
 	logger.info("down-sampling dataset")
 	target = len(train[train['relation'] == 'attack'])
 	for mode in config.MODE_NODE:
@@ -336,7 +331,7 @@ def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
 	"""
 	Helper function that generates noise
 
-	:param edges_correct: str: dataframe containing all of the triplets
+	:param edges_correct: str: dataframe containing all the triplets
 	:param noise_ratio: float: Determine the amount of noise to be added to the dataset
 	:return: A dataframe with the original triplets and noise triplets
 	"""
@@ -389,11 +384,11 @@ def __generate_noise(edges_correct: pd.DataFrame, noise_ratio: float):
 
 def get_mapping(dataset: pd.DataFrame):
 	"""
-	The get_mapping function takes a dataset as input and returns two dictionaries:
+	Creates two dictionaries:
 		- entity_to_id: maps each entity to an integer id.
 		- relation_to_id: maps each relation to an integer id.
 
-	:param dataset: pd.DataFrame: Get the mapping from entities to ids and relations to ids
+	:param dataset: Pd.DataFrame: Get the mapping from entities to ids and relations to ids
 	:return: A mapping from entities to ids and a mapping from relations to ids
 	"""
 	dataset = TriplesFactory.from_labeled_triples(triples=dataset[['head', 'relation', 'tail']].values,
@@ -407,7 +402,7 @@ def get_train_val_test_factory(train: pd.DataFrame,
 							   triplets_file_utils: str,
 							   create_inverse_triples: bool):
 	"""
-	The get_train_val_test_factory function creates a TriplesFactory object for each of the train, val and test sets.
+	Create a TriplesFactory object for each of the train, val and test sets.
 
 	:param train: pd.DataFrame: A pandas DataFrame containing the training triples.
 	:param val: pd.DataFrame: A pandas DataFrame containing the validation triples.
@@ -442,9 +437,7 @@ def get_train_val_test_factory(train: pd.DataFrame,
 
 def get_factory(dataset: pd.DataFrame, entity_to_id: dict, relation_to_id: dict, create_inverse_triples: bool = False):
 	"""
-	The get_factory function takes in a dataset, an entity_to_id dictionary, and a relation_to_id dictionary.
-	It then creates the TriplesFactory object from the labeled triples of the dataset.
-	The function also has an optional parameter create_inverse_triples which is set to False by default.
+	Creates the TriplesFactory object from the labeled triples of the dataset.
 
 	:param dataset: pd.DataFrame: Create the triplesfactory object
 	:param entity_to_id: dict: Map the entity to a unique id
@@ -464,14 +457,12 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 								drop_col_noise: bool = True,
 								get_noisy_test: bool = False):
 	"""
-	The get_train_val_test_from_dir function takes in a noisy_triples_file, which is the path to a file containing
-	noisy triples. The function then loads the train, val and test sets from this file. It returns these three sets as
-	pandas dataframes.
+	Returns training, testing and validation dataframes
 
-	:param noisy_triples_file: str: Specify the file that contains the noisy triples
-	:param noise: float: Specify the amount of noise in the data
+	:param noisy_triples_file: str: The file that contains the noisy triples
+	:param noise: float: The amount of noise in the data
 	:param drop_col_noise: bool: Drop the noisy column from the dataframe
-	:param get_noisy_test: bool: specify if to return test with noise or not
+	:param get_noisy_test: bool: if to return test with noise or not
 	:return: A tuple of dataframes, one for each dataset
 	"""
 	train = read_tsv(noisy_triples_file.format(use="train", noise=noise))
@@ -493,15 +484,12 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 
 def generate_mappings(triplets_file: str, triplets_file_utils: str, pretrained_embedding_file: str = None):
 	"""
-	The generate_mappings function takes in a triplets file and a triplets_file_utils string.
-	The function reads the triplet file, creates an entity to id mapping and relation to id mapping,
-	and saves them as json files into the triplets_file_utils file.
+	Creates an entity to id mapping and relation to id mapping
 
-	:param triplets_file: str: Specify the file path of the triplets
-	:param triplets_file_utils: str: Specify the path to the directory where you want to save your entity_to_id and
-	relation_to_id mapping
-	:param pretrained: whether to use bert for the embeddings
-	:param pretrained_embedding_file: where to save pretrained embeddings
+	:param triplets_file: str: the file path of the triplets
+	:param triplets_file_utils: str: the path to the directory where to save the entity_to_id and relation_to_id
+	mapping
+	:param pretrained_embedding_file: file where the pretrained embeddings will be saved
 	"""
 
 	logger.info("creating entity-to-id and relation-to-id mappings")

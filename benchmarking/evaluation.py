@@ -33,16 +33,16 @@ def link_deletion(model: Any,
 				  noisy_triples_file: str,
 				  triplets_file_utils: str,
 				  metrics_file: str,
-				  noise_ratio: float):
+				  noise_ratio: int):
 	"""
-	The link_deletion function is used to evaluate the performance of a model on link deletion.
+	Evaluate the performance of a KGE model on link deletion.
 
-	:param model: Any: Pass the model to the function
-	:param model_name: str: Save the metrics in a json file
-	:param noisy_triples_file: str: Specify the location of the noisy triples file
-	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: Save the results of the link deletion experiment
-	:param noise_ratio: float: Specify the amount of noise to be added to the dataset
+	:param model: Any: the model to evaluate
+	:param model_name: str: name of the model to evaluate
+	:param noisy_triples_file: str: dataset's file
+	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
+	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
 	"""
 	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
 
@@ -212,18 +212,20 @@ def relation_prediction(model: Any,
 						noisy_triples_file: str,
 						triplets_file_utils: str,
 						metrics_file: str,
-						noise_ratio: float,
+						noise_ratio: int,
 						relation_to_evaluate: str = None):
 	"""
-	The relation_prediction function is used to evaluate the performance of a model on relation prediction.
+	Evaluate the performance of a KGE model on relation prediction
 
-	:param model: Any: Pass the model to the function
-	:param model_name: str: Save the metrics in a json file
-	:param noisy_triples_file: str: Specify the location of the noisy triples file
-	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: Save the results of the link deletion experiment
-	:param noise_ratio: float: Specify the amount of noise to be added to the dataset
+	:param model: Any: the model to evaluate
+	:param model_name: str: name of the model to evaluate
+	:param noisy_triples_file: str: dataset's file
+	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
+	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
+	:param relation_to_evaluate: str: if not none, evaluates the relation prediction task on a specific relation
 	"""
+
 	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on relation prediction ===== ##".upper())
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
@@ -330,18 +332,18 @@ def link_prediction(model: Any,
 					triplets_file_utils: str,
 					model_name: str,
 					metrics_file: str,
-					noise_ratio: float):
+					noise_ratio: int):
 	"""
-	The link_prediction function evaluates the model on link prediction.
+	Evaluates the performance of a KGE model on link prediction.
 
-	:param model: torch.nn.Module: Get the model
-	:param noisy_triples_file: str: Load the noisy triples file
-	:param triplets_file_utils: str: Load the entity-to-id and relation-to-id mapping
-	:param model_name: str: name of the model
-	:param metrics_file: str: Save the results of the evaluation in a json file
-	:param noise_ratio: float: Specify the noise ratio of the dataset
-
+	:param model: Any: the model to evaluate
+	:param model_name: str: name of the model to evaluate
+	:param noisy_triples_file: str: dataset's file
+	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
+	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
 	"""
+
 	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link prediction ===== ##".upper())
 
 	# load original dataset
@@ -411,16 +413,16 @@ def triple_classification(model: Any,
 						  noisy_triples_file: str,
 						  triplets_file_utils: str,
 						  metrics_file: str,
-						  noise_ratio: float):
+						  noise_ratio: int):
 	"""
-	The triple_classification function is used to evaluate the performance of a KGE model on triple classification.
+	Evaluate the performance of a KGE model on triple classification
 
-	:param model: Any: Pass the model to be evaluated
-	:param model_name: str: Identify the model in the metrics file
-	:param noisy_triples_file: str: Specify the path to the directory containing all of the noisy triples
-	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: Save the results of the triple classification
-	:param noise_ratio: float: Specify the percentage of noise in the training set
+	:param model: Any: the model to evaluate
+	:param model_name: str: name of the model to evaluate
+	:param noisy_triples_file: str: dataset's file
+	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
+	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
 	"""
 	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
 
@@ -556,16 +558,16 @@ def relation_classification(model: Any,
 							noisy_triples_file: str,
 							triplets_file_utils: str,
 							metrics_file: str,
-							noise_ratio: float):
+							noise_ratio: int):
 	"""
-	The relation_classification function is used to evaluate the performance of a KGE model on relation classification.
+	Evaluate the performance of a KGE model on relation classification.
 
-	:param model: Any: Pass the model to be evaluated
-	:param model_name: str: Identify the model in the metrics file
-	:param noisy_triples_file: str: Specify the path to the directory containing all of the noisy triples
-	:param triplets_file_utils: str: Location of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: Save the results of the triple classification
-	:param noise_ratio: float: Specify the percentage of noise in the training set
+	:param model: Any: the model to evaluate
+	:param model_name: str: name of the model to evaluate
+	:param noisy_triples_file: str: dataset's file
+	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
+	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
+	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
 	"""
 	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on relation classification ===== ##".upper())
 
@@ -727,12 +729,19 @@ def relation_classification(model: Any,
 
 # ======================== BERT EVALUATION  ======================== #
 def link_deletion_bert(model: BertForSequenceClassification,
-					   model_dir: str,
-					   model_name: str,
 					   noisy_triples_file: str,
 					   metrics_file: str,
-					   noise_ratio: float):
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
+					   noise_ratio: int):
+	"""
+	Evaluates Bert performance on link deletion
+
+	:param model: BertForSequenceClassification: model
+	:param noisy_triples_file: str: dataset's file
+	:param metrics_file: str: file where the results of the link deletion will be saves
+	:param noise_ratio: int: the amount of noise in the testing dataset
+	"""
+
+	logger.info(f"## ===== Bert trained with {noise_ratio} noise on link deletion ===== ##".upper())
 
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
@@ -756,7 +765,6 @@ def link_deletion_bert(model: BertForSequenceClassification,
 
 	ranks_head = []
 	ranks_tail = []
-	ranks = []
 
 	# generate false connections
 	for head, rel, tail in test_original.values.tolist():
@@ -901,12 +909,19 @@ def link_deletion_bert(model: BertForSequenceClassification,
 
 
 def link_prediction_bert(model: BertForSequenceClassification,
-						 model_dir: str,
-						 model_name: str,
 						 noisy_triples_file: str,
 						 metrics_file: str,
 						 noise_ratio: float):
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link predicion ===== ##".upper())
+	"""
+		Evaluates Bert performance on link prediction
+
+		:param model: BertForSequenceClassification: model
+		:param noisy_triples_file: str: dataset's file
+		:param metrics_file: str: file where the results of the link deletion will be saves
+		:param noise_ratio: int: the amount of noise in the testing dataset
+		"""
+
+	logger.info(f"## ===== Bert trained with {noise_ratio} noise on link predicion ===== ##".upper())
 
 	# load original dataset
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
@@ -1065,12 +1080,18 @@ def link_prediction_bert(model: BertForSequenceClassification,
 
 
 def triple_classification_bert(model: BertForSequenceClassification,
-							   model_dir: str,
-							   model_name: str,
 							   noisy_triples_file: str,
 							   metrics_file: str,
 							   noise_ratio: float):
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
+	"""
+		Evaluates Bert performance on triple classification
+
+		:param model: BertForSequenceClassification: model
+		:param noisy_triples_file: str: dataset's file
+		:param metrics_file: str: file where the results of the link deletion will be saves
+		:param noise_ratio: int: the amount of noise in the testing dataset
+	"""
+	logger.info(f"## ===== Bert trained with {noise_ratio} noise on triple classification ===== ##".upper())
 
 	# load dataset gold
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,

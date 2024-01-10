@@ -1,6 +1,5 @@
 from typing import Any
 
-import config
 import numpy as np
 import pandas as pd
 import torch
@@ -10,13 +9,15 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import BertForSequenceClassification, BertTokenizer
 
+import config
+
 
 def get_scores(model: Any, factory: TriplesFactory):
 	"""
 	The get_scores function takes a model and a factory as input, and returns the scores of all triples in the factory.
 
-	:param model: Specify the model to be used for prediction
-	:param factory: The triples for which we want to compute scores
+	:param model: the model to be used for prediction
+	:param factory: the triples for which we want to compute scores
 	:return: A numpy array of scores
 	"""
 	factory.mapped_triples = factory.mapped_triples.to(config.DEVICE)
@@ -34,8 +35,8 @@ def get_scores_tensor(model: Any,
 	It then returns the scores for each triple in the triples list.
 
 
-	:param model: Any: Pass the model to the function
-	:param triples: [str]: Pass in the triples that will be used to calculate the score
+	:param model: Any: the model to be used
+	:param triples: [str]: the triples that will be used to calculate the score
 	:param entities_label_id_map: {}: Map the entities to their ids
 	:param relation_label_id_map: {}: Map the relation label to an id
 	:param sort: bool: Sort the scores in ascending order
@@ -49,9 +50,11 @@ def get_scores_tensor(model: Any,
 		mapped_triples.append([h_id, r_id, t_id])
 	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=config.DEVICE, requires_grad=False)
 
-	scores = \
-	predict_triples_df(model=model, triples=mapped_triples_tensor, triples_factory=None, batch_size=None, mode=None, )[
-		"score"].values
+	scores = predict_triples_df(model=model,
+								triples=mapped_triples_tensor,
+								triples_factory=None,
+								batch_size=None,
+								mode=None, )["score"].values
 
 	assert len(scores) == len(triples)
 
@@ -65,7 +68,7 @@ def get_center(scores: np.array):
 	"""
 	The get_center function takes a list of scores and returns the mean of those scores.
 
-	:param scores: []: Specify the type of data that is expected to be passed into the function
+	:param scores: []: the scores to be sorted
 	:return: The mean of the scores array
 	"""
 	assert scores.ndim == 1
@@ -73,16 +76,40 @@ def get_center(scores: np.array):
 
 
 def get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
+	"""
+	Wrapper function for __get_probabilities_bert that returns the scores
+
+	:param model: BertForSequenceClassification: model that will be used
+	:param dataloader: DataLoader: dataset to evaluate
+	:param sort: bool: if to sort the results or not
+	:return: the scores of the evaluated dataset
+	"""
 	prob, index = __get_probabilities_bert(model, dataloader, sort)
 	return prob
 
 
 def get_probabilities_bert_index(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
+	"""
+	Wrapper function for __get_probabilities_bert that returns the corresponding index of the best scores
+
+	:param model: BertForSequenceClassification: model that will be used
+	:param dataloader: DataLoader: dataset to evaluate
+	:param sort: bool: if to sort the results or not
+	:return: the index of the scores of the evaluated dataset
+	"""
 	prob, index = __get_probabilities_bert(model, dataloader, sort)
 	return index
 
 
 def __get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
+	"""
+	Calculates the probability of a triple using bert
+
+	:param model: BertForSequenceClassification: model that will be used
+	:param dataloader: DataLoader: dataset to evaluate
+	:param sort: bool: if to sort the results or not
+	:return: tuple: best score and corresponding index
+	"""
 	score_test = []
 	score_test_index = []
 	with torch.no_grad():
@@ -101,6 +128,12 @@ def __get_probabilities_bert(model: BertForSequenceClassification, dataloader: D
 
 
 def tokenize_and_generate_dataset(dataset: pd.DataFrame):
+	"""
+	Prepare the dataset (tokenize and encode) for bert
+
+	:param dataset: DataFrame: dataset to prepare
+	:return: the dataset ready to be given to bert
+	"""
 	tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 	# create bert embeddings
@@ -119,6 +152,13 @@ def tokenize_and_generate_dataset(dataset: pd.DataFrame):
 
 
 def adjust_dataset_for_bert(dataset: pd.DataFrame, label: float):
+	"""
+	Modify the dataset so it fits bert's requirements
+
+	:param dataset: DataFrame: dataset to prepare
+	:param label: float: label to assign to each entry
+	:return: the dataset ready to be given to bert
+	"""
 	# create dataset
 	new_dataset = pd.DataFrame()
 	new_dataset['merged_sent'] = dataset['head'] + "<sep>" + dataset['relation'] + "<sep>" + dataset['tail']
