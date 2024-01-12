@@ -1,11 +1,10 @@
 import csv
 import json
 
+import config
 import pandas as pd
 import torch
 from loguru import logger
-
-import config
 
 
 def load(file: str):

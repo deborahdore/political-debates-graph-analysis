@@ -1,13 +1,12 @@
 import math
 
+import config
 import numpy
 import pandas as pd
 from loguru import logger
 from pykeen.triples import TriplesFactory
 from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
-
-import config
 from utils.utils import load, read_json, read_tsv, save_json, save_tsv
 
 modalities_text = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
