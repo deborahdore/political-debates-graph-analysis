@@ -47,6 +47,7 @@ To execute the script, it's mandatory to run the [main](main.py) file and includ
 | --mode_text | Yes |  | Configuration for the feature of the nodes. Available: "text" or "text+claim" |
 | --mode_node | Yes |  | Types of relationships between nodes (can be more than one). Available: "claim+premise", "speaker" and "year" |
 
+If you are not sure about node types and text types, take a look at this [explanation](results/example_nodes.pdf).
 
 _Example_: <br>
 `python main.py --model TransE --noise 0 --mode_text text --mode_node "speaker, year" --generate --special_benchmarking_flag --use_pretrained_embeddings`
