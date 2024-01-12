@@ -9,9 +9,6 @@ from sentence_transformers import SentenceTransformer
 from sklearn.model_selection import train_test_split
 from utils.utils import load, read_json, read_tsv, save_json, save_tsv
 
-modalities_text = ['text', 'text+claim', 'text+speaker', 'text+claim+speaker']
-modalities_nodes = ['claim+premise', 'speaker', 'year']
-
 political_positions = {
 	'NIXON'    : 'President',
 	'KENNEDY'  : 'President',
@@ -109,7 +106,6 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 	:return: a dataframe
 	"""
 	logger.info(f"Creating nodes content with mode: {mode.upper()}")
-	assert mode in modalities_text
 
 	if mode == 'text':
 		head = df['Governor'].copy()
@@ -146,9 +142,6 @@ def add_nodes(df_original: pd.DataFrame, mode: str, mode_text: str):
 	:param mode_text: str: determine whether the nodes were created from mode text or mode text+claim
 	:return: A dataframe
 	"""
-	assert mode in modalities_nodes
-	assert mode_text in modalities_text
-
 	if mode_text == "text":
 		df = __add_nodes_mode_text(df_original, mode)
 	else:  # text+claim

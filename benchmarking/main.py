@@ -2,6 +2,7 @@ import argparse
 import os.path
 
 import config
+from benchmarking.config import VALID_MODE_NODE, VALID_MODE_TEXT
 from evaluation import link_deletion, \
 	link_deletion_bert, \
 	link_prediction, \
@@ -27,16 +28,36 @@ def get_kwargs():
 	"""
 
 	parser = argparse.ArgumentParser()
+	### NOT REQUIRED ###
 	parser.add_argument("--generate",
 						default=False,
 						action='store_true',
-						help="Whether or not to generate a new dataset")
+						help="whether or not to generate a new dataset")
 
 	parser.add_argument("--optimize",
 						default=False,
 						action='store_true',
-						help="Whether or not to perform hyper-parameter optimization on the model")
+						help="whether or not to perform hyper-parameter optimization on the model")
 
+	parser.add_argument("--special_benchmarking_flag",
+						default=False,
+						action='store_true',
+						help="whether or not to perform evaluation with only support, attack and equivalent relations")
+
+	parser.add_argument("--use_pretrained_embeddings",
+						default=False,
+						action='store_true',
+						help="whether or not to use pretrained embeddings for the KGE models")
+
+	parser.add_argument("--wandb", default=False, action='store_true', help="whether or not to use wandb for logging")
+
+	parser.add_argument("--wandb_project_name",
+						type=str,
+						required=False,
+						default="KGE experiments",
+						help="wandb project name")
+
+	### REQUIRED ###
 	parser.add_argument("--model", type=str, required=True, help=f"Model (name) to use ({config.VALID_MODELS})")
 
 	parser.add_argument("--noise",
@@ -44,12 +65,33 @@ def get_kwargs():
 						required=True,
 						help=f"Noise level to train the model on ({config.VALID_NOISE_RATIO})")
 
+	parser.add_argument("--mode_text",
+						type=str,
+						required=True,
+						help=f"Mode for creating feature nodes: {VALID_MODE_TEXT}")
+
+	parser.add_argument("--mode_node",
+						type=str,
+						required=True,
+						help=f"Mode for creating connections between nodes: {VALID_MODE_NODE}")
+
 	args = parser.parse_args()
+
+	config.USE_PRETRAINED_EMBEDDINGS = args.use_pretrained_embeddings
+	config.WANDB = args.wandb
+	config.WANDB_PROJECT_NAME = args.wandb_project_name
+
+	config.MODE_TEXT = args.mode_text
+	config.MODE_NODE = [mode.strip() for mode in str(args.mode_node).split(",")]
+
+	assert config.MODE_TEXT in VALID_MODE_TEXT
+	for mode in config.MODE_NODE:
+		assert mode in VALID_MODE_NODE
 
 	assert args.noise in config.VALID_NOISE_RATIO
 	assert args.model in config.VALID_MODELS
 
-	return args.generate, args.optimize, args.noise, args.model
+	return args
 
 
 def bert_basic(ratio: int):
@@ -141,9 +183,9 @@ def kge_basic(name: str, ratio: int):
 
 def main():
 	""" Main function """
-	generate_dataset, optimization, noise, model_name = get_kwargs()
+	args = get_kwargs()
 
-	if generate_dataset:
+	if args.generate:
 		# generates triples from original file
 		generate_triplets(original_dataset_file=config.original_dataset_file,
 						  triples_file=config.triplets_file,
@@ -157,19 +199,19 @@ def main():
 					   original_triplets_file=config.original_triplets_file,
 					   noisy_triples_file=config.noisy_triples_file,
 					   valid_noise=config.VALID_NOISE_RATIO)
-	if optimization:
-		if model_name == 'bert': exit(1)
-		hyperparameter_optimization(model_name=model_name,
-									model_dir=config.model_dir.format(model=model_name),
+	if args.optimize:
+		if args.model == 'bert': exit(1)
+		hyperparameter_optimization(model_name=args.model,
+									model_dir=config.model_dir.format(model=args.model),
 									noisy_triples_file=config.noisy_triples_file,
 									triplets_file_utils=config.triplets_file_utils,
 									pretrained_embedding_file=config.pretrained_embedding_file)
 
 	else:
-		if model_name == 'bert':
-			bert_basic(noise)
+		if args.model == 'bert':
+			bert_basic(args.noise)
 		else:
-			kge_basic(model_name, noise)
+			kge_basic(args.model, args.noise)
 
 
 if __name__ == '__main__':

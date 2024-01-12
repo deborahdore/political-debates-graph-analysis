@@ -1,6 +1,6 @@
 # political-debates-graph-analysis
 
-The objective of this project is to implement knowledge embedding graph techniques on a dataset comprising 41
+The objective of this project is to implement knowledge embedding graph techniques on a dataset containing 41
 presidential election debates in the United States spanning from 1960 to 2016. This dataset has been meticulously
 annotated, with a specific focus on dissecting argument components (referred to as _premises_ and _claims_) and
 delineating argument relations (namely, _support_ , _attack_ and _equivalence_).
@@ -34,58 +34,17 @@ All the code for the exploration data analysis of the dataset can be found in th
 </a>
 
 _Example graph of debate between Gore and Kemp_:
-<img src="visualization/imgs/09-10-1996_debate_graph.svg">
+<img src="imgs/09-10-1996_debate_graph.svg">
 
 ## BENCHMARKING
 
-The dataset was tested against 10 state of the art KGE models using the [PyKEEN](https://github.com/pykeen/pykeen)
-library with increasing level of noise (0, 10%, 20%, 30%, 50% - random) to test the robustness of these models. A bert
-model
-was also tested on these datasets to compare its performances against the kge models.
-
-* _TransE_
-* _DistMult_
-* _ComplEx_
-* _HolE_
-* _ConvE_
-* _RotatE_
-* _PairRE_
-* _AutoSF_
-* _BoxE_
-* _TransH_
-
-Result of the model's optimization are
-available [in this folder](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Eob1CqlF5Z5EiOWaL_1u9CsBz-cAxDULqe2lSHQ4d1hr5Q?e=IcFfUy).
-
-### DATASET
-
-Original dataset and datasets without noise are available
-on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/Ek_00pPwRgNBrR6HuKIrEyoBJ5wMVDkt3epQTjwbTl5NVg?e=iV9ifl)
+An explaination of the work and the corresponding code can be found in the folder [benchmarking](benchmarking).
 
 ### REPRODUCIBILITY
-
-#### Environment
 
 * Python 3.9
 * Nvidia V100 32 Gb
 * [requirements.py](requirements.txt)
-
-#### Data Processing Script
-
-`benchmarking/utils/dataset_utils.py`
-
-#### Training/Hyperparameter tuning Script
-
-`benchmarking/training.py`
-
-#### Evaluation Script
-
-`benchmarking/evaluation.py`</br>
-`benchmarking/utils/metrics.py`</br>
-`benchmarking/utils/evaluation_utils.py`
-
-Results of the evaluation are available
-on [OneDrive](https://unice-my.sharepoint.com/:f:/g/personal/deborah_dore_unice_fr/EpNZvJMw6ZVEmPKkyYG9W5kBo8F7VsXP-abJIMEnSGPV4g?e=sdaE5G)
 
 ## ACKNOWLEDGEMENT
 
