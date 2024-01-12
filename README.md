@@ -55,4 +55,4 @@ support.
 
 ## LICENSE
 
-Our code and data are licensed with a [MIT License](LICENSE).
+Our code and data are licensed with a [License](LICENSE).
