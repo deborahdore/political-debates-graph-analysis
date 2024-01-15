@@ -2,7 +2,6 @@ import argparse
 import os.path
 
 import config
-from benchmarking.config import VALID_MODE_NODE, VALID_MODE_TEXT
 from evaluation import link_deletion, \
 	link_deletion_bert, \
 	link_prediction, \
@@ -68,12 +67,12 @@ def get_kwargs():
 	parser.add_argument("--mode_text",
 						type=str,
 						required=True,
-						help=f"Mode for creating feature nodes: {VALID_MODE_TEXT}")
+						help=f"Mode for creating feature nodes: {config.VALID_MODE_TEXT}")
 
 	parser.add_argument("--mode_node",
 						type=str,
 						required=True,
-						help=f"Mode for creating connections between nodes: {VALID_MODE_NODE}")
+						help=f"Mode for creating connections between nodes: {config.VALID_MODE_NODE}")
 
 	args = parser.parse_args()
 
@@ -84,9 +83,9 @@ def get_kwargs():
 	config.MODE_TEXT = args.mode_text
 	config.MODE_NODE = [mode.strip() for mode in str(args.mode_node).split(",")]
 
-	assert config.MODE_TEXT in VALID_MODE_TEXT
+	assert config.MODE_TEXT in config.VALID_MODE_TEXT
 	for mode in config.MODE_NODE:
-		assert mode in VALID_MODE_NODE
+		assert mode in config.VALID_MODE_NODE
 
 	assert args.noise in config.VALID_NOISE_RATIO
 	assert args.model in config.VALID_MODELS

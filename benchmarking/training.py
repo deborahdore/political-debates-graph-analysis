@@ -241,10 +241,10 @@ def training(model_dir: str,
 
 	if config.USE_PRETRAINED_EMBEDDINGS:
 		assert pretrained_embedding_file is not None
-		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
+		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
 		pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
 											   entity_initializer=PretrainedInitializer(
-												   tensor=pretrained_embedding_tensor), )
+												   tensor=pretrained_embedding_tensor))
 
 	logger.info(f"Best params: {pipeline_config}")
 
@@ -328,19 +328,17 @@ def hyperparameter_optimization(model_name: str,
 
 	if config.USE_PRETRAINED_EMBEDDINGS:
 		assert pretrained_embedding_file is not None
-		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file))
+		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
 		model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
-							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor), )
-		model_kwargs_ranges = None
+							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor))
 	else:
 		model_kwargs = None
-		model_kwargs_ranges = dict(embedding_dim=dict(type=int, low=5, high=150))
+
 	hpo_results = hpo_pipeline(training=train_factory,
 							   validation=val_factory,
 							   testing=test_factory,
 							   model=model_name,
 							   model_kwargs=model_kwargs,
-							   model_kwargs_ranges=model_kwargs_ranges,
 							   # optimizer args
 							   optimizer="Adam",
 							   # training loop args
@@ -375,7 +373,7 @@ def hyperparameter_optimization(model_name: str,
 												  n_ei_candidates=32, ),
 							   pruner=PercentilePruner(percentile=70.0, n_startup_trials=5, ),
 							   direction="maximize",
-							   n_trials=config.NUM_TRIALS)
+							   n_trials=config.NUM_TRIALS, )
 
 	logger.info(f"Best hyper-parameters: {hpo_results.study.best_params}")
 	logger.info(f"## ===== HYPER-OPTIMIZATION TRAINING COMPLETE ===== ##".upper())

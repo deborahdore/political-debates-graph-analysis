@@ -4,8 +4,11 @@ from pathlib import Path
 import torch
 
 # ======================== utils ======================== #
-VALID_MODELS = ["TransE", "DistMult", "ComplEx", "HolE", "ConvE", "PairRE", "AutoSF", "RotatE", "TransH", "BoxE",
-				"bert"]
+# semantic matching: DistMulT , HolE, RESCAL
+# transational: TransE, TransH, BoxE
+# other: ConvE, ConvKB
+
+VALID_MODELS = ["TransE", "TransH", "BoxE", "DistMult", "RESCAL", "HolE", "ConvE", "ConvKB"]
 VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 
 # ===================== Settings ===================== #
@@ -16,10 +19,10 @@ FORCE_TRAINING = True
 NUM_TRIALS = 30
 
 WANDB = True
-WANDB_PROJECT_NAME = "KGE Experiments 4"
+WANDB_PROJECT_NAME = "KGE Experiments Family of Models"
 
-MODE_TEXT = 'text+claim'
-MODE_NODE = ['speaker', 'year']
+MODE_TEXT = 'text'
+MODE_NODE = ['claim+premise', 'year']
 
 VALID_MODE_TEXT = ['text', 'text+claim']
 VALID_MODE_NODE = ['claim+premise', 'speaker', 'year']

@@ -504,7 +504,6 @@ def generate_mappings(triplets_file: str, triplets_file_utils: str, pretrained_e
 	if config.USE_PRETRAINED_EMBEDDINGS:
 		assert pretrained_embedding_file is not None
 		logger.info("creating pretrained entity embeddings")
-		# Load BERT tokenizer and model
-		model = SentenceTransformer('all-MiniLM-L6-v2')
+		model = SentenceTransformer('all-MiniLM-L6-v2').to(config.DEVICE)
 		embeddings = model.encode(list(entity_to_id.keys()), show_progress_bar=True, device=config.DEVICE)
 		numpy.save(pretrained_embedding_file, embeddings)
