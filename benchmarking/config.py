@@ -5,10 +5,10 @@ import torch
 
 # ======================== utils ======================== #
 # semantic matching: DistMulT , HolE, RESCAL
-# transational: TransE, TransH, BoxE
+# transational: TransE, TransH, TransD
 # other: ConvE, ConvKB
 
-VALID_MODELS = ["TransE", "TransH", "BoxE", "DistMult", "RESCAL", "HolE", "ConvE", "ConvKB"]
+VALID_MODELS = ["TransE", "TransH", "TransD", "DistMult", "RESCAL", "HolE", "ConvE", "ConvKB"]
 VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 
 # ===================== Settings ===================== #

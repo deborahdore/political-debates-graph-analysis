@@ -53,7 +53,7 @@ def get_kwargs():
 	parser.add_argument("--wandb_project_name",
 						type=str,
 						required=False,
-						default="KGE experiments",
+						default=config.WANDB_PROJECT_NAME,
 						help="wandb project name")
 
 	### REQUIRED ###
