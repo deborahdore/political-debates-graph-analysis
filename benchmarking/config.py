@@ -21,8 +21,8 @@ NUM_TRIALS = 30
 WANDB = True
 WANDB_PROJECT_NAME = "KGE Experiments Family of Models"
 
-MODE_TEXT = 'text'
-MODE_NODE = ['claim+premise', 'year']
+MODE_TEXT = 'text+claim'
+MODE_NODE = ['speaker', 'year']
 
 VALID_MODE_TEXT = ['text', 'text+claim']
 VALID_MODE_NODE = ['claim+premise', 'speaker', 'year']

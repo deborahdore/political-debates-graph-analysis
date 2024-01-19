@@ -278,7 +278,6 @@ def training(model_dir: str,
 		# evaluation args
 		evaluator="RankBasedEvaluator",
 		evaluator_kwargs={"filtered": True, },
-		evaluation_relation_whitelist=['support', 'attack', 'equivalent'],
 		evaluation_kwargs={
 			"use_tqdm"                 : True,
 			"additional_filter_triples": [train_factory.mapped_triples, val_factory.mapped_triples, ], },
@@ -360,7 +359,6 @@ def hyperparameter_optimization(model_name: str,
 								   "additional_filter_triples": [train_factory.mapped_triples,
 																 val_factory.mapped_triples, ], },
 							   evaluator_kwargs={"filtered": True, },
-							   evaluation_relation_whitelist=['support', 'attack', 'equivalent'],
 							   metric="both.realistic.inverse_harmonic_mean_rank",
 							   # MRR
 							   filter_validation_when_testing=True,
