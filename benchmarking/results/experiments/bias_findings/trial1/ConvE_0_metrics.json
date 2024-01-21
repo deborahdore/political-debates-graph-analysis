@@ -30,5 +30,17 @@
     "mrr"         : 0.9761904762,
     "adjusted_mr" : 0.0004093824,
     "adjusted_mrr": 0.976148689
+  },
+  "relation classification"       : {
+    "accuracy"     : 0.4454458293,
+    "f1_macro"     : 0.4375212024,
+    "f1_micro"     : 0.4454458293,
+    "f1_weighted"  : 0.4597758764,
+    "f1_pos"       : 0.3707571802,
+    "f1_neg"       : 0.5042852245,
+    "precision"    : 0.4610777605,
+    "recall"       : 0.4566155321,
+    "Z_statistic"  : -0.01,
+    "norm_distance": Infinity
   }
 }
