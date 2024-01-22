@@ -1,0 +1,122 @@
+{
+  "link prediction"               : {
+    "head": {
+      "hits_at_1"   : 0.0040268456,
+      "hits_at_3"   : 0.0055608821,
+      "hits_at_5"   : 0.006903164,
+      "hits_at_10"  : 0.0086289549,
+      "mr"          : 9458.158203125,
+      "mrr"         : 0.0066220678,
+      "adjusted_mr" : 0.6361479144,
+      "adjusted_mrr": 0.0062585458
+    },
+    "both": {
+      "hits_at_1"   : 0.0040268456,
+      "hits_at_3"   : 0.006903164,
+      "hits_at_5"   : 0.009012464,
+      "hits_at_10"  : 0.0123681687,
+      "mr"          : 8462.8623046875,
+      "mrr"         : 0.007897058,
+      "adjusted_mr" : 0.5691945718,
+      "adjusted_mrr": 0.0075340087
+    },
+    "tail": {
+      "hits_at_1"   : 0.0040268456,
+      "hits_at_3"   : 0.0082454458,
+      "hits_at_5"   : 0.0111217641,
+      "hits_at_10"  : 0.0161073826,
+      "mr"          : 7467.5659179688,
+      "mrr"         : 0.0091720482,
+      "adjusted_mr" : 0.502243681,
+      "adjusted_mrr": 0.0088094715
+    }
+  },
+  "link deletion"                 : {
+    "head": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0009587728,
+      "hits_at_5"   : 0.0011505273,
+      "hits_at_10"  : 0.0021093001,
+      "mr"          : 1958.0116970278,
+      "adjusted_mr" : 0.7507713562,
+      "mrr"         : 0.0026131394,
+      "adjusted_mrr": 0.000862665
+    },
+    "both": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.000671141,
+      "hits_at_5"   : 0.0008628955,
+      "hits_at_10"  : 0.0026845638,
+      "mr"          : 1739,
+      "adjusted_mr" : 0.6669142883,
+      "mrr"         : 0.0028628605,
+      "adjusted_mrr": 0.0011128244
+    },
+    "tail": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0003835091,
+      "hits_at_5"   : 0.0005752637,
+      "hits_at_10"  : 0.0032598274,
+      "mr"          : 1520.6132310642,
+      "adjusted_mr" : 0.5830572205,
+      "mrr"         : 0.0031125816,
+      "adjusted_mrr": 0.0013629837
+    }
+  },
+  "relation prediction"           : {
+    "hits_at_1"   : 0.707957814,
+    "hits_at_2"   : 0.8943432407,
+    "mr"          : 1.3976989453,
+    "mrr"         : 0.8363694471,
+    "adjusted_mr" : 0.0005359275,
+    "adjusted_mrr": 0.8360822656
+  },
+  "relation prediction support"   : {
+    "hits_at_1"   : 0.7957387679,
+    "hits_at_2"   : 0.9511347846,
+    "mr"          : 1.2531264474,
+    "mrr"         : 0.8897251814,
+    "adjusted_mr" : 0.0004804933,
+    "adjusted_mrr": 0.8895316424
+  },
+  "relation prediction attack"    : {
+    "hits_at_1"   : 0.3102094241,
+    "hits_at_2"   : 0.6243455497,
+    "mr"          : 2.0654450262,
+    "mrr"         : 0.592495637,
+    "adjusted_mr" : 0.0007919651,
+    "adjusted_mrr": 0.5917804421
+  },
+  "relation prediction equivalent": {
+    "hits_at_1"   : 0.1428571429,
+    "hits_at_2"   : 0.6015037594,
+    "mr"          : 2.2556390977,
+    "mrr"         : 0.5050125313,
+    "adjusted_mr" : 0.0008648923,
+    "adjusted_mrr": 0.5041437983
+  },
+  "triple classification"         : {
+    "accuracy"     : 0.7253282507,
+    "f1_macro"     : 0.7131487214,
+    "f1_micro"     : 0.7253282507,
+    "f1_weighted"  : 0.7287371837,
+    "f1_pos"       : 0.6540410776,
+    "f1_neg"       : 0.7722563652,
+    "precision"    : 0.7103940446,
+    "recall"       : 0.7211429373,
+    "Z_statistic"  : 62.3,
+    "norm_distance": 0.0959062138
+  },
+  "relation classification"       : {
+    "accuracy"     : 0.6608501119,
+    "f1_macro"     : 0.6480554254,
+    "f1_micro"     : 0.6608501119,
+    "f1_weighted"  : 0.6704236084,
+    "f1_pos"       : 0.5809508766,
+    "f1_neg"       : 0.7151599742,
+    "precision"    : 0.6532027024,
+    "recall"       : 0.6719558965,
+    "Z_statistic"  : 62.3,
+    "norm_distance": 0.0959062138
+  }
+}
