@@ -44,7 +44,7 @@ An explaination of the work and the corresponding code can be found in the folde
 
 * Python 3.9
 * Nvidia V100 32 Gb
-* [requirements.py](requirements.txt)
+* [environment.yaml](environment.yaml)
 
 ## ACKNOWLEDGEMENT
 
