@@ -2,13 +2,9 @@ from typing import Any
 
 import config
 import numpy as np
-import pandas as pd
 import torch
 from pykeen.models.predict import predict_triples_df
 from pykeen.triples import TriplesFactory
-from torch.nn import functional as F
-from torch.utils.data import DataLoader, TensorDataset
-from transformers import BertForSequenceClassification, BertTokenizer
 
 
 def get_scores(model: Any, factory: TriplesFactory):
@@ -70,95 +66,3 @@ def get_center(scores: np.array):
 	"""
 	assert scores.ndim == 1
 	return float(np.mean(a=sorted(scores)))  # float(np.median(a=sorted(scores)))
-
-
-def get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
-	"""
-	Wrapper function for __get_probabilities_bert that returns the scores
-
-	:param model: BertForSequenceClassification: model that will be used
-	:param dataloader: DataLoader: dataset to evaluate
-	:param sort: bool: if to sort the results or not
-	:return: the scores of the evaluated dataset
-	"""
-	prob, index = __get_probabilities_bert(model, dataloader, sort)
-	return prob
-
-
-def get_probabilities_bert_index(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
-	"""
-	Wrapper function for __get_probabilities_bert that returns the corresponding index of the best scores
-
-	:param model: BertForSequenceClassification: model that will be used
-	:param dataloader: DataLoader: dataset to evaluate
-	:param sort: bool: if to sort the results or not
-	:return: the index of the scores of the evaluated dataset
-	"""
-	prob, index = __get_probabilities_bert(model, dataloader, sort)
-	return index
-
-
-def __get_probabilities_bert(model: BertForSequenceClassification, dataloader: DataLoader, sort: bool = False):
-	"""
-	Calculates the probability of a triple using bert
-
-	:param model: BertForSequenceClassification: model that will be used
-	:param dataloader: DataLoader: dataset to evaluate
-	:param sort: bool: if to sort the results or not
-	:return: tuple: best score and corresponding index
-	"""
-	score_test = []
-	score_test_index = []
-	with torch.no_grad():
-		for batch in dataloader:
-			batch = tuple(b.to(config.DEVICE) for b in batch)
-			inputs = {'input_ids': batch[0], 'attention_mask': batch[1], 'labels': batch[2]}
-			outputs = model(**inputs)
-			probs = F.softmax(outputs.logits, dim=-1).detach().cpu()
-			max_values, index = torch.max(probs, dim=-1)
-			score_test.append(max_values.item())
-			score_test_index.append(index.item())
-
-	if sort:
-		return sorted(score_test), sorted(score_test_index)
-	return score_test, score_test_index
-
-
-def tokenize_and_generate_dataset(dataset: pd.DataFrame):
-	"""
-	Prepare the dataset (tokenize and encode) for bert
-
-	:param dataset: DataFrame: dataset to prepare
-	:return: the dataset ready to be given to bert
-	"""
-	tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-
-	# create bert embeddings
-	encoded_data = tokenizer.batch_encode_plus(dataset['merged_sent'],
-											   add_special_tokens=True,
-											   return_attention_mask=True,
-											   padding='max_length',
-											   max_length=256,
-											   return_tensors='pt')
-
-	dataset = TensorDataset(encoded_data['input_ids'],
-							encoded_data['attention_mask'],
-							torch.tensor(dataset.label.values))
-
-	return dataset
-
-
-def adjust_dataset_for_bert(dataset: pd.DataFrame, label: float):
-	"""
-	Modify the dataset so it fits bert's requirements
-
-	:param dataset: DataFrame: dataset to prepare
-	:param label: float: label to assign to each entry
-	:return: the dataset ready to be given to bert
-	"""
-	# create dataset
-	new_dataset = pd.DataFrame()
-	new_dataset['merged_sent'] = dataset['head'] + "<sep>" + dataset['relation'] + "<sep>" + dataset['tail']
-	new_dataset['label'] = label
-
-	return new_dataset.reset_index(drop=True)

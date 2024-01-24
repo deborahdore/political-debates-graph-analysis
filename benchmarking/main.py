@@ -3,14 +3,11 @@ import os.path
 
 import config
 from evaluation import link_deletion, \
-	link_deletion_bert, \
 	link_prediction, \
-	link_prediction_bert, \
 	relation_classification, \
 	relation_prediction, \
-	triple_classification, \
-	triple_classification_bert
-from training import bert_training, hyperparameter_optimization, training
+	triple_classification
+from training import hyperparameter_optimization, training
 from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
 from utils.utils import load_model
 
@@ -91,35 +88,6 @@ def get_kwargs():
 	assert args.model in config.VALID_MODELS
 
 	return args
-
-
-def bert_basic(ratio: int):
-	"""
-	Train and evaluate Bert model
-
-	:param ratio:int: Specify the noise ratio of the dataset
-	"""
-	model_file = os.path.join(config.model_dir.format(model="bert"), f"{ratio}/bert_{ratio}.pt")
-
-	if not os.path.exists(model_file) or config.FORCE_TRAINING:
-		model = bert_training(model_file=model_file, noisy_triples_file=config.noisy_triples_file, ratio=ratio)
-	else:
-		model = load_model(model_file)
-
-	link_prediction_bert(model=model,
-						 noisy_triples_file=config.noisy_triples_file,
-						 metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
-						 noise_ratio=ratio)
-
-	link_deletion_bert(model=model,
-					   noisy_triples_file=config.noisy_triples_file,
-					   metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
-					   noise_ratio=ratio)
-
-	triple_classification_bert(model=model,
-							   noisy_triples_file=config.noisy_triples_file,
-							   metrics_file=config.metrics_file.format(model="bert", ratio=ratio),
-							   noise_ratio=ratio)
 
 
 def kge_basic(name: str, ratio: int):
@@ -207,10 +175,7 @@ def main():
 									pretrained_embedding_file=config.pretrained_embedding_file)
 
 	else:
-		if args.model == 'bert':
-			bert_basic(args.noise)
-		else:
-			kge_basic(args.model, args.noise)
+		kge_basic(args.model, args.noise)
 
 
 if __name__ == '__main__':
