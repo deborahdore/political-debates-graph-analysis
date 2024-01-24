@@ -34,18 +34,18 @@ Some experiments were conducted to improve the results and evaluate them. It can
 
 To execute the script, it's mandatory to run the [main](main.py) file and include some arguments:
 
-|        **ARGUMENT**         | **REQUIRED** | **DEFAULT** |                                                    **HELP**                                                    |
-|:---------------------------:|:------------:|:-----------:|:--------------------------------------------------------------------------------------------------------------:|
-|         --generate          |      No      |    False    |                      Whether or not to generate a new dataset with the new configurations                      |
-|         --optimize          |      No      |    False    |                      Whether or not to perform hyper-parameter optimization on the model                       |
-| --special_benchmarking_flag |      No      |    False    |            Whether or not to perform evaluation with only support, attack and equivalent relations             |
-| --use_pretrained_embeddings |      No      |    False    |                         Whether or not to use pretrained embeddings for the KGE models                         |
-|           --wandb           |      No      |    False    |                              Whether or not to use Wandb to log model's training                               |
-|    --wandb_project_name     |      No      |    None     |                                              Wandb's project name                                              |
-|           --model           |     Yes      |             | Model's name to train. Available: TransE, DistMult, ComplEx, HolE, ConvE, PairRE, AutoSF, RotatE, TransH, BoxE |
-|           --noise           |     Yes      |             |                   Noise in the dataset to train the model on. Available: 0, 10, 20, 30, 100                    |
-|         --mode_text         |     Yes      |             |                 Configuration for the feature of the nodes. Available: "text" or "text+claim"                  |
-|         --mode_node         |     Yes      |             | Types of relationships between nodes (can be more than one). Available: "claim+premise", "speaker" and "year"  |
+|        **ARGUMENT**         | **REQUIRED** | **DEFAULT** |                                                   **HELP**                                                    |
+|:---------------------------:|:------------:|:-----------:|:-------------------------------------------------------------------------------------------------------------:|
+|         --generate          |      No      |    False    |                     Whether or not to generate a new dataset with the new configurations                      |
+|         --optimize          |      No      |    False    |                      Whether or not to perform hyper-parameter optimization on the model                      |
+| --special_benchmarking_flag |      No      |    False    |            Whether or not to perform evaluation with only support, attack and equivalent relations            |
+| --use_pretrained_embeddings |      No      |    False    |                        Whether or not to use pretrained embeddings for the KGE models                         |
+|           --wandb           |      No      |    False    |                              Whether or not to use Wandb to log model's training                              |
+|    --wandb_project_name     |      No      |    None     |                                             Wandb's project name                                              |
+|           --model           |     Yes      |             |        Model's name to train. Available: TransE, TransH, TransD, DistMult, RESCAL, HolE, ConvE, ConvKB        |
+|           --noise           |     Yes      |             |                   Noise in the dataset to train the model on. Available: 0, 10, 20, 30, 100                   |
+|         --mode_text         |     Yes      |             |                 Configuration for the feature of the nodes. Available: "text" or "text+claim"                 |
+|         --mode_node         |     Yes      |             | Types of relationships between nodes (can be more than one). Available: "claim+premise", "speaker" and "year" |
 
 If you are not sure about node types and text types, take a look at this [explanation](results/example_nodes.pdf).
 
