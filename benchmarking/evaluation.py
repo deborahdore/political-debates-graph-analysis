@@ -577,10 +577,10 @@ def relation_classification(model: Any,
 	# ===== LOAD ORIGINAL
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, True)
 
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
-																		  val_original,
-																		  test_original,
-																		  triplets_file_utils,
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train=train_original,
+																		  val=val_original,
+																		  test=test_original,
+																		  triplets_file_utils=triplets_file_utils,
 																		  create_inverse_triples=False)
 
 	# ===== LOAD ALL FAKE
@@ -591,10 +591,10 @@ def relation_classification(model: Any,
 	train_fake = train_fake[train_fake['noise'] == 1].copy()
 	val_fake = val_fake[val_fake['noise'] == 1].copy()
 	test_fake = test_fake[test_fake['noise'] == 1].copy()
-	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
-																						 val_fake,
-																						 test_fake,
-																						 triplets_file_utils,
+	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train=train_fake,
+																						 val=val_fake,
+																						 test=test_fake,
+																						 triplets_file_utils=triplets_file_utils,
 																						 create_inverse_triples=False)
 
 	# ===== Inference (computation of KGE scores) on Original Training Set ====== #
