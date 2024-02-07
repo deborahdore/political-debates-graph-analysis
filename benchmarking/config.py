@@ -15,7 +15,7 @@ VALID_NOISE_RATIO = [0, 10, 20, 30, 100]
 
 SPECIAL_BENCHMARKING_FLAG = True
 USE_PRETRAINED_EMBEDDINGS = True
-FORCE_TRAINING = False
+FORCE_TRAINING = True
 NUM_TRIALS = 30
 
 WANDB = True
@@ -32,7 +32,7 @@ DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # ===================== Directories ===================== #
 
 base_dir = os.path.abspath(".")
-dataset_dir = os.path.join(base_dir, "dataset")
+dataset_dir = os.path.join(base_dir, "dataset_2") #modify dataset path
 models_dir = os.path.join(base_dir, "models")
 model_dir = os.path.join(models_dir, "{model}")
 results_dir = os.path.join(base_dir, "evaluation_results")
@@ -42,7 +42,7 @@ excel_dir = os.path.join(results_dir, "excel")
 # ======================== Files ======================== #
 
 original_dataset_file = os.path.join(dataset_dir, "original_dataset.csv")
-original_triplets_file = os.path.join(dataset_dir, "original_triplets_file.tsv")
+original_triplets_file = os.path.join(dataset_dir, "triplets_file.tsv")
 triplets_file = os.path.join(dataset_dir, "triplets_file.tsv")
 triplets_file_utils = os.path.join(dataset_dir, "{file_name}.json")
 pretrained_embedding_file = os.path.join(dataset_dir, "pretrained_embedding_file.npy")

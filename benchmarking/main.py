@@ -154,9 +154,10 @@ def main():
 
 	if args.generate:
 		# generates triples from original file
-		generate_triplets(original_dataset_file=config.original_dataset_file,
-						  triples_file=config.triplets_file,
-						  original_triplets_file=config.original_triplets_file)
+		if os.path.exists(config.original_dataset_file):
+			generate_triplets(original_dataset_file=config.original_dataset_file,
+							  triples_file=config.triplets_file,
+							  original_triplets_file=config.original_triplets_file)
 		# generate node to label mappings
 		generate_mappings(triplets_file=config.triplets_file,
 						  triplets_file_utils=config.triplets_file_utils,

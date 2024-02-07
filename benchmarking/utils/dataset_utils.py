@@ -104,6 +104,8 @@ def configure_nodes(df: pd.DataFrame, mode: str):
 	:param df: pd.DataFrame: starting dataframe
 	:param mode: str: Determine which nodes to add to the dataframe
 	:return: a dataframe
+
+	Graphs from A -> B: head -> tail: governor -> dependent
 	"""
 	logger.info(f"Creating nodes content with mode: {mode.upper()}")
 
