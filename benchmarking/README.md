@@ -28,11 +28,11 @@ and [here](results/pretrained-special).
 The first are the results with no other addition other than the information in the dataset while the seconds include the
 use of pretrained embeddings for the arguments.
 
-Some experiments were conducted to improve the results and evaluate them. It can be found [here](results/experiments).
+Some experiments were conducted to improve the results and evaluate them. They can be found [here](results/experiments).
 
 ### EXECUTE AN EXPERIMENT
 
-To execute the script, it's mandatory to run the [main](main.py) file and include some arguments:
+To execute the script, it's mandatory to run the [main](main.py) file and include some arguments (other  hyperparameters can be changed  from the [config.py](config.py) file:
 
 |        **ARGUMENT**         | **REQUIRED** | **DEFAULT** |                                                   **HELP**                                                    |
 |:---------------------------:|:------------:|:-----------:|:-------------------------------------------------------------------------------------------------------------:|
