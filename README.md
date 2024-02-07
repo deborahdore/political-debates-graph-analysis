@@ -34,7 +34,7 @@ All the code for the exploration data analysis of the dataset can be found in th
 </a>
 
 _Example graph of debate between Gore and Kemp_:
-<img src="imgs/09-10-1996_debate_graph.svg">
+<img src="notebooks/imgs/09-10-1996_debate_graph.svg">
 
 ## BENCHMARKING
 
