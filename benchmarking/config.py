@@ -18,11 +18,11 @@ USE_PRETRAINED_EMBEDDINGS = True
 FORCE_TRAINING = True
 NUM_TRIALS = 30
 
-WANDB = True
+WANDB = False
 WANDB_PROJECT_NAME = "KGE Experiments Family of Models"
 
-MODE_TEXT = 'text+claim'
-MODE_NODE = ['speaker', 'year']
+MODE_TEXT = 'text'
+MODE_NODE = ['claim+premise', 'year']
 
 VALID_MODE_TEXT = ['text', 'text+claim']
 VALID_MODE_NODE = ['claim+premise', 'speaker', 'year']
@@ -32,7 +32,7 @@ DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # ===================== Directories ===================== #
 
 base_dir = os.path.abspath(".")
-dataset_dir = os.path.join(base_dir, "dataset_2") #modify dataset path
+dataset_dir = os.path.join(base_dir, "dataset_2")
 models_dir = os.path.join(base_dir, "models")
 model_dir = os.path.join(models_dir, "{model}")
 results_dir = os.path.join(base_dir, "evaluation_results")

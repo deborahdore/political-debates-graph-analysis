@@ -1,0 +1,122 @@
+{
+  "link prediction noise=100"                        : {
+    "head": {
+      "hits_at_1"   : 0.0001917546,
+      "hits_at_3"   : 0.0003835091,
+      "hits_at_5"   : 0.0003835091,
+      "hits_at_10"  : 0.0005752637,
+      "mr"          : 14892.484375,
+      "mrr"         : 0.0005074791,
+      "adjusted_mr" : 1.0016950293,
+      "adjusted_mrr": 0.0001417066
+    },
+    "both": {
+      "hits_at_1"   : 9.58773e-05,
+      "hits_at_3"   : 0.0002876318,
+      "hits_at_5"   : 0.0002876318,
+      "hits_at_10"  : 0.0004793864,
+      "mr"          : 14843.197265625,
+      "mrr"         : 0.0004260224,
+      "adjusted_mr" : 0.9983597162,
+      "adjusted_mrr": 6.02268e-05
+    },
+    "tail": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0001917546,
+      "hits_at_5"   : 0.0001917546,
+      "hits_at_10"  : 0.0003835091,
+      "mr"          : 14793.908203125,
+      "mrr"         : 0.0003445657,
+      "adjusted_mr" : 0.9950244064,
+      "adjusted_mrr": -2.1253e-05
+    }
+  },
+  "link deletion noise=100"                          : {
+    "head": {
+      "hits_at_1"   : 0.0,
+      "hits_at_3"   : 0.0009587728,
+      "hits_at_5"   : 0.0011505273,
+      "hits_at_10"  : 0.0021093001,
+      "mr"          : 2590.4172579099,
+      "adjusted_mr" : 0.993258151,
+      "mrr"         : 0.0018138482,
+      "adjusted_mrr": 6.1971e-05
+    },
+    "both": {
+      "hits_at_1"   : 9.58773e-05,
+      "hits_at_3"   : 0.0008628955,
+      "hits_at_5"   : 0.0009587728,
+      "hits_at_10"  : 0.0016299137,
+      "mr"          : 2610,
+      "adjusted_mr" : 1.0010970375,
+      "mrr"         : 0.0016677267,
+      "adjusted_mrr": -8.4407e-05
+    },
+    "tail": {
+      "hits_at_1"   : 0.0001917546,
+      "hits_at_3"   : 0.0007670182,
+      "hits_at_5"   : 0.0007670182,
+      "hits_at_10"  : 0.0011505273,
+      "mr"          : 2631.3048897411,
+      "adjusted_mr" : 1.008935924,
+      "mrr"         : 0.0015216051,
+      "adjusted_mrr": -0.000230785
+    }
+  },
+  "relation prediction noise=100"                    : {
+    "hits_at_1"   : 0.3171620326,
+    "hits_at_2"   : 0.6803451582,
+    "mr"          : 2.0024928092,
+    "mrr"         : 0.6053052093,
+    "adjusted_mr" : 0.000767827,
+    "adjusted_mrr": 0.604612496
+  },
+  "relation prediction relation=support noise=100"   : {
+    "hits_at_1"   : 0.3047707272,
+    "hits_at_2"   : 0.6901343214,
+    "mr"          : 2.0050949514,
+    "mrr"         : 0.6007410838,
+    "adjusted_mr" : 0.0007688248,
+    "adjusted_mrr": 0.6000403602
+  },
+  "relation prediction relation=attack noise=100"    : {
+    "hits_at_1"   : 0.3717277487,
+    "hits_at_2"   : 0.6217277487,
+    "mr"          : 2.0065445026,
+    "mrr"         : 0.6228184991,
+    "adjusted_mr" : 0.0007693806,
+    "adjusted_mrr": 0.6221565227
+  },
+  "relation prediction relation=equivalent noise=100": {
+    "hits_at_1"   : 0.4060150376,
+    "hits_at_2"   : 0.6992481203,
+    "mr"          : 1.8947368421,
+    "mrr"         : 0.6528822055,
+    "adjusted_mr" : 0.0007265095,
+    "adjusted_mrr": 0.6522729927
+  },
+  "triple classification noise=100"                  : {
+    "accuracy"     : 0.5037413525,
+    "f1_macro"     : 0.4931265283,
+    "f1_micro"     : 0.5037413525,
+    "f1_weighted"  : 0.5124713983,
+    "f1_pos"       : 0.4197755035,
+    "f1_neg"       : 0.566477553,
+    "precision"    : 0.5003532708,
+    "recall"       : 0.5003794281,
+    "Z_statistic"  : -0.8,
+    "norm_distance": Infinity
+  },
+  "relation classification noise=100"                : {
+    "accuracy"     : 0.5073186322,
+    "f1_macro"     : 0.490395669,
+    "f1_micro"     : 0.5073186322,
+    "f1_weighted"  : 0.5213508612,
+    "f1_pos"       : 0.3975300922,
+    "f1_neg"       : 0.5832612457,
+    "precision"    : 0.5021326726,
+    "recall"       : 0.5023969319,
+    "Z_statistic"  : -0.8,
+    "norm_distance": Infinity
+  }
+}

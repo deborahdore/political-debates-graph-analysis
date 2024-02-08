@@ -192,10 +192,10 @@ def link_deletion(model: Any,
 	# Check if the JSON file exists
 	if os.path.isfile(metrics_file):
 		existing_results = read_json(metrics_file)
-		existing_results.update({"link deletion": results_eval})
+		existing_results.update({f"link deletion noise={noise_ratio}": results_eval})
 		save_json(existing_results, metrics_file)
 	else:
-		save_json({"link deletion": results_eval}, metrics_file)
+		save_json({f"link deletion noise={noise_ratio}": results_eval}, metrics_file)
 
 	logger.info(f"## ===== LINK DELETION COMPLETE ===== ##")
 
@@ -306,9 +306,9 @@ def relation_prediction(model: Any,
 
 	# Check if the JSON file exists
 	if relation_to_evaluate is not None:
-		title = f"relation prediction {relation_to_evaluate}"
+		title = f"relation prediction relation={relation_to_evaluate} noise={noise_ratio}"
 	else:
-		title = "relation prediction"
+		title = f"relation prediction noise={noise_ratio}"
 
 	if os.path.isfile(metrics_file):
 		existing_results = read_json(metrics_file)
@@ -393,10 +393,10 @@ def link_prediction(model: Any,
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
 		existing_results = read_json(metrics_file)
-		existing_results.update({"link prediction": results_eval})
+		existing_results.update({f"link prediction noise={noise_ratio}": results_eval})
 		save_json(existing_results, metrics_file)
 	else:
-		save_json({"link prediction": results_eval}, metrics_file)
+		save_json({f"link prediction noise={noise_ratio}": results_eval}, metrics_file)
 
 	logger.info(f"## ===== LINK PREDICTION COMPLETE ===== ##")
 
@@ -538,10 +538,10 @@ def triple_classification(model: Any,
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
 		existing_results = read_json(metrics_file)
-		existing_results.update({"triple classification": results_eval})
+		existing_results.update({f"triple classification noise={noise_ratio}": results_eval})
 		save_json(existing_results, metrics_file)
 	else:
-		save_json({"triple classification": results_eval}, metrics_file)
+		save_json({f"triple classification noise={noise_ratio}": results_eval}, metrics_file)
 
 	logger.info(f"## ===== TRIPLE CLASSIFICATION COMPLETE ===== ##")
 
@@ -712,9 +712,9 @@ def relation_classification(model: Any,
 	# Check if the JSON file exists
 	if os.path.exists(metrics_file):
 		existing_results = read_json(metrics_file)
-		existing_results.update({"relation classification": results_eval})
+		existing_results.update({f"relation classification noise={noise_ratio}": results_eval})
 		save_json(existing_results, metrics_file)
 	else:
-		save_json({"relation classification": results_eval}, metrics_file)
+		save_json({f"relation classification noise={noise_ratio}": results_eval}, metrics_file)
 
 	logger.info(f"## ===== RELATION CLASSIFICATION COMPLETE ===== ##")
