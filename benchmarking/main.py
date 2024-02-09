@@ -1,27 +1,21 @@
 import argparse
-import os.path
+from pathlib import Path
 
-import config
-from evaluation import link_deletion, \
+import pykeen.models
+
+from benchmarking import config
+from benchmarking.evaluation import link_deletion, \
 	link_prediction, \
+	make_prediction, \
 	relation_classification, \
 	relation_prediction, \
 	triple_classification
-from training import hyperparameter_optimization, training
-from utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
-from utils.utils import load_model
+from benchmarking.training import optimization, training
+from benchmarking.utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
 
 
 def get_kwargs():
-	"""
-	Parse the command line arguments
-
-	:return:
-	- Generate argument containing True/False. If true, the datasets with noise will be generated
-	- optimize argument containing True/False. If true, will perform hyperparameter optimization
-	- model argument containing the model name to be optimized/trained
-	- noise argument containing the noise ratio to optimize/train the model on
-	"""
+	"""	Parse the command line arguments """
 
 	parser = argparse.ArgumentParser()
 	### NOT REQUIRED ###
@@ -53,13 +47,16 @@ def get_kwargs():
 						default=config.WANDB_PROJECT_NAME,
 						help="wandb project name")
 
-	### REQUIRED ###
-	parser.add_argument("--model", type=str, required=True, help=f"Model (name) to use ({config.VALID_MODELS})")
-
 	parser.add_argument("--noise",
 						type=int,
-						required=True,
+						required=False,
+						default=0,
 						help=f"Noise level to train the model on ({config.VALID_NOISE_RATIO})")
+
+	### REQUIRED ###
+	parser.add_argument("--output_dir_name", type=str, required=True, help="Output directory name")
+
+	parser.add_argument("--model", type=str, required=True, help=f"Model (name) to use ({config.VALID_MODELS})")
 
 	parser.add_argument("--mode_text",
 						type=str,
@@ -73,110 +70,131 @@ def get_kwargs():
 
 	args = parser.parse_args()
 
+	mode_nodes = [mode.strip() for mode in str(args.mode_node).split(",")]
+
+	assert args.mode_text in config.VALID_MODE_TEXT
+	if not bool(mode_nodes):
+		for mode in mode_nodes:
+			assert mode in config.VALID_MODE_NODE
+	assert args.noise in config.VALID_NOISE_RATIO
+	assert args.model in config.VALID_MODELS
+
 	config.USE_PRETRAINED_EMBEDDINGS = args.use_pretrained_embeddings
 	config.WANDB = args.wandb
 	config.WANDB_PROJECT_NAME = args.wandb_project_name
-
 	config.MODE_TEXT = args.mode_text
-	config.MODE_NODE = [mode.strip() for mode in str(args.mode_node).split(",")]
+	config.MODE_NODE = mode_nodes
 
-	assert config.MODE_TEXT in config.VALID_MODE_TEXT
-	for mode in config.MODE_NODE:
-		assert mode in config.VALID_MODE_NODE
+	if args.generate:
+		for noise in config.VALID_NOISE_RATIO:
+			Path(config.noisy_dir.format(noise=noise)).mkdir(parents=True, exist_ok=True)
 
-	assert args.noise in config.VALID_NOISE_RATIO
-	assert args.model in config.VALID_MODELS
+	Path(config.noisy_dir.format(noise=args.noise)).mkdir(parents=True, exist_ok=True)
+	Path(config.plot_dir.format(task_name=args.output_dir_name, model=args.model)).mkdir(parents=True, exist_ok=True)
 
 	return args
 
 
-def kge_basic(name: str, ratio: int):
-	"""
-	Trains and evaluate a KGE model
-
-	:param name: str: Name the model to train/evaluate
-	:param ratio: int: Specify the noise ratio of the dataset
-	"""
-	model_file = os.path.join(config.model_dir.format(model=name), f"{ratio}/{name}_{ratio}.pt")
-	if not os.path.exists(model_file) or config.FORCE_TRAINING:
-		result = training(model_dir=config.model_dir.format(model=name),
-						  model_name=name,
-						  model_file=model_file,
-						  noisy_triples_file=config.noisy_triples_file,
-						  triplets_file_utils=config.triplets_file_utils,
-						  ratio=ratio,
-						  pretrained_embedding_file=config.pretrained_embedding_file)
-		model = result.model
-
-	else:
-		model = load_model(model_file)
-
+def evaluation(model: pykeen.models.Model,
+			   model_name: str,
+			   results_dir: str,
+			   noisy_split_triplets_file: str,
+			   noisy_split_triplets_file2: str,
+			   triplets_file_utils: str,
+			   task_name: str,
+			   ratio: float):
+	""" Evaluate a KGE model"""
 	link_prediction(model=model,
-					noisy_triples_file=config.noisy_triples_file,
-					triplets_file_utils=config.triplets_file_utils,
-					model_name=name,
-					metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+					model_name=model_name,
+					noisy_split_triplets_file=noisy_split_triplets_file,
+					triplets_file_utils=triplets_file_utils,
+					task_name=task_name,
+					results_dir=results_dir,
 					noise_ratio=ratio)
 	link_deletion(model=model,
-				  model_name=name,
-				  noisy_triples_file=config.noisy_triples_file,
-				  triplets_file_utils=config.triplets_file_utils,
-				  metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+				  model_name=model_name,
+				  noisy_split_triplets_file=noisy_split_triplets_file,
+				  triplets_file_utils=triplets_file_utils,
+				  task_name=task_name,
+				  results_dir=results_dir,
 				  noise_ratio=ratio)
 
-	for relation_to_evaluate in [None, 'support', 'attack', 'equivalent']:
+	for relation_to_evaluate in [None, '__label__support', '__label__attack', '__label__equivalent']:
 		relation_prediction(model=model,
-							model_name=name,
-							noisy_triples_file=config.noisy_triples_file,
-							triplets_file_utils=config.triplets_file_utils,
-							metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+							model_name=model_name,
+							noisy_split_triplets_file=noisy_split_triplets_file,
+							triplets_file_utils=triplets_file_utils,
+							task_name=task_name,
+							results_dir=results_dir,
 							noise_ratio=ratio,
 							relation_to_evaluate=relation_to_evaluate)
 
 	triple_classification(model=model,
-						  model_name=name,
-						  noisy_triples_file=config.noisy_triples_file,
-						  triplets_file_utils=config.triplets_file_utils,
-						  metrics_file=config.metrics_file.format(model=name, ratio=ratio),
+						  model_name=model_name,
+						  noisy_split_triplets_file=noisy_split_triplets_file,
+						  triplets_file_utils=triplets_file_utils,
+						  task_name=task_name,
+						  results_dir=results_dir,
 						  noise_ratio=ratio)
 
-	relation_classification(model=model,
-							model_name=name,
-							noisy_triples_file=config.noisy_triples_file,
-							triplets_file_utils=config.triplets_file_utils,
-							metrics_file=config.metrics_file.format(model=name, ratio=ratio),
-							noise_ratio=ratio)
+	threshold = relation_classification(model=model,
+										model_name=model_name,
+										noisy_split_triplets_file=noisy_split_triplets_file,
+										triplets_file_utils=triplets_file_utils,
+										task_name=task_name,
+										results_dir=results_dir,
+										noise_ratio=ratio)
+	make_prediction(model=model,
+					model_name=model_name,
+					noisy_split_triplets_file2=noisy_split_triplets_file2,
+					triplets_file_utils=triplets_file_utils,
+					task_name=task_name,
+					results_dir=results_dir,
+					plot_dir=config.plot_dir,
+					threshold=threshold)
 
 
 def main():
-	""" Main function """
 	args = get_kwargs()
 
 	if args.generate:
 		# generates triples from original file
-		if os.path.exists(config.original_dataset_file):
-			generate_triplets(original_dataset_file=config.original_dataset_file,
-							  triples_file=config.triplets_file,
-							  original_triplets_file=config.original_triplets_file)
+		generate_triplets(original_dataset_file=config.original_dataset_file,
+						  original_split_triplets_file=config.original_split_triplets_file,
+						  noisy_split_triplets_file=config.noisy_split_triplets_file,
+						  noisy_triplets_file=config.noisy_triplets_file)
 		# generate node to label mappings
-		generate_mappings(triplets_file=config.triplets_file,
+		generate_mappings(noisy_triplets_file=config.noisy_triplets_file,
 						  triplets_file_utils=config.triplets_file_utils,
 						  pretrained_embedding_file=config.pretrained_embedding_file)
 		# for every level of noise, create a dataset
-		generate_noise(triplets_file=config.triplets_file,
-					   original_triplets_file=config.original_triplets_file,
-					   noisy_triples_file=config.noisy_triples_file,
+		generate_noise(noisy_triplets_file=config.noisy_triplets_file,
+					   noisy_split_triplets_file=config.noisy_split_triplets_file,
 					   valid_noise=config.VALID_NOISE_RATIO)
 	if args.optimize:
-		if args.model == 'bert': exit(1)
-		hyperparameter_optimization(model_name=args.model,
-									model_dir=config.model_dir.format(model=args.model),
-									noisy_triples_file=config.noisy_triples_file,
-									triplets_file_utils=config.triplets_file_utils,
-									pretrained_embedding_file=config.pretrained_embedding_file)
+		optimization(model_name=args.model,
+					 model_dir=config.model_dir,
+					 noisy_split_triplets_file=config.noisy_split_triplets_file,
+					 triplets_file_utils=config.triplets_file_utils,
+					 task_name=args.output_dir_name,
+					 pretrained_embedding_file=config.pretrained_embedding_file)
 
-	else:
-		kge_basic(args.model, args.noise)
+	model = training(model_name=args.model,
+					 model_dir=config.model_dir,
+					 noisy_split_triplets_file=config.noisy_split_triplets_file,
+					 triplets_file_utils=config.triplets_file_utils,
+					 task_name=args.output_dir_name,
+					 ratio=args.noise,
+					 pretrained_embedding_file=config.pretrained_embedding_file)
+
+	evaluation(model=model,
+			   model_name=args.model,
+			   results_dir=config.results_dir,
+			   noisy_split_triplets_file=config.noisy_split_triplets_file,
+			   noisy_split_triplets_file2=config.noisy_split_triplets_file2,
+			   triplets_file_utils=config.triplets_file_utils,
+			   task_name=args.output_dir_name,
+			   ratio=args.noise)
 
 
 if __name__ == '__main__':

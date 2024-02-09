@@ -1,10 +1,11 @@
 import os
 import random
-from typing import Any
 
 import numpy as np
 import pandas as pd
+import pykeen.models
 from loguru import logger
+from matplotlib import pyplot as plt
 from pykeen.evaluation import RankBasedEvaluator
 from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
 	AdjustedInverseHarmonicMeanRank, \
@@ -12,42 +13,36 @@ from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
 	HitsAtK, \
 	InverseHarmonicMeanRank
 from sklearn import metrics
+from sklearn.metrics import ConfusionMatrixDisplay
 
-import config
-from utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
-from utils.evaluation_utils import get_center, get_scores, get_scores_tensor
-from utils.utils import read_json, save_json
+from benchmarking import config
+from benchmarking.utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
+from benchmarking.utils.evaluation_utils import get_center, get_scores, get_scores_tensor
+from benchmarking.utils.util import read_json, read_tsv, save_csv, save_json
 
 
-# ======================== KGE MODELS EVALUATION  ======================== #
+# ======================== LINK DELETION  ======================== #
 
-def link_deletion(model: Any,
+def link_deletion(model: pykeen.models.Model,
 				  model_name: str,
-				  noisy_triples_file: str,
+				  noisy_split_triplets_file: str,
 				  triplets_file_utils: str,
-				  metrics_file: str,
-				  noise_ratio: int):
-	"""
-	Evaluate the performance of a KGE model on link deletion.
+				  task_name: str,
+				  results_dir: str,
+				  noise_ratio: float):
+	"""	Evaluate the performance of a KGE model on link deletion."""
 
-	:param model: Any: the model to evaluate
-	:param model_name: str: name of the model to evaluate
-	:param noisy_triples_file: str: dataset's file
-	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
-	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
-	"""
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link deletion ===== ##".upper())
+	logger.info(f"🎯 Evaluating {model_name} on link deletion")
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
 	# load original dataset
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+	train_original, test_original, val_original = get_train_val_test_from_dir(noisy_split_triplets_file,
 																			  noise=0,
 																			  drop_col_noise=True,
 																			  get_noisy_test=False)
-	# triples factories from original dataset
+
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
@@ -62,10 +57,12 @@ def link_deletion(model: Any,
 	original_df = pd.concat([train_original, test_original, val_original],
 							axis=0).dropna().drop_duplicates().reset_index(drop=True).values.tolist()
 
-	# get only nodes/relations that the model has seen
-	nodes = get_nodes(train_original)
-	relations = train_original['relation'].drop_duplicates().values.tolist()
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		relations = ['__label__support', '__label__attack', '__label__equivalent']
+	else:
+		relations = train_original['relation'].drop_duplicates().values.tolist()
 
+	nodes = get_nodes(train_original)
 	test_size = len(test_original)
 
 	for h, r, t in test_original.values.tolist():
@@ -189,49 +186,38 @@ def link_deletion(model: Any,
 	}
 	logger.info(results_eval)
 
-	# Check if the JSON file exists
-	if os.path.isfile(metrics_file):
-		existing_results = read_json(metrics_file)
-		existing_results.update({f"link deletion noise={noise_ratio}": results_eval})
-		save_json(existing_results, metrics_file)
-	else:
-		save_json({f"link deletion noise={noise_ratio}": results_eval}, metrics_file)
+	save_json(results_eval,
+			  f"{results_dir.format(model=model_name, task_name=task_name)}/link_deletion_noise_{noise_ratio}.json")
 
-	logger.info(f"## ===== LINK DELETION COMPLETE ===== ##")
+	logger.info(f"🎯 Link deletion complete 🎯")
 
 
-def relation_prediction(model: Any,
+# ======================== RELATION PREDICTION  ======================== #
+def relation_prediction(model: pykeen.models.Model,
 						model_name: str,
-						noisy_triples_file: str,
+						noisy_split_triplets_file: str,
 						triplets_file_utils: str,
-						metrics_file: str,
-						noise_ratio: int,
+						task_name: str,
+						results_dir: str,
+						noise_ratio: float,
 						relation_to_evaluate: str = None):
-	"""
-	Evaluate the performance of a KGE model on relation prediction
+	""" Evaluate the performance of a KGE model on relation prediction """
 
-	:param model: Any: the model to evaluate
-	:param model_name: str: name of the model to evaluate
-	:param noisy_triples_file: str: dataset's file
-	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
-	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
-	:param relation_to_evaluate: str: if not none, evaluates the relation prediction task on a specific relation
-	"""
-
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on relation prediction ===== ##".upper())
+	logger.info(f"🎯 Evaluating {model_name} on "
+				f"{'relation' if relation_to_evaluate is None else relation_to_evaluate} "
+				f"prediction")
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
 	# load original dataset
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_split_triplets_file,
 																			  noise=0,
 																			  drop_col_noise=True,
 																			  get_noisy_test=False)
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		relations = ['support', 'attack', 'equivalent']
+		relations = ['__label__support', '__label__attack', '__label__equivalent']
 	else:
 		relations = train_original['relation'].drop_duplicates().values.tolist()
 
@@ -239,7 +225,6 @@ def relation_prediction(model: Any,
 	ranks = []
 
 	if relation_to_evaluate is not None:
-		logger.info(f"Evaluating only {relation_to_evaluate} relations")
 		test_original = test_original[test_original['relation'] == relation_to_evaluate]
 
 	for h, r, t in test_original.values.tolist():
@@ -304,54 +289,39 @@ def relation_prediction(model: Any,
 
 	logger.info(results_eval)
 
-	# Check if the JSON file exists
-	if relation_to_evaluate is not None:
-		title = f"relation prediction relation={relation_to_evaluate} noise={noise_ratio}"
-	else:
-		title = f"relation prediction noise={noise_ratio}"
+	save_json(results_eval, f"{results_dir.format(model=model_name, task_name=task_name)}/"
+							f"{'relation' if relation_to_evaluate is None else relation_to_evaluate}_prediction_noise_"
+							f"{noise_ratio}.json")
 
-	if os.path.isfile(metrics_file):
-		existing_results = read_json(metrics_file)
-		existing_results.update({title: results_eval})
-		save_json(existing_results, metrics_file)
-	else:
-		save_json({title: results_eval}, metrics_file)
-
-	logger.info(f"## ===== RELATION PREDICTION COMPLETE ===== ##")
+	logger.info(f"🎯 {'Relation' if relation_to_evaluate is None else relation_to_evaluate} prediction complete 🎯")
 
 
-def link_prediction(model: Any,
-					noisy_triples_file: str,
-					triplets_file_utils: str,
+# ======================== LINK PREDICTION  ======================== #
+def link_prediction(model: pykeen.models.Model,
 					model_name: str,
-					metrics_file: str,
-					noise_ratio: int):
-	"""
-	Evaluates the performance of a KGE model on link prediction.
+					noisy_split_triplets_file: str,
+					triplets_file_utils: str,
+					task_name: str,
+					results_dir: str,
+					noise_ratio: float):
+	""" Evaluates the performance of a KGE model on link prediction. """
 
-	:param model: Any: the model to evaluate
-	:param model_name: str: name of the model to evaluate
-	:param noisy_triples_file: str: dataset's file
-	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
-	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
-	"""
-
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on link prediction ===== ##".upper())
+	logger.info(f"🎯 Evaluating {model_name} on link prediction")
 
 	# load original dataset
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file,
-																			  noise=0,
-																			  drop_col_noise=False,
-																			  get_noisy_test=False)
-	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
-																		  val_original,
-																		  test_original,
+	train, test, val = get_train_val_test_from_dir(noisy_split_triplets_file,
+												   noise=0,
+												   drop_col_noise=False,
+												   get_noisy_test=False)
+
+	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
+																		  val,
+																		  test,
 																		  triplets_file_utils,
 																		  create_inverse_triples=False)
 
 	# load noisy dataset
-	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_triples_file,
+	train_noisy, val_noisy, test_noisy = get_train_val_test_from_dir(noisy_split_triplets_file,
 																	 noise=noise_ratio,
 																	 drop_col_noise=False,
 																	 get_noisy_test=True)
@@ -369,6 +339,7 @@ def link_prediction(model: Any,
 																val_factory_noisy.mapped_triples,
 																# filter on validation triples with noisy
 																],
+
 									 batch_size=None,
 									 slice_size=None,
 									 device=config.DEVICE,
@@ -390,37 +361,25 @@ def link_prediction(model: Any,
 
 	logger.info(results_eval)
 
-	# Check if the JSON file exists
-	if os.path.exists(metrics_file):
-		existing_results = read_json(metrics_file)
-		existing_results.update({f"link prediction noise={noise_ratio}": results_eval})
-		save_json(existing_results, metrics_file)
-	else:
-		save_json({f"link prediction noise={noise_ratio}": results_eval}, metrics_file)
-
-	logger.info(f"## ===== LINK PREDICTION COMPLETE ===== ##")
+	save_json(results_eval,
+			  f"{results_dir.format(model=model_name, task_name=task_name)}/link_prediction_noise_{noise_ratio}.json")
+	logger.info(f"🎯 Link prediction complete 🎯")
 
 
-def triple_classification(model: Any,
+# ======================== TRIPLE CLASSIFICATION  ======================== #
+
+def triple_classification(model: pykeen.models.Model,
 						  model_name: str,
-						  noisy_triples_file: str,
+						  noisy_split_triplets_file: str,
 						  triplets_file_utils: str,
-						  metrics_file: str,
-						  noise_ratio: int):
-	"""
-	Evaluate the performance of a KGE model on triple classification
-
-	:param model: Any: the model to evaluate
-	:param model_name: str: name of the model to evaluate
-	:param noisy_triples_file: str: dataset's file
-	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
-	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
-	"""
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on triple classification ===== ##".upper())
+						  task_name: str,
+						  results_dir: str,
+						  noise_ratio: float):
+	"""	Evaluate the performance of a KGE model on triple classification """
+	logger.info(f"🎯 Evaluating {model_name} on triple classification")
 
 	# ===== LOAD ORIGINAL
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, False)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_split_triplets_file, 0, False)
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
@@ -428,13 +387,13 @@ def triple_classification(model: Any,
 																		  create_inverse_triples=False)
 
 	# ===== LOAD ALL FAKE
-	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_triples_file,
+	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_split_triplets_file,
 																  100,
 																  drop_col_noise=False,
 																  get_noisy_test=True)
-	train_fake = train_fake[train_fake['noise'] == 1].copy()
-	val_fake = val_fake[val_fake['noise'] == 1].copy()
-	test_fake = test_fake[test_fake['noise'] == 1].copy()
+	train_fake = train_fake[train_fake['noise'] == str(1)].copy()
+	val_fake = val_fake[val_fake['noise'] == str(1)].copy()
+	test_fake = test_fake[test_fake['noise'] == str(1)].copy()
 	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train_fake,
 																						 val_fake,
 																						 test_fake,
@@ -464,15 +423,15 @@ def triple_classification(model: Any,
 	real_testing_scores = get_scores(model=model, factory=test_factory)
 	real_testing_scores_center = get_center(scores=real_testing_scores)
 
-	logger.info("Triples Classification statistics:".upper())
-	logger.info(f"training_scores_center: {training_scores_center}")
-	logger.info(f"fake_validation_scores_center: {fake_validation_scores_center}")
-	logger.info(f"real_validation_scores_center: {real_validation_scores_center}")
-	logger.info(f"fake_testing_scores_center: {fake_testing_scores_center}")
-	logger.info(f"real_testing_scores_center: {real_testing_scores_center}")
+	logger.info("🎯 Triples Classification statistics: 🎯")
+	logger.info(f"📊 training_scores_center: {training_scores_center}")
+	logger.info(f"📊 fake_validation_scores_center: {fake_validation_scores_center}")
+	logger.info(f"📊 real_validation_scores_center: {real_validation_scores_center}")
+	logger.info(f"📊 fake_testing_scores_center: {fake_testing_scores_center}")
+	logger.info(f"📊 real_testing_scores_center: {real_testing_scores_center}")
 
 	threshold = fake_validation_scores_center + ((real_validation_scores_center - fake_validation_scores_center) / 2)
-	logger.info(f"classification threshold: {threshold}")
+	logger.info(f"📊 classification threshold: {threshold}")
 
 	y_true = [1 for _ in real_testing_scores] + [0 for _ in fake_testing_scores]
 	y_pred = [1 if y >= threshold else 0 for y in real_testing_scores] + [1 if y >= threshold else 0 for y in
@@ -535,40 +494,30 @@ def triple_classification(model: Any,
 
 	logger.info(results_eval)
 
-	# Check if the JSON file exists
-	if os.path.exists(metrics_file):
-		existing_results = read_json(metrics_file)
-		existing_results.update({f"triple classification noise={noise_ratio}": results_eval})
-		save_json(existing_results, metrics_file)
-	else:
-		save_json({f"triple classification noise={noise_ratio}": results_eval}, metrics_file)
+	results_dir = results_dir.format(model=model_name, task_name=task_name)
+	save_json(results_eval, f"{results_dir}/triple_classification_noise_{noise_ratio}.json")
 
-	logger.info(f"## ===== TRIPLE CLASSIFICATION COMPLETE ===== ##")
+	logger.info("🎯 Triple classification complete 🎯")
 
 
-def relation_classification(model: Any,
+# ======================== RELATION CLASSIFICATION  ======================== #
+
+def relation_classification(model: pykeen.models.Model,
 							model_name: str,
-							noisy_triples_file: str,
+							noisy_split_triplets_file: str,
 							triplets_file_utils: str,
-							metrics_file: str,
-							noise_ratio: int):
-	"""
-	Evaluate the performance of a KGE model on relation classification.
+							task_name: str,
+							results_dir: str,
+							noise_ratio: float):
+	"""	Evaluate the performance of a KGE model on relation classification.	"""
 
-	:param model: Any: the model to evaluate
-	:param model_name: str: name of the model to evaluate
-	:param noisy_triples_file: str: dataset's file
-	:param triplets_file_utils: str: file that contains of entity-to-id and relation-to-id mappings
-	:param metrics_file: str: json file where the results of the link deletion experiment will be saves
-	:param noise_ratio: int: the amount of noise of the dataset in which the model will be evaluated
-	"""
-	logger.info(f"## ===== {model_name} trained with {noise_ratio} noise on relation classification ===== ##".upper())
+	logger.info(f"🎯 Evaluating {model_name} on relation classification")
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
 	# ===== LOAD ORIGINAL
-	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_triples_file, 0, True)
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_split_triplets_file, 0, True)
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train=train_original,
 																		  val=val_original,
@@ -577,13 +526,13 @@ def relation_classification(model: Any,
 																		  create_inverse_triples=False)
 
 	# ===== LOAD ALL FAKE
-	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_triples_file,
+	train_fake, val_fake, test_fake = get_train_val_test_from_dir(noisy_split_triplets_file,
 																  100,
 																  drop_col_noise=False,
 																  get_noisy_test=True)
-	train_fake = train_fake[train_fake['noise'] == 1].copy()
-	val_fake = val_fake[val_fake['noise'] == 1].copy()
-	test_fake = test_fake[test_fake['noise'] == 1].copy()
+	train_fake = train_fake[train_fake['noise'] == str(1)].copy()
+	val_fake = val_fake[val_fake['noise'] == str(1)].copy()
+	test_fake = test_fake[test_fake['noise'] == str(1)].copy()
 	train_fake_factory, val_fake_factory, test_fake_factory = get_train_val_test_factory(train=train_fake,
 																						 val=val_fake,
 																						 test=test_fake,
@@ -613,18 +562,18 @@ def relation_classification(model: Any,
 	real_testing_scores = get_scores(model=model, factory=test_factory)
 	real_testing_scores_center = get_center(scores=real_testing_scores)
 
-	logger.info("Relation Classification statistics:".upper())
-	logger.info(f"training_scores_center: {training_scores_center}")
-	logger.info(f"fake_validation_scores_center: {fake_validation_scores_center}")
-	logger.info(f"real_validation_scores_center: {real_validation_scores_center}")
-	logger.info(f"fake_testing_scores_center: {fake_testing_scores_center}")
-	logger.info(f"real_testing_scores_center: {real_testing_scores_center}")
+	logger.info("🎯 Relation Classification statistics: 🎯")
+	logger.info(f"📊training_scores_center: {training_scores_center}")
+	logger.info(f"📊fake_validation_scores_center: {fake_validation_scores_center}")
+	logger.info(f"📊real_validation_scores_center: {real_validation_scores_center}")
+	logger.info(f"📊fake_testing_scores_center: {fake_testing_scores_center}")
+	logger.info(f"📊real_testing_scores_center: {real_testing_scores_center}")
 
 	threshold = fake_validation_scores_center + ((real_validation_scores_center - fake_validation_scores_center) / 2)
-	logger.info(f"classification threshold: {threshold}")
+	logger.info(f"📊classification threshold: {threshold}")
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		relations = ['support', 'attack', 'equivalent']
+		relations = ['__label__support', '__label__attack', '__label__equivalent']
 	else:
 		relations = pd.concat([train_original, val_original, test_original], axis=0)[
 			'relation'].drop_duplicates().values.tolist()
@@ -709,12 +658,103 @@ def relation_classification(model: Any,
 
 	logger.info(results_eval)
 
-	# Check if the JSON file exists
-	if os.path.exists(metrics_file):
-		existing_results = read_json(metrics_file)
-		existing_results.update({f"relation classification noise={noise_ratio}": results_eval})
-		save_json(existing_results, metrics_file)
-	else:
-		save_json({f"relation classification noise={noise_ratio}": results_eval}, metrics_file)
+	results_dir = results_dir.format(model=model_name, task_name=task_name)
+	save_json(results_eval, f"{results_dir}/relation_classification_noise_{noise_ratio}.json")
 
-	logger.info(f"## ===== RELATION CLASSIFICATION COMPLETE ===== ##")
+	logger.info("🎯 Relation classification complete 🎯")
+	return threshold
+
+
+# ======================== MAKE PREDICTIONS  ======================== #
+
+def make_prediction(model: pykeen.models.Model,
+					model_name: str,
+					noisy_split_triplets_file2: str,
+					triplets_file_utils: str,
+					task_name: str,
+					results_dir: str,
+					plot_dir: str,
+					threshold: float):
+	""" Make and Save into csv the predictions on the test file """
+
+	logger.info(f"🎯 Use {model_name} to make predictions")
+
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
+
+	test_original = read_tsv(noisy_split_triplets_file2.format(split="test"))
+
+	y_true = test_original['relation'].values.tolist()
+	heads = test_original['head'].values.tolist()
+	tails = test_original['tail'].values.tolist()
+	y_pred = []
+
+	relations = ['__label__support', '__label__attack', '__label__equivalent']
+
+	for head, rel, tail in test_original.values.tolist():
+		triples = []
+		for elem in relations:
+			triples.append([head, elem, tail])
+
+		scores = get_scores_tensor(model,
+								   triples=triples,
+								   entities_label_id_map=entity_to_id,
+								   relation_label_id_map=relation_to_id)
+
+		if max(scores) > threshold:
+			# assign relation
+			if scores.argmax() == 0:
+				y_pred.append(["__label__support"])
+			elif scores.argmax() == 1:
+				y_pred.append(["__label__attack"])
+			else:
+				y_pred.append(["__label__noRel"])
+		else:
+			y_pred.append(["__label__noRel"])
+
+	assert len(test_original) == len(y_true) == len(y_pred) == len(heads) == len(tails)
+
+	predictions = pd.DataFrame({'pred': y_pred, 'true': y_true, 'head': heads, 'tail': tails})
+	results_dir = results_dir.format(model=model_name, task_name=task_name)
+	save_csv(predictions, os.path.join(results_dir, "predictions.csv"))
+
+	n_round = 10
+	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
+	logger.info(f"accuracy: {accuracy}")
+	f1_macro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info(f"f1_macro: {f1_macro}")
+	f1_micro = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="micro"), n_round)
+	logger.info(f"f1_micro: {f1_micro}")
+	f1_weighted = round(metrics.f1_score(y_true=y_true, y_pred=y_pred, average="weighted"), n_round)
+	logger.info(f"f1_weighted: {f1_weighted}")
+	precision = round(metrics.precision_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info(f"precision: {precision}")
+	recall = round(metrics.recall_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
+	logger.info(f"recall: {recall}")
+	cf = metrics.multilabel_confusion_matrix(y_true,
+											 y_pred,
+											 labels=["__label__support", "__label__attack", "__label__noRel"])
+	logger.info(f"confusion matrix: {cf}")
+
+	results_eval = {
+		"accuracy"   : accuracy,
+		"f1_macro"   : f1_macro,
+		"f1_micro"   : f1_micro,
+		"f1_weighted": f1_weighted,
+		"precision"  : precision,
+		"recall"     : recall}
+
+	save_json(results_eval, f"{results_dir}/predictions_eval.json")
+
+	# Plot results
+	fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
+	class_names = ['support', 'attack', 'equivalence']
+
+	for i in range(len(class_names)):
+		disp = ConfusionMatrixDisplay(confusion_matrix=cf[i], display_labels=[0, 1])
+		disp.plot(ax=axs[i], cmap='Blues')
+		disp.ax_.set_title(f'Confusion Matrix for {class_names[i]}')
+
+	plt.tight_layout()
+	plot_dir = plot_dir.format(model=model_name, task_name=task_name)
+	plt.savefig(os.path.join(plot_dir, "confusion_matrix.svg"))

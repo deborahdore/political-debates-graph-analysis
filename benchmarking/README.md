@@ -47,6 +47,7 @@ can be changed from the [config.py](config.py) file:
 |           --noise           |     Yes      |             |                   Noise in the dataset to train the model on. Available: 0, 10, 20, 30, 100                   |
 |         --mode_text         |     Yes      |             |                 Configuration for the feature of the nodes. Available: "text" or "text+claim"                 |
 |         --mode_node         |     Yes      |             | Types of relationships between nodes (can be more than one). Available: "claim+premise", "speaker" and "year" |
+|      --output_dir_name      |     Yes      |             |                                      Define name of the output directory                                      |
 
 If you are not sure about node types and text types, take a look at this [explanation](results/example_nodes.pdf).
 
