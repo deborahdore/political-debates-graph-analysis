@@ -1,7 +1,12 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 benchmarking/models/
-benchmarking/dataset/
+benchmarking/dataset/noise_0
+benchmarking/dataset/noise_10
+benchmarking/dataset/noise_20
+benchmarking/dataset/noise_30
+benchmarking/dataset/noise_100
+
 *.slurm
 .DS_Store
 *.DS_Store
