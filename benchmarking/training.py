@@ -54,8 +54,8 @@ def training(model_name: str,
 											   entity_initializer=PretrainedInitializer(
 												   tensor=pretrained_embedding_tensor))
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		pipeline_config['evaluation_relation_whitelist'] = ['__label__support', '__label__attack',
-															'__label__equivalent']
+		pipeline_config['evaluation_relation_whitelist'] = ['__label__Support', '__label__Attack',
+															'__label__Equivalent']
 
 	if config.WANDB:
 		pipeline_config['result_tracker'] = "wandb"
@@ -115,7 +115,7 @@ def optimization(model_name: str,
 
 	evaluation_relation_whitelist = None
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		evaluation_relation_whitelist = ['__label__support', '__label__attack', '__label__equivalent']
+		evaluation_relation_whitelist = ['__label__Support', '__label__Attack', '__label__Equivalent']
 
 	hpo_results = hpo_pipeline(  # 1. Dataset
 		training=train_factory,

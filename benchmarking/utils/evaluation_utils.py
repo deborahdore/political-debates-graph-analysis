@@ -25,21 +25,15 @@ def get_scores_tensor(model: Any,
 
 	mapped_triples = []
 	for h, r, t in triples:
-		h_id = entities_label_id_map.get(h, len(entities_label_id_map.keys()))
-		r_id = relation_label_id_map.get(r, len(entities_label_id_map.keys()))
-		t_id = entities_label_id_map.get(t, len(entities_label_id_map.keys()))
+		h_id = entities_label_id_map.get(h)
+		r_id = relation_label_id_map.get(r)
+		t_id = entities_label_id_map.get(t)
 		mapped_triples.append([h_id, r_id, t_id])
 	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=config.DEVICE, requires_grad=False)
 
-	try:
-		scores = predict_triples_df(model=model,
-									triples=mapped_triples_tensor,
-									triples_factory=None,
-									batch_size=None,
-									mode=None, )["score"].values
-	except Exception as err:
-		print(err)
-		return
+	scores = \
+	predict_triples_df(model=model, triples=mapped_triples_tensor, triples_factory=None, batch_size=None, mode=None, )[
+		"score"].values
 
 	assert len(scores) == len(triples)
 

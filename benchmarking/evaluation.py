@@ -58,7 +58,7 @@ def link_deletion(model: pykeen.models.Model,
 							axis=0).dropna().drop_duplicates().reset_index(drop=True).values.tolist()
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		relations = ['__label__support', '__label__attack', '__label__equivalent']
+		relations = ['__label__Support', '__label__Attack', '__label__Equivalent']
 	else:
 		relations = train_original['relation'].drop_duplicates().values.tolist()
 
@@ -217,7 +217,7 @@ def relation_prediction(model: pykeen.models.Model,
 																			  get_noisy_test=False)
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		relations = ['__label__support', '__label__attack', '__label__equivalent']
+		relations = ['__label__Support', '__label__Attack', '__label__Equivalent']
 	else:
 		relations = train_original['relation'].drop_duplicates().values.tolist()
 
@@ -573,7 +573,7 @@ def relation_classification(model: pykeen.models.Model,
 	logger.info(f"📊classification threshold: {threshold}")
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		relations = ['__label__support', '__label__attack', '__label__equivalent']
+		relations = ['__label__Support', '__label__Attack', '__label__Equivalent']
 	else:
 		relations = pd.concat([train_original, val_original, test_original], axis=0)[
 			'relation'].drop_duplicates().values.tolist()
@@ -689,29 +689,37 @@ def make_prediction(model: pykeen.models.Model,
 	tails = test_original['tail'].values.tolist()
 	y_pred = []
 
-	relations = ['__label__support', '__label__attack', '__label__equivalent']
+	relations = ['__label__Support', '__label__Attack', '__label__Equivalent']
 
+	skipped = 0
 	for head, rel, tail in test_original.values.tolist():
 		triples = []
 		for elem in relations:
 			triples.append([head, elem, tail])
 
-		scores = get_scores_tensor(model,
-								   triples=triples,
-								   entities_label_id_map=entity_to_id,
-								   relation_label_id_map=relation_to_id)
+		try:
+			scores = get_scores_tensor(model,
+									   triples=triples,
+									   entities_label_id_map=entity_to_id,
+									   relation_label_id_map=relation_to_id)
+		except Exception as err:
+			logger.warning(f"{err} not preset between entities")
+			y_pred.append(["__label__noRel"])
+			skipped += 1
+			continue
 
 		if max(scores) > threshold:
 			# assign relation
 			if scores.argmax() == 0:
-				y_pred.append(["__label__support"])
+				y_pred.append(["__label__Support"])
 			elif scores.argmax() == 1:
-				y_pred.append(["__label__attack"])
+				y_pred.append(["__label__Attack"])
 			else:
 				y_pred.append(["__label__noRel"])
 		else:
 			y_pred.append(["__label__noRel"])
 
+	logger.info(f"Skipped: {skipped}")
 	assert len(test_original) == len(y_true) == len(y_pred) == len(heads) == len(tails)
 
 	predictions = pd.DataFrame({'pred': y_pred, 'true': y_true, 'head': heads, 'tail': tails})
@@ -733,7 +741,7 @@ def make_prediction(model: pykeen.models.Model,
 	logger.info(f"recall: {recall}")
 	cf = metrics.multilabel_confusion_matrix(y_true,
 											 y_pred,
-											 labels=["__label__support", "__label__attack", "__label__noRel"])
+											 labels=["__label__Support", "__label__Attack", "__label__noRel"])
 	logger.info(f"confusion matrix: {cf}")
 
 	results_eval = {

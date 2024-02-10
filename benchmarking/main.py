@@ -108,38 +108,38 @@ def evaluation(model: pykeen.models.Model,
 			   task_name: str,
 			   ratio: float):
 	""" Evaluate a KGE model"""
-	# link_prediction(model=model,
-	# 				model_name=model_name,
-	# 				noisy_split_triplets_file=noisy_split_triplets_file,
-	# 				triplets_file_utils=triplets_file_utils,
-	# 				task_name=task_name,
-	# 				results_dir=results_dir,
-	# 				noise_ratio=ratio)
-	# link_deletion(model=model,
-	# 			  model_name=model_name,
-	# 			  noisy_split_triplets_file=noisy_split_triplets_file,
-	# 			  triplets_file_utils=triplets_file_utils,
-	# 			  task_name=task_name,
-	# 			  results_dir=results_dir,
-	# 			  noise_ratio=ratio)
-	#
-	# for relation_to_evaluate in [None, '__label__support', '__label__attack', '__label__equivalent']:
-	# 	relation_prediction(model=model,
-	# 						model_name=model_name,
-	# 						noisy_split_triplets_file=noisy_split_triplets_file,
-	# 						triplets_file_utils=triplets_file_utils,
-	# 						task_name=task_name,
-	# 						results_dir=results_dir,
-	# 						noise_ratio=ratio,
-	# 						relation_to_evaluate=relation_to_evaluate)
-	#
-	# triple_classification(model=model,
-	# 					  model_name=model_name,
-	# 					  noisy_split_triplets_file=noisy_split_triplets_file,
-	# 					  triplets_file_utils=triplets_file_utils,
-	# 					  task_name=task_name,
-	# 					  results_dir=results_dir,
-	# 					  noise_ratio=ratio)
+	link_prediction(model=model,
+					model_name=model_name,
+					noisy_split_triplets_file=noisy_split_triplets_file,
+					triplets_file_utils=triplets_file_utils,
+					task_name=task_name,
+					results_dir=results_dir,
+					noise_ratio=ratio)
+	link_deletion(model=model,
+				  model_name=model_name,
+				  noisy_split_triplets_file=noisy_split_triplets_file,
+				  triplets_file_utils=triplets_file_utils,
+				  task_name=task_name,
+				  results_dir=results_dir,
+				  noise_ratio=ratio)
+
+	for relation_to_evaluate in [None, '__label__Support', '__label__Attack', '__label__Equivalent']:
+		relation_prediction(model=model,
+							model_name=model_name,
+							noisy_split_triplets_file=noisy_split_triplets_file,
+							triplets_file_utils=triplets_file_utils,
+							task_name=task_name,
+							results_dir=results_dir,
+							noise_ratio=ratio,
+							relation_to_evaluate=relation_to_evaluate)
+
+	triple_classification(model=model,
+						  model_name=model_name,
+						  noisy_split_triplets_file=noisy_split_triplets_file,
+						  triplets_file_utils=triplets_file_utils,
+						  task_name=task_name,
+						  results_dir=results_dir,
+						  noise_ratio=ratio)
 
 	threshold = relation_classification(model=model,
 										model_name=model_name,

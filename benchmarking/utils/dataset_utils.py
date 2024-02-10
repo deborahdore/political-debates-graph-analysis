@@ -32,9 +32,9 @@ def generate_triplets(original_dataset_file: str,
 	# load original dataset
 	df_original = read_csv(original_dataset_file)
 	df_original['RelationType'] = df_original['RelationType'].replace({
-		'support'   : '__label__support',
-		'attack'    : '__label__attack',
-		'equivalent': '__label__equivalent'})
+		'support'   : '__label__Support',
+		'attack'    : '__label__Attack',
+		'equivalent': '__label__Equivalent'})
 
 	train_df = read_tsv(original_split_triplets_file.format(split="train"))
 	dev_df = read_tsv(original_split_triplets_file.format(split="dev"))
@@ -263,11 +263,11 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 		test = test.drop("noise", axis=1)
 
 	if special_benchmarking_flag:
-		val = val[(val['relation'] == '__label__support') or (val['relation'] == '__label__attack') or (
-				val['relation'] == '__label__equivalent')]
+		val = val[(val['relation'] == '__label__Support') or (val['relation'] == '__label__Attack') or (
+				val['relation'] == '__label__Equivalent')]
 
-		test = test[(test['relation'] == '__label__support') or (test['relation'] == '__label__attack') or (
-				test['relation'] == '__label__equivalent')]
+		test = test[(test['relation'] == '__label__Support') or (test['relation'] == '__label__Attack') or (
+				test['relation'] == '__label__Equivalent')]
 
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
 
