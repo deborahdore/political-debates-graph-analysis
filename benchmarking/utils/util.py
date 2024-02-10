@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 
 import pandas as pd
 import torch
@@ -102,8 +103,7 @@ def preprocess_dataset(df: pd.DataFrame):
 	:return: the processed dataframe
 	"""
 	df = df.applymap(lambda x: str(x))
-	df = df.applymap(lambda x: x.lower())
-	df = df.applymap(lambda x: x.strip("."))
+	# df = df.applymap(lambda x: x.lower())
 	df = df.applymap(lambda x: x.strip())
 	df = df.dropna().drop_duplicates().reset_index(drop=True)
 	return df

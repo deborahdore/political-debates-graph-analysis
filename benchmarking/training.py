@@ -53,48 +53,30 @@ def training(model_name: str,
 		pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
 											   entity_initializer=PretrainedInitializer(
 												   tensor=pretrained_embedding_tensor))
-	evaluation_relation_whitelist = None
 	if config.SPECIAL_BENCHMARKING_FLAG:
-		evaluation_relation_whitelist = ['__label__support', '__label__attack', '__label__equivalent']
+		pipeline_config['evaluation_relation_whitelist'] = ['__label__support', '__label__attack',
+															'__label__equivalent']
+
+	if config.WANDB:
+		pipeline_config['result_tracker'] = "wandb"
+		pipeline_config['result_tracker_kwargs'] = dict(project=config.WANDB_PROJECT_NAME)
+		pipeline_config['metadata'] = dict(title=f'{task_name}-{model_name}-noise={ratio}')
 
 	logger.info(f"📊 Best params: {pipeline_config}")
 
-	result = pipeline(  # 1. Dataset
-		training=train_factory,
-		validation=val_factory,
-		testing=test_factory,
-		evaluation_relation_whitelist=evaluation_relation_whitelist,
-		# 2. Model
-		model=model_name,
-		model_kwargs=pipeline_config['model_kwargs'],
-		# 3. Loss
-		loss=pipeline_config['loss'],
-		loss_kwargs=pipeline_config['loss_kwargs'],
-		# 5. Optimizer
-		optimizer=pipeline_config['optimizer'],
-		optimizer_kwargs=pipeline_config['optimizer_kwargs'],
-		# 6. Training Loop
-		training_loop=pipeline_config['training_loop'],
-		negative_sampler=pipeline_config['negative_sampler'],
-		negative_sampler_kwargs=pipeline_config['negative_sampler_kwargs'],
-		# 7. Training
-		training_kwargs=pipeline_config['training_kwargs'],
-		# 8. Evaluation
-		evaluator=pipeline_config['evaluator'],
-		evaluation_kwargs={
-			"use_tqdm"                 : True,
-			"additional_filter_triples": [train_factory.mapped_triples, val_factory.mapped_triples, ], },
-		# 9. Tracking
-		result_tracker="wandb" if config.WANDB else None,
-		result_tracker_kwargs=dict(project=config.WANDB_PROJECT_NAME) if config.WANDB else None,
-		metadata=dict(title=f'{task_name}-{model_name}-noise={ratio}'),
-		# Misc
-		device=config.DEVICE,
-		use_testing_data=True,
-		evaluation_fallback=True,
-		filter_validation_when_testing=True,
-		use_tqdm=True,
-		random_seed=config.SEED)
+	pipeline_config['training'] = train_factory
+	pipeline_config['validation'] = val_factory
+	pipeline_config['testing'] = test_factory
+	pipeline_config['evaluation_kwargs']['additional_filter_triples'] = [train_factory.mapped_triples,
+																		 val_factory.mapped_triples, ]
+	pipeline_config['device'] = config.DEVICE
+	pipeline_config['use_testing_data'] = True
+	pipeline_config['evaluation_fallback'] = True
+	pipeline_config['filter_validation_when_testing'] = True
+	pipeline_config['use_tqdm'] = True
+	pipeline_config['random_seed'] = config.SEED
+
+	result = pipeline(**pipeline_config)
 
 	result.save_model(path=model_file)
 

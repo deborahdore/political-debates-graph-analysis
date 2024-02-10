@@ -2,6 +2,9 @@ import argparse
 from pathlib import Path
 
 import pykeen.models
+import rootutils
+
+rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 from benchmarking import config
 from benchmarking.evaluation import link_deletion, \
@@ -65,7 +68,8 @@ def get_kwargs():
 
 	parser.add_argument("--mode_node",
 						type=str,
-						required=True,
+						required=False,
+						default="",
 						help=f"Mode for creating connections between nodes: {config.VALID_MODE_NODE}")
 
 	args = parser.parse_args()
@@ -104,38 +108,38 @@ def evaluation(model: pykeen.models.Model,
 			   task_name: str,
 			   ratio: float):
 	""" Evaluate a KGE model"""
-	link_prediction(model=model,
-					model_name=model_name,
-					noisy_split_triplets_file=noisy_split_triplets_file,
-					triplets_file_utils=triplets_file_utils,
-					task_name=task_name,
-					results_dir=results_dir,
-					noise_ratio=ratio)
-	link_deletion(model=model,
-				  model_name=model_name,
-				  noisy_split_triplets_file=noisy_split_triplets_file,
-				  triplets_file_utils=triplets_file_utils,
-				  task_name=task_name,
-				  results_dir=results_dir,
-				  noise_ratio=ratio)
-
-	for relation_to_evaluate in [None, '__label__support', '__label__attack', '__label__equivalent']:
-		relation_prediction(model=model,
-							model_name=model_name,
-							noisy_split_triplets_file=noisy_split_triplets_file,
-							triplets_file_utils=triplets_file_utils,
-							task_name=task_name,
-							results_dir=results_dir,
-							noise_ratio=ratio,
-							relation_to_evaluate=relation_to_evaluate)
-
-	triple_classification(model=model,
-						  model_name=model_name,
-						  noisy_split_triplets_file=noisy_split_triplets_file,
-						  triplets_file_utils=triplets_file_utils,
-						  task_name=task_name,
-						  results_dir=results_dir,
-						  noise_ratio=ratio)
+	# link_prediction(model=model,
+	# 				model_name=model_name,
+	# 				noisy_split_triplets_file=noisy_split_triplets_file,
+	# 				triplets_file_utils=triplets_file_utils,
+	# 				task_name=task_name,
+	# 				results_dir=results_dir,
+	# 				noise_ratio=ratio)
+	# link_deletion(model=model,
+	# 			  model_name=model_name,
+	# 			  noisy_split_triplets_file=noisy_split_triplets_file,
+	# 			  triplets_file_utils=triplets_file_utils,
+	# 			  task_name=task_name,
+	# 			  results_dir=results_dir,
+	# 			  noise_ratio=ratio)
+	#
+	# for relation_to_evaluate in [None, '__label__support', '__label__attack', '__label__equivalent']:
+	# 	relation_prediction(model=model,
+	# 						model_name=model_name,
+	# 						noisy_split_triplets_file=noisy_split_triplets_file,
+	# 						triplets_file_utils=triplets_file_utils,
+	# 						task_name=task_name,
+	# 						results_dir=results_dir,
+	# 						noise_ratio=ratio,
+	# 						relation_to_evaluate=relation_to_evaluate)
+	#
+	# triple_classification(model=model,
+	# 					  model_name=model_name,
+	# 					  noisy_split_triplets_file=noisy_split_triplets_file,
+	# 					  triplets_file_utils=triplets_file_utils,
+	# 					  task_name=task_name,
+	# 					  results_dir=results_dir,
+	# 					  noise_ratio=ratio)
 
 	threshold = relation_classification(model=model,
 										model_name=model_name,
