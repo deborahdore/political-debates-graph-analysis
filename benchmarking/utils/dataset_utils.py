@@ -28,13 +28,15 @@ def generate_triplets(original_dataset_file: str,
 	noisy_triplets_file = noisy_triplets_file.format(noise=0)
 
 	logger.info("💡 Triplets generation")
+	logger.info(f"💡 Mode text: {config.MODE_TEXT}")
+	logger.info(f"💡 Mode node: {config.MODE_NODE}")
 
 	# load original dataset
 	df_original = read_csv(original_dataset_file)
 	df_original['RelationType'] = df_original['RelationType'].replace({
-		'support'   : '__label__Support',
-		'attack'    : '__label__Attack',
-		'equivalent': '__label__Equivalent'})
+		'Support'   : '__label__Support',
+		'Attack'    : '__label__Attack',
+		'Equivalent': '__label__Equivalent'})
 
 	train_df = read_tsv(original_split_triplets_file.format(split="train"))
 	dev_df = read_tsv(original_split_triplets_file.format(split="dev"))
@@ -45,7 +47,7 @@ def generate_triplets(original_dataset_file: str,
 		dev_df = configure_mode_text_type(df_original, dev_df)
 		test_df = configure_mode_text_type(df_original, test_df)
 
-	if not bool(config.MODE_NODE):
+	if config.MODE_NODE:
 		for mode_node in config.MODE_NODE:
 			mode_df = extract_nodes(df_original, mode_node, config.MODE_TEXT)
 
@@ -103,7 +105,7 @@ def extract_nodes(df_original: pd.DataFrame, mode_node: str, mode_text: str):
 			df['head'] = pd.concat([df_original['Dependent'], df_original['Governor']], axis=0)
 			df['tail'] = pd.concat([df_original['Speaker1'], df_original['Speaker2']], axis=0)
 			df['relation'] = "__label__says"
-	elif mode_text == 'text+claim':
+	elif mode_text == 'text+type':
 		if mode_node == 'year':
 			head1 = df_original['Governor'] + '_' + df_original['G_type']
 			head2 = df_original['Dependent'] + '_' + df_original['D_type']

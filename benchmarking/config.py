@@ -25,7 +25,7 @@ WANDB = False
 WANDB_PROJECT_NAME = "KGE Experiments"
 
 MODE_TEXT = 'text'
-MODE_NODE = ['claim+premise', 'year']
+MODE_NODE = []
 
 VALID_MODE_TEXT = ['text', 'text+type']
 VALID_MODE_NODE = ['claim+premise', 'speaker', 'year']

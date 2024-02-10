@@ -56,6 +56,12 @@ def get_kwargs():
 						default=0,
 						help=f"Noise level to train the model on ({config.VALID_NOISE_RATIO})")
 
+	parser.add_argument("--mode_node",
+						type=str,
+						required=False,
+						default=[],
+						help=f"Mode for creating connections between nodes: {config.VALID_MODE_NODE}")
+
 	### REQUIRED ###
 	parser.add_argument("--output_dir_name", type=str, required=True, help="Output directory name")
 
@@ -66,20 +72,15 @@ def get_kwargs():
 						required=True,
 						help=f"Mode for creating feature nodes: {config.VALID_MODE_TEXT}")
 
-	parser.add_argument("--mode_node",
-						type=str,
-						required=False,
-						default="",
-						help=f"Mode for creating connections between nodes: {config.VALID_MODE_NODE}")
-
 	args = parser.parse_args()
 
-	mode_nodes = [mode.strip() for mode in str(args.mode_node).split(",")]
-
-	assert args.mode_text in config.VALID_MODE_TEXT
-	if not bool(mode_nodes):
+	if args.mode_node:
+		mode_nodes = [mode.strip() for mode in str(args.mode_node).split(",")]
 		for mode in mode_nodes:
 			assert mode in config.VALID_MODE_NODE
+		config.MODE_NODE = mode_nodes
+
+	assert args.mode_text in config.VALID_MODE_TEXT
 	assert args.noise in config.VALID_NOISE_RATIO
 	assert args.model in config.VALID_MODELS
 
@@ -87,7 +88,6 @@ def get_kwargs():
 	config.WANDB = args.wandb
 	config.WANDB_PROJECT_NAME = args.wandb_project_name
 	config.MODE_TEXT = args.mode_text
-	config.MODE_NODE = mode_nodes
 
 	if args.generate:
 		for noise in config.VALID_NOISE_RATIO:
