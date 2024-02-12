@@ -48,12 +48,14 @@ def training(model_name: str,
 	pipeline_config = read_json(pipeline_config)['pipeline']
 
 	if config.USE_PRETRAINED_EMBEDDINGS:
+		logger.info("🚀 Training with pretrained embeddings")
 		assert pretrained_embedding_file is not None
 		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
 		pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
 											   entity_initializer=PretrainedInitializer(
 												   tensor=pretrained_embedding_tensor))
 	if config.SPECIAL_BENCHMARKING_FLAG:
+		logger.info("🚀 Training with only relevant relations")
 		pipeline_config['evaluation_relation_whitelist'] = ['__label__Support', '__label__Attack',
 															'__label__Equivalent']
 
@@ -106,6 +108,7 @@ def optimization(model_name: str,
 																		  create_inverse_triples=False)
 
 	if config.USE_PRETRAINED_EMBEDDINGS:
+		logger.info("🚀 Training with pretrained embeddings")
 		assert pretrained_embedding_file is not None
 		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
 		model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
@@ -115,6 +118,7 @@ def optimization(model_name: str,
 
 	evaluation_relation_whitelist = None
 	if config.SPECIAL_BENCHMARKING_FLAG:
+		logger.info("🚀 Training with only relevant relations")
 		evaluation_relation_whitelist = ['__label__Support', '__label__Attack', '__label__Equivalent']
 
 	hpo_results = hpo_pipeline(  # 1. Dataset

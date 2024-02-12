@@ -14,7 +14,10 @@ from benchmarking.evaluation import link_deletion, \
 	relation_prediction, \
 	triple_classification
 from benchmarking.training import optimization, training
-from benchmarking.utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
+from benchmarking.utils.dataset_utils import generate_mappings, \
+	generate_noise, \
+	generate_pretrained_embeddings, \
+	generate_triplets
 
 
 def get_kwargs():
@@ -148,6 +151,7 @@ def evaluation(model: pykeen.models.Model,
 										task_name=task_name,
 										results_dir=results_dir,
 										noise_ratio=ratio)
+
 	make_prediction(model=model,
 					model_name=model_name,
 					noisy_split_triplets_file2=noisy_split_triplets_file2,
@@ -171,6 +175,9 @@ def main():
 		generate_mappings(noisy_triplets_file=config.noisy_triplets_file,
 						  triplets_file_utils=config.triplets_file_utils,
 						  pretrained_embedding_file=config.pretrained_embedding_file)
+		# generate embeddings
+		generate_pretrained_embeddings(triplets_file_utils=config.triplets_file_utils,
+									   pretrained_embedding_file=config.pretrained_embedding_file)
 		# for every level of noise, create a dataset
 		generate_noise(noisy_triplets_file=config.noisy_triplets_file,
 					   noisy_split_triplets_file=config.noisy_split_triplets_file,

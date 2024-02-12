@@ -1,4 +1,5 @@
 import math
+import os
 
 import numpy
 import pandas as pd
@@ -265,6 +266,7 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 		test = test.drop("noise", axis=1)
 
 	if special_benchmarking_flag:
+		logger.info("🚀 Training with only relevant relations")
 		val = val[(val['relation'] == '__label__Support') or (val['relation'] == '__label__Attack') or (
 				val['relation'] == '__label__Equivalent')]
 
@@ -282,7 +284,6 @@ def generate_mappings(noisy_triplets_file: str, triplets_file_utils: str, pretra
 												  create_inverse_triples=False)
 
 	entity_to_id = factory.entity_to_id
-	entity_to_id['placeholder'] = len(entity_to_id.keys())
 	relation_to_id = factory.relation_to_id
 
 	entity_to_id_file = triplets_file_utils.format(file_name="entity_to_id")
@@ -291,8 +292,18 @@ def generate_mappings(noisy_triplets_file: str, triplets_file_utils: str, pretra
 	relation_to_id_file = triplets_file_utils.format(file_name="relation_to_id")
 	save_json(relation_to_id, relation_to_id_file)
 
-	if config.USE_PRETRAINED_EMBEDDINGS:
-		assert pretrained_embedding_file is not None
-		model = SentenceTransformer('all-MiniLM-L6-v2').to(config.DEVICE)
-		embeddings = model.encode(list(entity_to_id.keys()), show_progress_bar=True, device=config.DEVICE)
-		numpy.save(pretrained_embedding_file, embeddings)
+
+def generate_pretrained_embeddings(triplets_file_utils: str, pretrained_embedding_file: str = None):
+	"""	Creates pretrained embeddings from entity to id file using paraphrase-MiniLM-L6-v2
+	This model was trained on a large corpus that comprises 'government' phrases that is the most similar kind of text
+	with respect to political debates """
+
+	if os.path.isfile(pretrained_embedding_file):
+		return
+
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+
+	assert pretrained_embedding_file is not None
+	model = SentenceTransformer('sentence-transformers/paraphrase-MiniLM-L6-v2').to(config.DEVICE)
+	embeddings = model.encode(list(entity_to_id.keys()), show_progress_bar=True, device=config.DEVICE)
+	numpy.save(pretrained_embedding_file, embeddings)

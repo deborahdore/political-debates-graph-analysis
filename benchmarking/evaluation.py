@@ -217,6 +217,7 @@ def relation_prediction(model: pykeen.models.Model,
 																			  get_noisy_test=False)
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
+		logger.info("🚀 Training with only relevant relations")
 		relations = ['__label__Support', '__label__Attack', '__label__Equivalent']
 	else:
 		relations = train_original['relation'].drop_duplicates().values.tolist()
@@ -680,8 +681,13 @@ def make_prediction(model: pykeen.models.Model,
 	logger.info(f"🎯 Use {model_name} to make predictions")
 
 	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
-	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
+	if config.MODE_TEXT == "text+type":
+		new_entity_to_id = {}
+		for idx, key in enumerate(entity_to_id):
+			new_entity_to_id[key.split("_")[0]] = idx
+		entity_to_id = new_entity_to_id
 
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 	test_original = read_tsv(noisy_split_triplets_file2.format(split="test"))
 
 	y_true = test_original['relation'].values.tolist()
