@@ -236,8 +236,10 @@ def get_train_val_test_factory(train: pd.DataFrame,
 	return train_factory, val_factory, test_factory
 
 
-def get_factory(dataset: pd.DataFrame, entity_to_id: dict, relation_to_id: dict, create_inverse_triples: bool = False):
+def get_factory(dataset: pd.DataFrame, triplets_file_utils: str, create_inverse_triples: bool = False):
 	""" Creates the TriplesFactory object from the labeled triples of the dataset. """
+	entity_to_id = read_json(triplets_file_utils.format(file_name="entity_to_id"))
+	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 	factory = TriplesFactory.from_labeled_triples(triples=dataset[['head', 'relation', 'tail']].values,
 												  entity_to_id=entity_to_id,
 												  relation_to_id=relation_to_id,

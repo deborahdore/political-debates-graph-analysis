@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "best_trial_evaluation": 0.24095825825869918,
+    "best_trial_number": 26,
+    "git_hash": "UNHASHED",
+    "version": "1.8.0"
+  },
+  "pipeline": {
+    "evaluation_kwargs": {
+      "additional_filter_triples": null,
+      "use_tqdm": true
+    },
+    "evaluator": "rankbased",
+    "evaluator_kwargs": {
+      "filtered": true
+    },
+    "filter_validation_when_testing": true,
+    "loss": "marginranking",
+    "loss_kwargs": {
+      "margin": 2.600978769052326
+    },
+    "model": "distmult",
+    "model_kwargs": {
+      "embedding_dim": 96
+    },
+    "negative_sampler": "basic",
+    "negative_sampler_kwargs": {
+      "filtered": true,
+      "filterer": "python-set",
+      "num_negs_per_pos": 35
+    },
+    "optimizer": "adam",
+    "optimizer_kwargs": {
+      "lr": 0.009155677187097925
+    },
+    "regularizer": "lp",
+    "regularizer_kwargs": {
+      "weight": 0.02100296511129356
+    },
+    "testing": "<user defined>",
+    "training": "<user defined>",
+    "training_kwargs": {
+      "batch_size": 256,
+      "num_epochs": 30,
+      "use_tqdm_batch": false
+    },
+    "training_loop": "slcwa",
+    "validation": "<user defined>"
+  }
+}

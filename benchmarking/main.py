@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pykeen.models
 import rootutils
+from loguru import logger
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
@@ -88,6 +89,7 @@ def get_kwargs():
 	assert args.model in config.VALID_MODELS
 
 	config.USE_PRETRAINED_EMBEDDINGS = args.use_pretrained_embeddings
+	config.SPECIAL_BENCHMARKING_FLAG = args.special_benchmarking_flag
 	config.WANDB = args.wandb
 	config.WANDB_PROJECT_NAME = args.wandb_project_name
 	config.MODE_TEXT = args.mode_text
@@ -98,6 +100,13 @@ def get_kwargs():
 
 	Path(config.noisy_dir.format(noise=args.noise)).mkdir(parents=True, exist_ok=True)
 	Path(config.plot_dir.format(task_name=args.output_dir_name, model=args.model)).mkdir(parents=True, exist_ok=True)
+
+	logger.info(f"⚠️ Special benchmarking flag: {config.SPECIAL_BENCHMARKING_FLAG}")
+	logger.info(f"⚠️ Use pretrained embeddings: {config.USE_PRETRAINED_EMBEDDINGS}")
+	logger.info(f"⚠️ Mode Text: {config.MODE_TEXT}")
+	logger.info(f"⚠️ Mode Node: {config.MODE_NODE}")
+	logger.info(f"⚠️ Noise: {args.noise}")
+	logger.info(f"⚠️ Model: {args.model}")
 
 	return args
 
@@ -176,8 +185,9 @@ def main():
 						  triplets_file_utils=config.triplets_file_utils,
 						  pretrained_embedding_file=config.pretrained_embedding_file)
 		# generate embeddings
-		generate_pretrained_embeddings(triplets_file_utils=config.triplets_file_utils,
-									   pretrained_embedding_file=config.pretrained_embedding_file)
+		# generate_pretrained_embeddings(triplets_file_utils=config.triplets_file_utils,
+		# 							   pretrained_embedding_file=config.pretrained_embedding_file)
+
 		# for every level of noise, create a dataset
 		generate_noise(noisy_triplets_file=config.noisy_triplets_file,
 					   noisy_split_triplets_file=config.noisy_split_triplets_file,
@@ -188,11 +198,13 @@ def main():
 					 noisy_split_triplets_file=config.noisy_split_triplets_file,
 					 triplets_file_utils=config.triplets_file_utils,
 					 task_name=args.output_dir_name,
+					 noisy_triplets_file=config.noisy_triplets_file,
 					 pretrained_embedding_file=config.pretrained_embedding_file)
 
 	model = training(model_name=args.model,
 					 model_dir=config.model_dir,
 					 noisy_split_triplets_file=config.noisy_split_triplets_file,
+					 noisy_triplets_file=config.noisy_triplets_file,
 					 triplets_file_utils=config.triplets_file_utils,
 					 task_name=args.output_dir_name,
 					 ratio=args.noise,

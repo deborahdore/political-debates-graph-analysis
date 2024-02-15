@@ -6,17 +6,22 @@ from loguru import logger
 from optuna.pruners import PercentilePruner
 from optuna.samplers import TPESampler
 from pykeen.hpo import hpo_pipeline
+from pykeen.models import ERModel, TransE
 from pykeen.nn.init import PretrainedInitializer
+from pykeen.nn.representation import LabelBasedTransformerRepresentation
 from pykeen.pipeline import pipeline
 
 from benchmarking import config
-from benchmarking.utils.dataset_utils import get_train_val_test_factory, get_train_val_test_from_dir
-from benchmarking.utils.util import load_model, read_json
+from benchmarking.utils.dataset_utils import get_factory, get_train_val_test_factory, get_train_val_test_from_dir
+from benchmarking.utils.util import load_model, read_json, read_tsv
+
+from pykeen.nn.representation import LabelBasedTransformerRepresentation
 
 
 def training(model_name: str,
 			 model_dir: str,
 			 noisy_split_triplets_file: str,
+			 noisy_triplets_file: str,
 			 triplets_file_utils: str,
 			 task_name: str,
 			 ratio: float,
@@ -49,11 +54,16 @@ def training(model_name: str,
 
 	if config.USE_PRETRAINED_EMBEDDINGS:
 		logger.info("🚀 Training with pretrained embeddings")
-		assert pretrained_embedding_file is not None
-		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
-		pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
-											   entity_initializer=PretrainedInitializer(
-												   tensor=pretrained_embedding_tensor))
+		# assert pretrained_embedding_file is not None
+		# pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
+		# pipeline_config['model_kwargs'] = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
+		# 									   entity_initializer=PretrainedInitializer(
+		# 										   tensor=pretrained_embedding_tensor))
+
+		dataset = get_factory(read_tsv(noisy_triplets_file.format(noise=ratio)), triplets_file_utils)
+		entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(triples_factory=dataset)
+		pipeline_config['model_kwargs'] = dict(entity_representations=entity_representations)
+
 	if config.SPECIAL_BENCHMARKING_FLAG:
 		logger.info("🚀 Training with only relevant relations")
 		pipeline_config['evaluation_relation_whitelist'] = ['__label__Support', '__label__Attack',
@@ -91,6 +101,7 @@ def optimization(model_name: str,
 				 noisy_split_triplets_file: str,
 				 triplets_file_utils: str,
 				 task_name: str,
+				 noisy_triplets_file: str,
 				 pretrained_embedding_file: str = None):
 	"""	Optimize the hyperparameters of a model	"""
 
@@ -106,15 +117,19 @@ def optimization(model_name: str,
 																		  test,
 																		  triplets_file_utils,
 																		  create_inverse_triples=False)
-
+	model_kwargs = None
 	if config.USE_PRETRAINED_EMBEDDINGS:
 		logger.info("🚀 Training with pretrained embeddings")
-		assert pretrained_embedding_file is not None
-		pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
-		model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
-							entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor))
-	else:
-		model_kwargs = None
+		# assert pretrained_embedding_file is not None
+		# pretrained_embedding_tensor = torch.FloatTensor(np.load(pretrained_embedding_file)).to(config.DEVICE)
+		# model_kwargs = dict(embedding_dim=pretrained_embedding_tensor.shape[-1],
+		# 					entity_initializer=PretrainedInitializer(tensor=pretrained_embedding_tensor))
+
+		dataset = get_factory(read_tsv(noisy_triplets_file.format(noise=0)), triplets_file_utils)
+		entity_representations = LabelBasedTransformerRepresentation.from_triples_factory(triples_factory=dataset)
+		model_kwargs = dict(embedding_dim=entity_representations.shape[-1],
+							entity_representations=entity_representations,
+							relation_representations_kwargs=dict(shape=entity_representations.shape))
 
 	evaluation_relation_whitelist = None
 	if config.SPECIAL_BENCHMARKING_FLAG:
@@ -127,7 +142,7 @@ def optimization(model_name: str,
 		testing=test_factory,
 		evaluation_relation_whitelist=evaluation_relation_whitelist,
 		# 2. Model
-		model=model_name,
+		model=TransE,
 		model_kwargs=model_kwargs,
 		# 5. Optimizer
 		optimizer="Adam",
