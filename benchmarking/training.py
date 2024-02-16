@@ -30,12 +30,16 @@ def training(model_name: str,
 
 	logger.info(f"🚀 Basic training {model_name} with {ratio}% noise")
 
-	train, test, val = get_train_val_test_from_dir(noisy_split_triplets_file,
+	train, val, test = get_train_val_test_from_dir(noisy_split_triplets_file,
 												   noise=ratio,
 												   drop_col_noise=False,
 												   get_noisy_test=False)
-	logger.info("📊 Relation counts: ")
+
+	logger.info("📊 Train relation counts: ")
 	logger.info(train['relation'].value_counts())
+
+	logger.info("📊 Test relation counts: ")
+	logger.info(test['relation'].value_counts())
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
 																		  val,
@@ -101,10 +105,13 @@ def optimization(model_name: str,
 
 	logger.info(f"🚀 Hyper-optimization {model_name}")
 
-	train, test, val = get_train_val_test_from_dir(noisy_split_triplets_file, noise=0, get_noisy_test=False)
+	train, val, test = get_train_val_test_from_dir(noisy_split_triplets_file, noise=0, get_noisy_test=False)
 
-	logger.info("📊 Relation counts: ")
+	logger.info("📊 Train relation counts: ")
 	logger.info(train['relation'].value_counts())
+
+	logger.info("📊 Test relation counts: ")
+	logger.info(test['relation'].value_counts())
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
 																		  val,

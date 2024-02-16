@@ -14,3 +14,4 @@ dependencies:
   - pip:
       - pykeen=1.8.0
       - rootutils=1.0.*
+      - openpyxl

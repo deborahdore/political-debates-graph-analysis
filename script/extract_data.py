@@ -23,6 +23,8 @@ def process_directory(directory):
 	data = {}
 	for model_folder in ["TransE", "DistMult", "ConvE"]:
 		model_path = os.path.join(directory, model_folder)
+		print(model_path)
+
 		data[model_folder] = {}
 		result_path = os.path.join(model_path, 'results')
 
@@ -31,6 +33,7 @@ def process_directory(directory):
 
 		link_deletion_file = os.path.join(result_path, "link_deletion_noise_0.json")
 		assert os.path.isfile(link_deletion_file)
+
 		relation_prediction_file = os.path.join(result_path, "relation_prediction_noise_0.json")
 		assert os.path.isfile(relation_prediction_file)
 
@@ -57,10 +60,15 @@ def main():
 	current_directory = os.getcwd()
 	task = current_directory.split('/')[-1]
 	data = {}
+	counter = 0
 	for folder in os.listdir(current_directory):  # for every folder in basic/special/pretrained
 		folder_path = os.path.join(current_directory, folder)
+		if not os.path.isdir(folder_path):
+			continue
+		counter += 1
 		data[folder] = process_directory(folder_path)
 
+	assert counter == 12  # there should be 12 folders
 	df_rows = []
 	for folder, models in data.items():
 		for model, metrics in models.items():

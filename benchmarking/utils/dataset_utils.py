@@ -233,10 +233,6 @@ def get_train_val_test_factory(train: pd.DataFrame,
 													   relation_to_id=relation_to_id,
 													   create_inverse_triples=False)
 
-	train_factory.mapped_triples = train_factory.mapped_triples.to(config.DEVICE)
-	val_factory.mapped_triples = val_factory.mapped_triples.to(config.DEVICE)
-	test_factory.mapped_triples = test_factory.mapped_triples.to(config.DEVICE)
-
 	return train_factory, val_factory, test_factory
 
 
@@ -249,15 +245,13 @@ def get_factory(dataset: pd.DataFrame, triplets_file_utils: str, create_inverse_
 												  relation_to_id=relation_to_id,
 												  create_inverse_triples=create_inverse_triples)
 
-	factory.mapped_triples = factory.mapped_triples.to(config.DEVICE)
 	return factory
 
 
 def get_train_val_test_from_dir(noisy_triples_file: str,
 								noise: float,
 								drop_col_noise: bool = True,
-								get_noisy_test: bool = False,
-								special_benchmarking_flag: bool = config.SPECIAL_BENCHMARKING_FLAG):
+								get_noisy_test: bool = False):
 	"""	Returns training, testing and validation dataframes	"""
 
 	train = read_tsv(noisy_triples_file.format(split="train", noise=noise))
@@ -273,12 +267,12 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 		val = val.drop("noise", axis=1)
 		test = test.drop("noise", axis=1)
 
-	if special_benchmarking_flag:
-		logger.info("🚀 Training with only relevant relations")
-		val = val[(val['relation'] == '__label__Support') or (val['relation'] == '__label__Attack') or (
+	if config.SPECIAL_BENCHMARKING_FLAG:
+		logger.info("🚀 Using with only relevant relations")
+		val = val[(val['relation'] == '__label__Support') | (val['relation'] == '__label__Attack') | (
 				val['relation'] == '__label__Equivalent')]
 
-		test = test[(test['relation'] == '__label__Support') or (test['relation'] == '__label__Attack') or (
+		test = test[(test['relation'] == '__label__Support') | (test['relation'] == '__label__Attack') | (
 				test['relation'] == '__label__Equivalent')]
 
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)

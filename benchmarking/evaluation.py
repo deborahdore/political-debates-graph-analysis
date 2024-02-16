@@ -38,10 +38,13 @@ def link_deletion(model: torch.nn.Module,
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 
 	# load original dataset
-	train_original, test_original, val_original = get_train_val_test_from_dir(noisy_split_triplets_file,
+	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_split_triplets_file,
 																			  noise=0,
 																			  drop_col_noise=True,
 																			  get_noisy_test=False)
+
+	logger.info("📊 Relation counts: ")
+	logger.info(test_original['relation'].value_counts())
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
@@ -215,6 +218,8 @@ def relation_prediction(model: torch.nn.Module,
 																			  noise=0,
 																			  drop_col_noise=True,
 																			  get_noisy_test=False)
+	logger.info("📊 Relation counts: ")
+	logger.info(test_original['relation'].value_counts())
 
 	if config.SPECIAL_BENCHMARKING_FLAG:
 		logger.info("🚀 Training with only relevant relations")
@@ -310,10 +315,12 @@ def link_prediction(model: torch.nn.Module,
 	logger.info(f"🎯 Evaluating {model_name} on link prediction")
 
 	# load original dataset
-	train, test, val = get_train_val_test_from_dir(noisy_split_triplets_file,
+	train, val, test = get_train_val_test_from_dir(noisy_split_triplets_file,
 												   noise=0,
 												   drop_col_noise=False,
 												   get_noisy_test=False)
+	logger.info("📊 Relation counts: ")
+	logger.info(test['relation'].value_counts())
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train,
 																		  val,
@@ -381,6 +388,10 @@ def triple_classification(model: torch.nn.Module,
 
 	# ===== LOAD ORIGINAL
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_split_triplets_file, 0, False)
+
+	logger.info("📊 Relation counts: ")
+	logger.info(test_original['relation'].value_counts())
+
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train_original,
 																		  val_original,
 																		  test_original,
@@ -519,6 +530,9 @@ def relation_classification(model: torch.nn.Module,
 
 	# ===== LOAD ORIGINAL
 	train_original, val_original, test_original = get_train_val_test_from_dir(noisy_split_triplets_file, 0, True)
+
+	logger.info("📊 Relation counts: ")
+	logger.info(test_original['relation'].value_counts())
 
 	train_factory, val_factory, test_factory = get_train_val_test_factory(train=train_original,
 																		  val=val_original,

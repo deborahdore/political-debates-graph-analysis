@@ -15,7 +15,10 @@ from benchmarking.evaluation import link_deletion, \
 	relation_prediction, \
 	triple_classification
 from benchmarking.training import optimization, training
-from benchmarking.utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
+from benchmarking.utils.dataset_utils import generate_mappings, \
+	generate_noise, \
+	generate_pretrained_embeddings, \
+	generate_triplets
 
 
 def get_kwargs():
@@ -182,13 +185,14 @@ def main():
 						  triplets_file_utils=config.triplets_file_utils,
 						  pretrained_embedding_file=config.pretrained_embedding_file)
 		# generate embeddings
-		# generate_pretrained_embeddings(triplets_file_utils=config.triplets_file_utils,
-		# 							   pretrained_embedding_file=config.pretrained_embedding_file)
+		generate_pretrained_embeddings(triplets_file_utils=config.triplets_file_utils,
+									   pretrained_embedding_file=config.pretrained_embedding_file)
 
 		# for every level of noise, create a dataset
 		generate_noise(noisy_triplets_file=config.noisy_triplets_file,
 					   noisy_split_triplets_file=config.noisy_split_triplets_file,
 					   valid_noise=config.VALID_NOISE_RATIO)
+
 	if args.optimize:
 		optimization(model_name=args.model,
 					 model_dir=config.model_dir,

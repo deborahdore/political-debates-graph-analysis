@@ -49,7 +49,7 @@ can be changed from the [config.py](config.py) file:
 |         --mode_node         |     Yes      |             | Types of relationships between nodes (can be more than one). Available: "claim+premise", "speaker" and "year" |
 |      --output_dir_name      |     Yes      |             |                                      Define name of the output directory                                      |
 
-If you are not sure about node types and text types, take a look at this [explanation](results/example_nodes.pdf).
+If you are not sure about node types and text types, take a look at this [explaination.pdf](output%2Fexplaination.pdf).
 
 _Example_: <br>
 `python main.py --model TransE --noise 0 --mode_text text --mode_node "speaker, year" --generate --special_benchmarking_flag --use_pretrained_embeddings`
