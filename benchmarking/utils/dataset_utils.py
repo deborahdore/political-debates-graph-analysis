@@ -278,7 +278,7 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
 
 
-def generate_mappings(noisy_triplets_file: str, triplets_file_utils: str, pretrained_embedding_file: str = None):
+def generate_mappings(noisy_triplets_file: str, triplets_file_utils: str):
 	"""	Creates an entity to id mapping and relation to id mapping	"""
 	triplets = read_tsv(noisy_triplets_file.format(noise=0))
 

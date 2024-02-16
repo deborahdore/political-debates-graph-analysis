@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import pykeen.models
 import torch
-from pykeen.models.predict import predict_triples_df
+from pykeen.predict import predict_triples
 from pykeen.triples import TriplesFactory
 
 from benchmarking import config
@@ -12,7 +12,7 @@ from benchmarking import config
 def get_scores(model: pykeen.models.Model, factory: TriplesFactory):
 	""" Computes the scores of all triples in the factory """
 	factory.mapped_triples = factory.mapped_triples.to(config.DEVICE)
-	scores = predict_triples_df(model=model, triples=factory.mapped_triples, batch_size=None, mode=None)
+	scores = predict_triples(model=model, triples=factory.mapped_triples, batch_size=None, mode=None)
 	return np.sort(scores["score"].values)
 
 
@@ -32,7 +32,7 @@ def get_scores_tensor(model: Any,
 	mapped_triples_tensor = torch.tensor(mapped_triples, dtype=torch.long, device=config.DEVICE, requires_grad=False)
 
 	scores = \
-	predict_triples_df(model=model, triples=mapped_triples_tensor, triples_factory=None, batch_size=None, mode=None, )[
+	predict_triples(model=model, triples=mapped_triples_tensor, triples_factory=None, batch_size=None, mode=None, )[
 		"score"].values
 
 	assert len(scores) == len(triples)

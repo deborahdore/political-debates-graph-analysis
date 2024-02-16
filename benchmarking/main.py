@@ -16,9 +16,7 @@ from benchmarking.evaluation import link_deletion, \
 	triple_classification
 from benchmarking.training import optimization, training
 from benchmarking.utils.dataset_utils import generate_mappings, \
-	generate_noise, \
-	generate_pretrained_embeddings, \
-	generate_triplets
+	generate_noise, generate_triplets
 
 
 def get_kwargs():
@@ -182,11 +180,7 @@ def main():
 						  noisy_triplets_file=config.noisy_triplets_file)
 		# generate node to label mappings
 		generate_mappings(noisy_triplets_file=config.noisy_triplets_file,
-						  triplets_file_utils=config.triplets_file_utils,
-						  pretrained_embedding_file=config.pretrained_embedding_file)
-		# generate embeddings
-		generate_pretrained_embeddings(triplets_file_utils=config.triplets_file_utils,
-									   pretrained_embedding_file=config.pretrained_embedding_file)
+						  triplets_file_utils=config.triplets_file_utils)
 
 		# for every level of noise, create a dataset
 		generate_noise(noisy_triplets_file=config.noisy_triplets_file,
@@ -222,4 +216,6 @@ def main():
 
 
 if __name__ == '__main__':
+	### TO RUN THIS BRANCH YOU MUST INSTALL THE LATEST VERSION ON PYKEEN WITH PYTHON 3.10 ###
+	### PACKAGE INFORMATION ARE ON THE environment.yaml ###
 	main()

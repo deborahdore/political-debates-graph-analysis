@@ -101,8 +101,7 @@ def preprocess_dataset(df: pd.DataFrame):
 	:param df: DataFrame: the dataframe to process
 	:return: the processed dataframe
 	"""
-	df = df.applymap(lambda x: str(x))
-	# df = df.applymap(lambda x: x.lower())
-	df = df.applymap(lambda x: x.strip())
+	df = df.map(lambda x: str(x))
+	df = df.map(lambda x: x.strip())
 	df = df.dropna().drop_duplicates().reset_index(drop=True)
 	return df
