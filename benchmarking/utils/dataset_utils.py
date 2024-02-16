@@ -233,6 +233,10 @@ def get_train_val_test_factory(train: pd.DataFrame,
 													   relation_to_id=relation_to_id,
 													   create_inverse_triples=False)
 
+	train_factory.mapped_triples = train_factory.mapped_triples.to(config.DEVICE)
+	val_factory.mapped_triples = val_factory.mapped_triples.to(config.DEVICE)
+	test_factory.mapped_triples = test_factory.mapped_triples.to(config.DEVICE)
+
 	return train_factory, val_factory, test_factory
 
 
@@ -244,6 +248,8 @@ def get_factory(dataset: pd.DataFrame, triplets_file_utils: str, create_inverse_
 												  entity_to_id=entity_to_id,
 												  relation_to_id=relation_to_id,
 												  create_inverse_triples=create_inverse_triples)
+
+	factory.mapped_triples = factory.mapped_triples.to(config.DEVICE)
 	return factory
 
 

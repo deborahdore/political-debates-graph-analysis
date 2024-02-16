@@ -25,20 +25,30 @@ def process_directory(directory):
 		model_path = os.path.join(directory, model_folder)
 		data[model_folder] = {}
 		result_path = os.path.join(model_path, 'results')
-		data[model_folder][link_prediction] = \
-			extract_data_from_json(os.path.join(result_path, "link_prediction_noise_0.json"))['both']['hits_at_10']
 
-		data[model_folder][link_deletion] = \
-			extract_data_from_json(os.path.join(result_path, "link_deletion_noise_0.json"))['both']['hits_at_10']
+		link_prediction_file = os.path.join(result_path, "link_prediction_noise_0.json")
+		assert os.path.isfile(link_prediction_file)
 
-		data[model_folder][relation_prediction] = \
-			extract_data_from_json(os.path.join(result_path, "relation_prediction_noise_0.json"))['hits_at_1']
+		link_deletion_file = os.path.join(result_path, "link_deletion_noise_0.json")
+		assert os.path.isfile(link_deletion_file)
+		relation_prediction_file = os.path.join(result_path, "relation_prediction_noise_0.json")
+		assert os.path.isfile(relation_prediction_file)
 
-		data[model_folder][triple_classification] = \
-			extract_data_from_json(os.path.join(result_path, "triple_classification_noise_0.json"))['f1_macro']
+		triple_classification_file = os.path.join(result_path, "triple_classification_noise_0.json")
+		assert os.path.isfile(triple_classification_file)
 
-		data[model_folder][relation_classification] = \
-			extract_data_from_json(os.path.join(result_path, "relation_classification_noise_0.json"))['f1_macro']
+		relation_classification_file = os.path.join(result_path, "relation_classification_noise_0.json")
+		assert os.path.isfile(relation_classification_file)
+
+		data[model_folder][link_prediction] = extract_data_from_json(link_prediction_file)['both']['hits_at_10']
+
+		data[model_folder][link_deletion] = extract_data_from_json(link_deletion_file)['both']['hits_at_10']
+
+		data[model_folder][relation_prediction] = extract_data_from_json(relation_prediction_file)['hits_at_1']
+
+		data[model_folder][triple_classification] = extract_data_from_json(triple_classification_file)['f1_macro']
+
+		data[model_folder][relation_classification] = extract_data_from_json(relation_classification_file)['f1_macro']
 
 	return data
 

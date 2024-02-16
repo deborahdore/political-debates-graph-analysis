@@ -3,7 +3,7 @@ import random
 
 import numpy as np
 import pandas as pd
-import pykeen.models
+import torch
 from loguru import logger
 from matplotlib import pyplot as plt
 from pykeen.evaluation import RankBasedEvaluator
@@ -23,7 +23,7 @@ from benchmarking.utils.util import read_json, read_tsv, save_csv, save_json
 
 # ======================== LINK DELETION  ======================== #
 
-def link_deletion(model: pykeen.models.Model,
+def link_deletion(model: torch.nn.Module,
 				  model_name: str,
 				  noisy_split_triplets_file: str,
 				  triplets_file_utils: str,
@@ -193,7 +193,7 @@ def link_deletion(model: pykeen.models.Model,
 
 
 # ======================== RELATION PREDICTION  ======================== #
-def relation_prediction(model: pykeen.models.Model,
+def relation_prediction(model: torch.nn.Module,
 						model_name: str,
 						noisy_split_triplets_file: str,
 						triplets_file_utils: str,
@@ -298,7 +298,7 @@ def relation_prediction(model: pykeen.models.Model,
 
 
 # ======================== LINK PREDICTION  ======================== #
-def link_prediction(model: pykeen.models.Model,
+def link_prediction(model: torch.nn.Module,
 					model_name: str,
 					noisy_split_triplets_file: str,
 					triplets_file_utils: str,
@@ -369,7 +369,7 @@ def link_prediction(model: pykeen.models.Model,
 
 # ======================== TRIPLE CLASSIFICATION  ======================== #
 
-def triple_classification(model: pykeen.models.Model,
+def triple_classification(model: torch.nn.Module,
 						  model_name: str,
 						  noisy_split_triplets_file: str,
 						  triplets_file_utils: str,
@@ -503,7 +503,7 @@ def triple_classification(model: pykeen.models.Model,
 
 # ======================== RELATION CLASSIFICATION  ======================== #
 
-def relation_classification(model: pykeen.models.Model,
+def relation_classification(model: torch.nn.Module,
 							model_name: str,
 							noisy_split_triplets_file: str,
 							triplets_file_utils: str,
@@ -668,7 +668,7 @@ def relation_classification(model: pykeen.models.Model,
 
 # ======================== MAKE PREDICTIONS  ======================== #
 
-def make_prediction(model: pykeen.models.Model,
+def make_prediction(model: torch.nn.Module,
 					model_name: str,
 					noisy_split_triplets_file2: str,
 					triplets_file_utils: str,

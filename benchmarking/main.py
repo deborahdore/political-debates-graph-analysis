@@ -1,8 +1,8 @@
 import argparse
 from pathlib import Path
 
-import pykeen.models
 import rootutils
+import torch.nn
 from loguru import logger
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
@@ -15,10 +15,7 @@ from benchmarking.evaluation import link_deletion, \
 	relation_prediction, \
 	triple_classification
 from benchmarking.training import optimization, training
-from benchmarking.utils.dataset_utils import generate_mappings, \
-	generate_noise, \
-	generate_pretrained_embeddings, \
-	generate_triplets
+from benchmarking.utils.dataset_utils import generate_mappings, generate_noise, generate_triplets
 
 
 def get_kwargs():
@@ -111,7 +108,7 @@ def get_kwargs():
 	return args
 
 
-def evaluation(model: pykeen.models.Model,
+def evaluation(model: torch.nn.Module,
 			   model_name: str,
 			   results_dir: str,
 			   noisy_split_triplets_file: str,
