@@ -275,6 +275,17 @@ def get_train_val_test_from_dir(noisy_triples_file: str,
 		test = test[(test['relation'] == '__label__Support') | (test['relation'] == '__label__Attack') | (
 				test['relation'] == '__label__Equivalent')]
 
+	logger.info("🚀 Using Training strategy: down-sampling")
+	train_relations_keys = train['relation'].value_counts().keys().values
+	train_relations_values = train['relation'].value_counts().values
+	counts = dict(zip(train_relations_keys, train_relations_values))
+	for key in train_relations_keys:
+		if key in ['__label__Support', '__label__Attack', '__label__Equivalent']:
+			continue
+		rows = train[train['relation'] == key].sample(n=counts.get('__label__Support'))
+		train = train[train['relation'] != key]
+		train = pd.concat([train, rows], axis=0).dropna().drop_duplicates().reset_index(drop=True)
+
 	return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
 
 
