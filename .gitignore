@@ -174,3 +174,4 @@ cython_debug/
 /benchmarking/models/
 /benchmarking/plot/
 /benchmarking/dataset_2/
+*.sh
