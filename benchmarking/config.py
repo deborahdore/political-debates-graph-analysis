@@ -37,7 +37,7 @@ DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 base_dir = os.path.abspath(".")
 output_dir = os.path.join(base_dir, "output/{task_name}")
 model_dir = os.path.join(output_dir, "{model}")
-results_dir = os.path.join(model_dir, "results")
+results_dir = os.path.join(model_dir, "results/noise_{noise}")
 plot_dir = os.path.join(results_dir, "plot")
 
 dataset_dir = os.path.join(base_dir, "dataset")

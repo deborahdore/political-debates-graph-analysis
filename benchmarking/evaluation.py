@@ -189,8 +189,8 @@ def link_deletion(model: torch.nn.Module,
 	}
 	logger.info(results_eval)
 
-	save_json(results_eval,
-			  f"{results_dir.format(model=model_name, task_name=task_name)}/link_deletion_noise_{noise_ratio}.json")
+	result_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise_ratio)
+	save_json(results_eval, f"{result_dir}/link_deletion.json")
 
 	logger.info(f"🎯 Link deletion complete 🎯")
 
@@ -295,9 +295,9 @@ def relation_prediction(model: torch.nn.Module,
 
 	logger.info(results_eval)
 
-	save_json(results_eval, f"{results_dir.format(model=model_name, task_name=task_name)}/"
-							f"{'relation' if relation_to_evaluate is None else relation_to_evaluate}_prediction_noise_"
-							f"{noise_ratio}.json")
+	result_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise_ratio)
+	save_json(results_eval, f"{result_dir}/"
+							f"{'relation' if relation_to_evaluate is None else relation_to_evaluate}_prediction.json")
 
 	logger.info(f"🎯 {'Relation' if relation_to_evaluate is None else relation_to_evaluate} prediction complete 🎯")
 
@@ -369,8 +369,8 @@ def link_prediction(model: torch.nn.Module,
 
 	logger.info(results_eval)
 
-	save_json(results_eval,
-			  f"{results_dir.format(model=model_name, task_name=task_name)}/link_prediction_noise_{noise_ratio}.json")
+	result_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise_ratio)
+	save_json(results_eval, f"{result_dir}/link_prediction.json")
 	logger.info(f"🎯 Link prediction complete 🎯")
 
 
@@ -506,8 +506,8 @@ def triple_classification(model: torch.nn.Module,
 
 	logger.info(results_eval)
 
-	results_dir = results_dir.format(model=model_name, task_name=task_name)
-	save_json(results_eval, f"{results_dir}/triple_classification_noise_{noise_ratio}.json")
+	results_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise_ratio)
+	save_json(results_eval, f"{results_dir}/triple_classification.json")
 
 	logger.info("🎯 Triple classification complete 🎯")
 
@@ -673,8 +673,8 @@ def relation_classification(model: torch.nn.Module,
 
 	logger.info(results_eval)
 
-	results_dir = results_dir.format(model=model_name, task_name=task_name)
-	save_json(results_eval, f"{results_dir}/relation_classification_noise_{noise_ratio}.json")
+	results_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise_ratio)
+	save_json(results_eval, f"{results_dir}/relation_classification.json")
 
 	logger.info("🎯 Relation classification complete 🎯")
 	return threshold
@@ -689,6 +689,7 @@ def make_prediction(model: torch.nn.Module,
 					task_name: str,
 					results_dir: str,
 					plot_dir: str,
+					noise: int,
 					threshold: float):
 	""" Make and Save into csv the predictions on the test file """
 
@@ -743,7 +744,7 @@ def make_prediction(model: torch.nn.Module,
 	assert len(test_original) == len(y_true) == len(y_pred) == len(heads) == len(tails)
 
 	predictions = pd.DataFrame({'pred': y_pred, 'true': y_true, 'head': heads, 'tail': tails})
-	results_dir = results_dir.format(model=model_name, task_name=task_name)
+	results_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise)
 	save_csv(predictions, os.path.join(results_dir, "predictions.csv"))
 
 	n_round = 10

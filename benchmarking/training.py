@@ -24,7 +24,11 @@ def training(model_name: str,
 			 pretrained_embedding_file: str = None):
 	""" Train a KGE model """
 
-	model_file = f"{model_dir.format(model=model_name, task_name=task_name)}/{model_name}.pt"
+	if ratio == 0:
+		model_file = f"{model_dir.format(model=model_name, task_name=task_name)}/{model_name}.pt"
+	else:
+		model_file = f"{model_dir.format(model=model_name, task_name=task_name)}/{model_name}_{ratio}.pt"
+
 	if os.path.exists(model_file):
 		return load_model(model_file)
 

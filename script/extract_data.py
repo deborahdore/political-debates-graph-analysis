@@ -83,6 +83,7 @@ def main():
 			df_rows.append(row)
 
 	df = pd.DataFrame(df_rows)
+	assert len(df) == counter * 3
 	df.to_excel(f"extracted_data_{task}.xlsx", index=False)
 
 

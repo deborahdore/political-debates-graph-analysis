@@ -99,7 +99,9 @@ def get_kwargs():
 			Path(config.noisy_dir.format(noise=noise)).mkdir(parents=True, exist_ok=True)
 
 	Path(config.noisy_dir.format(noise=args.noise)).mkdir(parents=True, exist_ok=True)
-	Path(config.plot_dir.format(task_name=args.output_dir_name, model=args.model)).mkdir(parents=True, exist_ok=True)
+	Path(config.plot_dir.format(task_name=args.output_dir_name, model=args.model, noise=args.noise)).mkdir(
+		parents=True,
+																										   exist_ok=True)
 
 	logger.info(f"⚠️ Special benchmarking flag: {config.SPECIAL_BENCHMARKING_FLAG}")
 	logger.info(f"⚠️ Use pretrained embeddings: {config.USE_PRETRAINED_EMBEDDINGS}")
@@ -118,7 +120,7 @@ def evaluation(model: torch.nn.Module,
 			   noisy_split_triplets_file2: str,
 			   triplets_file_utils: str,
 			   task_name: str,
-			   ratio: float):
+			   ratio: int):
 	""" Evaluate a KGE model"""
 	link_prediction(model=model,
 					model_name=model_name,
@@ -168,6 +170,7 @@ def evaluation(model: torch.nn.Module,
 					task_name=task_name,
 					results_dir=results_dir,
 					plot_dir=config.plot_dir,
+					noise=ratio,
 					threshold=threshold)
 
 
