@@ -785,5 +785,5 @@ def make_prediction(model: torch.nn.Module,
 		disp.ax_.set_title(f'Confusion Matrix for {class_names[i]}')
 
 	plt.tight_layout()
-	plot_dir = plot_dir.format(model=model_name, task_name=task_name)
+	plot_dir = plot_dir.format(model=model_name, task_name=task_name, noise=noise)
 	plt.savefig(os.path.join(plot_dir, "confusion_matrix.svg"))
