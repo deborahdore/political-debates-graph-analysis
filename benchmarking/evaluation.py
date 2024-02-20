@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import torch
 from loguru import logger
 from matplotlib import pyplot as plt
@@ -13,12 +14,12 @@ from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
 	HitsAtK, \
 	InverseHarmonicMeanRank
 from sklearn import metrics
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix
 
 from benchmarking import config
 from benchmarking.utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
 from benchmarking.utils.evaluation_utils import get_center, get_scores, get_scores_tensor
-from benchmarking.utils.util import read_json, read_tsv, save_csv, save_json
+from benchmarking.utils.util import read_json, read_tsv, save_json, save_tsv
 
 
 # ======================== LINK DELETION  ======================== #
@@ -705,7 +706,7 @@ def make_prediction(model: torch.nn.Module,
 	relation_to_id = read_json(triplets_file_utils.format(file_name="relation_to_id"))
 	test_original = read_tsv(noisy_split_triplets_file2.format(split="test"))
 
-	y_true = test_original['relation'].values.tolist()
+	y_true = test_original['relation'].map(lambda x: x.replace("__label__", "")).values.tolist()
 	heads = test_original['head'].values.tolist()
 	tails = test_original['tail'].values.tolist()
 	y_pred = []
@@ -725,27 +726,28 @@ def make_prediction(model: torch.nn.Module,
 									   relation_label_id_map=relation_to_id)
 		except Exception as err:
 			logger.warning(f"{err} not preset between entities")
-			y_pred.append(["__label__noRel"])
+			y_pred.append("noRel")
 			skipped += 1
 			continue
 
 		if max(scores) > threshold:
 			# assign relation
 			if scores.argmax() == 0:
-				y_pred.append(["__label__Support"])
+				y_pred.append("Support")
 			elif scores.argmax() == 1:
-				y_pred.append(["__label__Attack"])
+				y_pred.append("Attack")
 			else:
-				y_pred.append(["__label__noRel"])
+				y_pred.append("noRel")
 		else:
-			y_pred.append(["__label__noRel"])
+			y_pred.append("noRel")
 
 	logger.info(f"Skipped: {skipped}")
 	assert len(test_original) == len(y_true) == len(y_pred) == len(heads) == len(tails)
 
-	predictions = pd.DataFrame({'pred': y_pred, 'true': y_true, 'head': heads, 'tail': tails})
+	predictions = pd.DataFrame({'true': y_true, 'predicted': y_pred, 'sentence1': heads, 'sentence2': tails})
 	results_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise)
-	save_csv(predictions, os.path.join(results_dir, "predictions.csv"))
+
+	save_tsv(predictions, os.path.join(results_dir, "predictions.tsv"))
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
@@ -760,9 +762,10 @@ def make_prediction(model: torch.nn.Module,
 	logger.info(f"precision: {precision}")
 	recall = round(metrics.recall_score(y_true=y_true, y_pred=y_pred, average="macro"), n_round)
 	logger.info(f"recall: {recall}")
-	cf = metrics.multilabel_confusion_matrix(y_true,
-											 y_pred,
-											 labels=["__label__Support", "__label__Attack", "__label__noRel"])
+
+	value_dict = {"Support": 0, "Attack": 1, "noRel": 3}
+	cf = confusion_matrix(predictions['true'].map(lambda x: value_dict.get(x)),
+						  predictions['predicted'].map(lambda x: value_dict.get(x)))
 	logger.info(f"confusion matrix: {cf}")
 
 	results_eval = {
@@ -775,14 +778,15 @@ def make_prediction(model: torch.nn.Module,
 
 	save_json(results_eval, f"{results_dir}/predictions_eval.json")
 
-	# Plot results
-	fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
-	class_names = ['support', 'attack', 'equivalence']
-
-	for i in range(len(class_names)):
-		disp = ConfusionMatrixDisplay(confusion_matrix=cf[i], display_labels=[0, 1])
-		disp.plot(ax=axs[i], cmap='Blues')
-		disp.ax_.set_title(f'Confusion Matrix for {class_names[i]}')
+	sns.heatmap(cf,
+				annot=True,
+				cmap='Blues',
+				xticklabels=list(value_dict.keys()),
+				yticklabels=list(value_dict.keys()),
+				fmt='g')
+	plt.xlabel('Predicted Labels')
+	plt.ylabel('True Labels')
+	plt.title(f'Confusion Matrix {model_name} - {noise}')
 
 	plt.tight_layout()
 	plot_dir = plot_dir.format(model=model_name, task_name=task_name, noise=noise)
