@@ -1,4 +1,14 @@
-# political-debates-graph-analysis
+<div align="center">
+
+# POLITICAL DEBATES GRAPH ANALYSIS
+
+<a href="https://pytorch.org/get-started/locally/"><img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white&labelColor=gray"></a>
+<a href="https://github.com/pykeen/pykeen?tab=readme-ov-file#citation"><img alt="PyKEEN" src="https://img.shields.io/badge/PyKEEN-blue?logo=github&style=flat&labelColor=gray"></a>
+<a href="https://github.com/pierpaologoffredo/ElecDeb60to20"><img alt="Dataset" src="https://img.shields.io/badge/ElecDeb60to20-green?logo=github&style=flat&labelColor=gray"></a><br>
+
+</div>
+
+## DESCRIPTION
 
 The objective of this project is to implement knowledge embedding graph techniques on a dataset containing 41
 presidential election debates in the United States spanning from 1960 to 2016. This dataset has been meticulously
@@ -34,6 +44,7 @@ All the code for the exploration data analysis of the dataset can be found in th
 </a>
 
 _Example graph of debate between Gore and Kemp_:
+
 <img src="notebooks/imgs/09-10-1996_debate_graph.svg">
 
 ## BENCHMARKING
@@ -42,7 +53,7 @@ An explaination of the work and the corresponding code can be found in the folde
 
 ### REPRODUCIBILITY
 
-* Python 3.9
+* Python 3.8
 * Nvidia V100 32 Gb
 * [environment.yaml](environment.yaml)
 
