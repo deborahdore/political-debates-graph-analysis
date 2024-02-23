@@ -8,6 +8,7 @@ benchmarking/dataset/noise_30
 benchmarking/dataset/noise_100
 benchmarking/dataset/entity_to_id.json
 benchmarking/dataset/relation_to_id.json
+benchmarking/dataset/pretrained_embedding_file.npy
 
 *.pt
 *.slurm
