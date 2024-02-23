@@ -24,8 +24,8 @@ attributes of constructed graphs to enhance the automated classification of argu
 
 ## EXPLORATION DATA ANALYSIS
 
-All the code for the exploration data analysis of the dataset can be found in the corresponding folder:
-`visualization/graph_visualization.ipynb`
+All the code for the exploration data analysis of the dataset can be found in the corresponding
+folder: [`visualization/graph_visualization.ipynb`](notebooks%2Fgraph_visualization.ipynb)
 
 | **Statistics**             | **num** | 
 |:---------------------------|:-------:|
@@ -43,15 +43,15 @@ All the code for the exploration data analysis of the dataset can be found in th
 <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
-_Example graph of debate between Gore and Kemp_:
-
-<img src="notebooks/imgs/09-10-1996_debate_graph.svg">
+| **Example graph of debate between Gore and Kemp**                              |
+|:-------------------------------------------------------------------------------|
+| ![09-10-1996_debate_graph.svg](notebooks%2Fimgs%2F09-10-1996_debate_graph.svg) |
 
 ## BENCHMARKING
 
 An explaination of the work and the corresponding code can be found in the folder [benchmarking](benchmarking).
 
-### REPRODUCIBILITY
+## REPRODUCIBILITY
 
 * Python 3.8
 * Nvidia V100 32 Gb

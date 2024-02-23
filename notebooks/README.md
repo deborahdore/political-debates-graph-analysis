@@ -18,7 +18,8 @@ The initial data exploration is available at [graph_visualization.ipynb](graph_v
 
 ## DATASET GENERATION
 
-The code to transform the dataset used to train the transformer in the paper **[(Goffredo et al.)](https://ojs.aaai.org/index.php/AAAI/article/view/27069)**
+The code to transform the dataset used to train the transformer in the paper *
+*[(Goffredo et al.)](https://ojs.aaai.org/index.php/AAAI/article/view/27069)**
 can be found at [create_dataset.ipynb](create_dataset.ipynb).
 
 ## ENSEMBLE

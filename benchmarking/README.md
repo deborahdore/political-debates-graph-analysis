@@ -2,7 +2,6 @@
 
 # BENCHMARKING
 
-
 </div>
 
 ### DESCRIPTION
@@ -10,7 +9,6 @@
 In this project we explore the possibility of using KGE models to predict relationships (_support, attack and
 equivalent_)
 between arguments in a graph taken from the political debates of US Presidents from 1960 to 2016. <br>
-
 
 ### FIRST APPROACH AND DATASET
 
@@ -57,7 +55,7 @@ can be changed from the [config.py](config.py) file:
 |         --mode_node         |     Yes      |             | Types of relationships between nodes separated by a comma (can be more than one). Available: "claim+premise", "speaker" and "year" |
 |      --output_dir_name      |     Yes      |             |                                                    Name of the output directory                                                    |
 
-If you are not sure about node types and text types, take a look at this [explaination.pdf](output%2Fexplaination.pdf). 
+If you are not sure about node types and text types, take a look at this [explaination.pdf](output%2Fexplaination.pdf).
 
 _Example_: <br>
 `python main.py --model TransE --noise 0 --mode_text text --mode_node "speaker, year" --generate --optimize --special_benchmarking_flag --use_pretrained_embeddings`
