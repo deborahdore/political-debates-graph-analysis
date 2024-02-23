@@ -1,0 +1,12 @@
+{
+  "accuracy"     : 0.4597266036,
+  "f1_macro"     : 0.4570153818,
+  "f1_micro"     : 0.4597266036,
+  "f1_weighted"  : 0.4609611778,
+  "f1_pos"       : 0.495384011,
+  "f1_neg"       : 0.4186467527,
+  "precision"    : 0.4576850054,
+  "recall"       : 0.4572960485,
+  "Z_statistic"  : -7.41,
+  "norm_distance": Infinity
+}

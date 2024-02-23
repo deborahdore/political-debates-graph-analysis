@@ -8,5 +8,5 @@
   "precision"    : 0.5288426112,
   "recall"       : 0.5315861794,
   "Z_statistic"  : 7.74,
-  "norm_distance": 0.0204711489
+  "norm_distance": 0.0204711684
 }
