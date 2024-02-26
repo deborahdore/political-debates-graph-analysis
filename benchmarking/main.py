@@ -48,6 +48,11 @@ def get_kwargs():
 
 	parser.add_argument("--wandb", default=False, action='store_true', help="whether or not to use wandb for logging")
 
+	parser.add_argument("--save_probabilities",
+						default=False,
+						action='store_true',
+						help="whether or not to save probabilities for each label during prediction")
+
 	parser.add_argument("--wandb_project_name",
 						type=str,
 						required=False,
@@ -120,7 +125,8 @@ def evaluation(model: torch.nn.Module,
 			   noisy_split_triplets_file2: str,
 			   triplets_file_utils: str,
 			   task_name: str,
-			   ratio: int):
+			   ratio: int,
+			   save_probabilities: bool = False):
 	""" Evaluate a KGE model"""
 	link_prediction(model=model,
 					model_name=model_name,
@@ -171,7 +177,8 @@ def evaluation(model: torch.nn.Module,
 					results_dir=results_dir,
 					plot_dir=config.plot_dir,
 					noise=ratio,
-					threshold=threshold)
+					threshold=threshold,
+					save_probabilities=save_probabilities)
 
 
 def main():
@@ -221,7 +228,8 @@ def main():
 			   noisy_split_triplets_file2=config.noisy_split_triplets_file2,
 			   triplets_file_utils=config.triplets_file_utils,
 			   task_name=args.output_dir_name,
-			   ratio=args.noise)
+			   ratio=args.noise,
+			   save_probabilities=args.save_probabilities)
 
 
 if __name__ == '__main__':

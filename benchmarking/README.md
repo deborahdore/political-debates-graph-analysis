@@ -49,6 +49,7 @@ can be changed from the [config.py](config.py) file:
 | --use_pretrained_embeddings |      No      |    False    |                                   Whether or not to use pretrained embeddings for the KGE models                                   |
 |           --wandb           |      No      |    False    |                                        Whether or not to use Wandb to log model's training                                         |
 |    --wandb_project_name     |      No      |    None     |                                                        Wandb's project name                                                        |
+|    --save_probabilities     |      No      |    False    |      Used during prediction on the final test set, whether or not to save a file with confidence probabilities for each label      |
 |           --model           |     Yes      |             |                  Model's name to train. Available: TransE, TransH, TransD, DistMult, RESCAL, HolE, ConvE, ConvKB                   |
 |           --noise           |     Yes      |             |                             Noise in the dataset to train the model on. Available: 0, 10, 20, 30, 100                              |
 |         --mode_text         |     Yes      |             |                           Configuration for the feature of the nodes. Available: "text" or "text+claim"                            |

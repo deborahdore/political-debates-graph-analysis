@@ -15,6 +15,7 @@ from pykeen.metrics.ranking import AdjustedArithmeticMeanRank, \
 	InverseHarmonicMeanRank
 from sklearn import metrics
 from sklearn.metrics import confusion_matrix
+from torch import softmax
 
 from benchmarking import config
 from benchmarking.utils.dataset_utils import get_nodes, get_train_val_test_factory, get_train_val_test_from_dir
@@ -691,7 +692,8 @@ def make_prediction(model: torch.nn.Module,
 					results_dir: str,
 					plot_dir: str,
 					noise: int,
-					threshold: float):
+					threshold: float,
+					save_probabilities: bool = False):
 	""" Make and Save into csv the predictions on the test file """
 
 	logger.info(f"🎯 Use {model_name} to make predictions")
@@ -709,9 +711,14 @@ def make_prediction(model: torch.nn.Module,
 	y_true = test_original['relation'].map(lambda x: x.replace("__label__", "")).values.tolist()
 	heads = test_original['head'].values.tolist()
 	tails = test_original['tail'].values.tolist()
+
+	support_proba = []
+	attack_proba = []
+	no_rel_proba = []
+
 	y_pred = []
 
-	relations = ['__label__Support', '__label__Attack', '__label__Equivalent']
+	relations = ['__label__Support', '__label__Attack']
 
 	skipped = 0
 	for head, rel, tail in test_original.values.tolist():
@@ -741,13 +748,27 @@ def make_prediction(model: torch.nn.Module,
 		else:
 			y_pred.append("noRel")
 
+		softmax_scores = softmax(torch.tensor(np.concatenate((scores, [threshold]))), dim=-1)
+		support_proba.append(softmax_scores[0].item())
+		attack_proba.append(softmax_scores[1].item())
+		no_rel_proba.append(softmax_scores[2].item())
+
 	logger.info(f"Skipped: {skipped}")
 	assert len(test_original) == len(y_true) == len(y_pred) == len(heads) == len(tails)
 
 	predictions = pd.DataFrame({'true': y_true, 'predicted': y_pred, 'sentence1': heads, 'sentence2': tails})
+
 	results_dir = results_dir.format(model=model_name, task_name=task_name, noise=noise)
 
 	save_tsv(predictions, os.path.join(results_dir, "predictions.tsv"))
+
+	if save_probabilities:
+		predictions['Support_proba'] = support_proba
+		predictions['Attack_proba'] = attack_proba
+		predictions['noRel_proba'] = no_rel_proba
+
+		predictions = predictions.applymap(lambda x: str(x))
+		save_tsv(predictions, os.path.join(results_dir, "predictions_with_probabilities.tsv"))
 
 	n_round = 10
 	accuracy = round(metrics.accuracy_score(y_true=y_true, y_pred=y_pred), n_round)
@@ -774,7 +795,8 @@ def make_prediction(model: torch.nn.Module,
 		"f1_micro"   : f1_micro,
 		"f1_weighted": f1_weighted,
 		"precision"  : precision,
-		"recall"     : recall}
+		"recall"     : recall,
+		"threshold"  : threshold}
 
 	save_json(results_eval, f"{results_dir}/predictions_eval.json")
 
