@@ -5,7 +5,7 @@ import torch
 
 # ======================== utils ======================== #
 # semantic matching: DistMulT , HolE, RESCAL
-# transactional: TransE, TransH, TransD
+# translational: TransE, TransH, TransD
 # other: ConvE, ConvKB
 
 VALID_MODELS = ["TransE", "TransH", "TransD", "DistMult", "RESCAL", "HolE", "ConvE", "ConvKB"]
