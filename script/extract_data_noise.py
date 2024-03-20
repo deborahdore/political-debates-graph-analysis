@@ -8,7 +8,7 @@ import pandas as pd
 """ eg. /your/path/to/output/pretrained/text+type-year/extract_data_noise.py """
 
 ### NOISE LEVEL TO EXTRACT ###
-NOISE = [0]
+NOISE = [100]
 
 ### COLUMN NAMES ###
 link_prediction = 'Link Prediction HITS@10'
@@ -109,7 +109,8 @@ def main():
 				attack_prediction        : metrics.get(attack_prediction, None),
 				equivalent_prediction    : metrics.get(equivalent_prediction, None),
 				relation_classification  : metrics.get(relation_classification, None),
-				predictions              : metrics.get(predictions, None)}
+				predictions              : metrics.get(predictions, None)
+			}
 			df_rows.append(row)
 
 	df = pd.DataFrame(df_rows)
