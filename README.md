@@ -10,13 +10,13 @@
 
 ## DESCRIPTION
 
-The objective of this project is to implement knowledge embedding graph techniques on a dataset containing 41
-presidential election debates in the United States spanning from 1960 to 2016. This dataset has been meticulously
+The objective of this project is to implement knowledge embedding graph techniques on a dataset containing 44
+presidential election debates in the United States spanning from 1960 to 2020. This dataset has been meticulously
 annotated, with a specific focus on dissecting argument components (referred to as _premises_ and _claims_) and
 delineating argument relations (namely, _support_ , _attack_ and _equivalence_).
 This dataset can be explored with the tool DISPUTool publicly available [here](https://3ia-demos.inria.fr/disputool/).
 More information about the dataset can be found in
-this [GitHub repo](https://github.com/ElecDeb60To16/Dataset/tree/master).
+this [GitHub repo](https://github.com/pierpaologoffredo/ElecDeb60to20).
 
 Previously, the classification of argument relations, including support, attack, and equivalence, primarily relied on
 deep learning techniques. This project endeavors to explore an innovative approach by considering the structural
@@ -56,13 +56,6 @@ An explaination of the work and the corresponding code can be found in the folde
 * Python 3.8
 * Nvidia V100 32 Gb
 * [environment.yaml](environment.yaml)
-
-## ACKNOWLEDGEMENT
-
-This work was supported by the French government, through the UCAJEDI Investments in the Future project managed by the
-National Research Agency (ANR) under reference number ANR-15-IDEX-01. The authors are grateful to the OPAL
-infrastructure and the Université Côte d’Azur’s Center for High-Performance Computing for providing resources and
-support.
 
 ## LICENSE
 
