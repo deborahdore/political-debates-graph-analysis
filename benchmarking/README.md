@@ -8,7 +8,7 @@
 
 In this project we explore the possibility of using KGE models to predict relationships (_support, attack and
 equivalent_)
-between arguments in a graph taken from the political debates of US Presidents from 1960 to 2016. <br>
+between arguments in a graph taken from the political debates of US Presidents from 1960 to 2020. <br>
 
 ### FIRST APPROACH AND DATASET
 
