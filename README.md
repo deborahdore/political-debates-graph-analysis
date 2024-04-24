@@ -56,7 +56,15 @@ An explaination of the work and the corresponding code can be found in the folde
 * Python 3.8
 * Nvidia V100 32 Gb
 * [environment.yaml](environment.yaml)
+* [Trained Models and Data](https://drive.google.com/drive/folders/1Sz9PSAemUFqKXDFWVYezeNNXt4brMmvl?usp=share_link)
 
 ## LICENSE
 
 Our code and data are licensed with a [License](LICENSE).
+
+## ACKNOWLEDGEMENT
+
+This work was supported by the French government, through the UCAJEDI Investments in the Future project managed by the
+National Research Agency (ANR) under reference number ANR-15-IDEX-01. The authors are grateful to the OPAL
+infrastructure and the Université Côte d’Azur’s Center for High-Performance Computing for providing resources and
+support.
