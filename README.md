@@ -7,7 +7,7 @@
 <a href="https://github.com/pierpaologoffredo/ElecDeb60to20"><img alt="Dataset" src="https://img.shields.io/badge/ElecDeb60to20-green?logo=github&style=flat&labelColor=gray"></a><br>
 
 </div>
-This repo contains the code for the paper _Leveraging Graph Structural Knowledge to Improve Argument Relation Prediction in Political Debates_ accepted at the 12th Workshop on Argument Mining @ ACL 2025 (Deborah Dore, Stefano Faralli, Serena Villata). 
+This repo contains the code for the paper "Leveraging Graph Structural Knowledge to Improve Argument Relation Prediction in Political Debates" accepted at the 12th Workshop on Argument Mining @ ACL 2025 (Deborah Dore, Stefano Faralli, Serena Villata). 
 
 ## DESCRIPTION
 
